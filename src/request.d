@@ -212,7 +212,4 @@ request.o: request.cpp /usr/include/stdc-predef.h request.h \
  ../include/dnscpp/loop.h receiver.h now.h ../include/dnscpp/core.h \
  /usr/include/c++/7/list /usr/include/c++/7/bits/stl_list.h \
  /usr/include/c++/7/bits/list.tcc ../include/dnscpp/answer.h \
- ../include/dnscpp/handler.h ../include/dnscpp/a.h \
- ../include/dnscpp/extractor.h ../include/dnscpp/cname.h \
- /usr/include/c++/7/iostream /usr/include/c++/7/istream \
- /usr/include/c++/7/bits/istream.tcc
+ ../include/dnscpp/handler.h

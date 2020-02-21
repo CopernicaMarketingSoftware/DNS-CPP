@@ -17,14 +17,6 @@
 #include "../include/dnscpp/answer.h"
 #include "../include/dnscpp/handler.h"
 
-
-// @todo remove this
-#include "../include/dnscpp/a.h"
-#include "../include/dnscpp/cname.h"
-
-
-#include <iostream>
-
 /**
  *  Begin of namespace
  */
@@ -52,11 +44,8 @@ Request::Request(Core *core, const char *domain, ns_type type, DNS::Handler *han
         nameserver.subscribe(this);
     }
     
-    // we set a timer to repeat the call in one second
-    // @todo dont use a hardcoded value
-    _timer = core->loop()->timer(1.0, this);
-    
-    // @todo set up a timer to repeat the call
+    // we set a timer to repeat the call
+    _timer = core->loop()->timer(_core->interval(), this);
 }
 
 /**
@@ -175,29 +164,6 @@ void Request::onReceived(Connection *connection, const Response &response)
     
     // self-destruct now that the request has been completed
     delete this;
-
-
-
-    std::cout << "response over tcp" << std::endl;
-
-    std::cout << "received response " << response.id() << std::endl;
-    
-    std::cout << "questions: " << response.questions() << std::endl;
-    std::cout << "answers: " << response.answers() << std::endl;
-    std::cout << "nameservers: " << response.nameservers() << std::endl;
-    std::cout << "additional: " << response.additional() << std::endl;
-
-    for (size_t i = 0; i < response.answers(); ++i)
-    {
-        Answer record(response, i);
-        
-        std::cout << "answer: " << record.type() << " " << record.name() << std::endl;
-        
-        if (record.type() == ns_t_a) std::cout << "    ip: " << A(response, record).ip() << std::endl;
-        if (record.type() == ns_t_cname) std::cout << "    target: " << CNAME(response, record).target() << std::endl;
-    }
-    
-    // @todo different implementation
 }
 
 /**
@@ -206,9 +172,7 @@ void Request::onReceived(Connection *connection, const Response &response)
  */
 void Request::onFailure(Connection *connection)
 {
-    std::cout << "tcp failure" << std::endl;
-    
-    
+    // @todo come up with an implementation
 }
 
 
