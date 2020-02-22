@@ -82,9 +82,6 @@ private:
     void *_identifier;
 
 
-    // @todo add a timer
-
-
     /**
      *  Size of the response -- this method only works if we have already received the frist two bytes
      *  @return uint16_t
