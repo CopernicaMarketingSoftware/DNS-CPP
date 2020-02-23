@@ -18,3 +18,6 @@
 #include <dnscpp/context.h>
 #include <dnscpp/loop.h>
 #include <dnscpp/handler.h>
+#include <dnscpp/response.h>
+#include <dnscpp/answer.h>
+#include <dnscpp/a.h>

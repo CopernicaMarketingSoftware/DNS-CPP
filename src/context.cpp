@@ -18,7 +18,12 @@
  */
 namespace DNS {
 
-
+/**
+ *  Do a dns lookup
+ *  @param  name        the record name to look for
+ *  @param  type        type of record (normally you ask for an 'a' record)
+ *  @param  handler     object that will be notified when the query is ready
+ */
 void Context::query(const char *domain, ns_type type, Handler *handler)
 {
     // we are going to create a self-destructing request

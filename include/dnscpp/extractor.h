@@ -17,6 +17,11 @@
 #pragma once
 
 /**
+ *  Dependencies
+ */
+#include "record.h"
+
+/**
  *  Begin of namespace
  */
 namespace DNS {

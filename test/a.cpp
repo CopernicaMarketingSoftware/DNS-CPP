@@ -28,6 +28,26 @@ public:
     virtual void onReceived(const DNS::Response &response) override
     {
         std::cout << "got response" << std::endl;
+        
+        std::cout << "authentic: " << (int)response.authentic() << std::endl;
+        std::cout << "checkingdisabled: " << (int)response.checkingdisabled() << std::endl;
+        
+        
+        std::cout << "answers: " << response.answers() << std::endl;
+        std::cout << "additional: " << response.additional() << std::endl;
+        
+        for (size_t i = 0; i < response.answers(); ++i)
+        {
+            DNS::Answer record(response, i);
+            std::cout << "- record " << record.name() << " " << record.type() << " " << record.ttl() << std::endl;
+            
+            
+            switch (record.type()) {
+            case ns_t_a:    std::cout << "  -  " << DNS::A(response, record).ip() << std::endl;
+            }
+        }
+        
+        
     }
 };
 
@@ -53,7 +73,7 @@ int main()
     context.nameserver(DNS::Ip("8.8.8.8"));
     
     // do a query
-    context.query("www.yahoo.com", ns_t_a, &handler);
+    context.query("www.example.com", ns_t_a, &handler);
     
     // run the event loop
     ev_run(loop, 0);

@@ -17,6 +17,7 @@
  *  Dependencies
  */
 #include "response.h"
+#include <string.h>
 
 /**
  *  Begin of namespace

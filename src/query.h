@@ -178,8 +178,9 @@ private:
         // which makes the system vulnerable for injection
         put16(1200);
         
-        // extended rcode and the edns version
-        _buffer[_size++] = ns_r_noerror;
+        // extended rcode (0 because the normal rcode is good enough) and the 
+        // edns version (also 0 because that is the mose up-to-date version)
+        _buffer[_size++] = 0;
         _buffer[_size++] = 0;
         
         // extra flags to say that dnssec is supported
@@ -229,7 +230,7 @@ public:
         header->rd = 1;
         
         // no error
-        header->rcode = NOERROR;
+        header->rcode = ns_r_noerror;
         
         // Perform opcode specific processing
         switch (op) {

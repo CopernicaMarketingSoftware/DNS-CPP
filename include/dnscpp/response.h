@@ -17,6 +17,7 @@
  *  Dependencies
  */
 #include <arpa/nameser.h>
+#include <stdexcept>
 
 /**
  *  Begin of namespace
@@ -175,7 +176,7 @@ public:
      *  The opcode, see arpa/nameser.h for supported opcodes
      *  @return ns_rcode
      */
-    ns_rcode rcode() const { return (ns_rcode)ns_msg_getflag(_handle, ns_f_rcode); }
+    ns_rcode rcode() const;
     
     /**
      *  Number of records in one response section
