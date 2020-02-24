@@ -24,23 +24,9 @@ namespace DNS {
  *  @param  record
  *  @throws std::runtime_error
  */
-RRSIG::RRSIG(const Response &response, const Record &record) : Extractor(response, record) 
-{
-    // we require at least 18 bytes for fixed fields
-    if (_record.size() < 18) throw std::runtime_error("RRSIG field is too small");
-    
-    // where does the signer begin
-    auto *signer = record.data() + 18;
-
-    // and parse the name from the data
-    auto processed = ns_name_uncompress(response.data(), response.end(), signer, _signer, MAXDNAME);
-    
-    // leap out if the name could not be decompressed
-    if (processed < 0) throw std::runtime_error("failed to extract signer");
-
-    // the signature starts right after the name
-    _signature = signer + processed;
-}
+RRSIG::RRSIG(const Response &response, const Record &record) : 
+    Extractor(response, record),
+    _signer(response, skip(record, 18)) {}
     
 /**
  *  Check if the signature is associated with a certain record

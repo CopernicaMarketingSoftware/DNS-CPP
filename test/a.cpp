@@ -15,6 +15,9 @@
 #include <dnscpp/libev.h>
 #include <iostream>
 
+
+#include "../src/name.h"
+
 /**
  *  Our own handler
  */
@@ -42,6 +45,7 @@ public:
             std::cout << "- record " << record.name() << " " << record.type() << " " << record.ttl() << std::endl;
             
             
+            
             switch (record.type()) {
             case ns_t_a: {   
                 DNS::A a(response, record);
@@ -66,6 +70,21 @@ public:
  */
 int main()
 {
+    std::vector<DNS::Name> names;
+    
+    names.emplace_back("www.copernica.com");
+    names.emplace_back("www.example.com");
+    names.emplace_back("copernica.com");
+    names.emplace_back("mail.copernica.com.");
+    
+    std::sort(names.begin(), names.end());
+    
+    for (const auto &name : names)
+    {
+        std::cout << name << std::endl;
+    }
+    
+    
     // the event loop
     struct ev_loop *loop = EV_DEFAULT;
     

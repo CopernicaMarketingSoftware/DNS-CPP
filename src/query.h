@@ -23,6 +23,7 @@
 #include "compressor.h"
 #include "../include/dnscpp/question.h"
 #include "../include/dnscpp/response.h"
+#include "../include/dnscpp/decompressed.h"
 
 /**
  *  Begin of namespace
@@ -113,37 +114,37 @@ private:
         // check all questions
         for (size_t i = 0; i < questions(); ++i)
         {
-            // buffer in which we're going to store the name
-            char name[MAXDNAME+1];
+            // prevent errors if name could not be extracted
+            try
+            {
+                // decompress the name
+                Decompressed name(_buffer, end(), current);
             
-            // get the name
-            ssize_t size = ns_name_uncompress(_buffer, end(), current, name, MAXDNAME+1);
+                // update current pointer to pass the consumed bytes 
+                current += name.consumed();
             
-            // skip on error
-            if (size < 0) continue;
-            
-            // make sure name is not a dot
-            if (name[0] == '.') name[0] = '\0';
-            
-            // update current pointer
-            current += size;
-            
-            // check if we still have room for two uint16's
-            if (end() - current < 4) break;
-            
-            // get the next two shorts
-            uint16_t type = ns_get16(current);
-            uint16_t dnsclass = ns_get16(current + 2);
-            
-            // update current pointer
-            current += 4;
-            
-            // now run the tests
-            if (type != record.type()) continue;
-            if (dnsclass != record.dnsclass()) continue;
-            
-            // type and class are then same, we just need the same name
-            if (ns_samename(name, record.name()) > 0) return true;
+                // check if we still have room for two uint16's
+                if (end() - current < 4) break;
+                
+                // get the next two shorts
+                uint16_t type = ns_get16(current);
+                uint16_t dnsclass = ns_get16(current + 2);
+                
+                // update current pointer
+                current += 4;
+                
+                // now run the tests
+                if (type != record.type()) continue;
+                if (dnsclass != record.dnsclass()) continue;
+                
+                // type and class are then same, we just need the same name
+                if (ns_samename(name, record.name()) > 0) return true;
+            }
+            catch (...)
+            {
+                // ignore the unparsable record
+                continue;
+            }
         }
             
         // record not found

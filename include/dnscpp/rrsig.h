@@ -22,6 +22,7 @@
  */
 #include <arpa/inet.h>
 #include "extractor.h"
+#include "decompressed.h"
 
 /**
  *  Begin of namespace
@@ -36,16 +37,25 @@ class RRSIG : public Extractor<ns_t_rrsig>
 private:
     /**
      *  The signer's name
-     *  @var char[]
+     *  @var Decompressed
      */
-    char _signer[MAXDNAME];
+    Decompressed _signer;
 
     /**
-     *  Pointer to the signature
-     *  @return const char *
+     *  Helper function to skip a number of bytes
+     *  @param  record          the record to check
+     *  @param  skip            number of byts
+     *  @return const unsigned char *
+     *  @throws std::runtime_error
      */
-    const unsigned char *_signature;
+    const unsigned char *skip(const Record &record, size_t bytes)
+    {
+        // check if this works out
+        if (record.size() < bytes) throw std::runtime_error("RRSIG record is too small");
     
+        // expose the right position
+        return record.data() + bytes;
+    }
     
 public:
     /**
@@ -143,7 +153,7 @@ public:
      */
     const unsigned char *signature() const
     {
-        return _signature;
+        return _record.data() + 18 + _signer.consumed();
     }
     
     /**
@@ -153,7 +163,7 @@ public:
     size_t size() const
     {
         // number of bytes into the message where the signature starts
-        size_t offset = _signature - _record.data();
+        size_t offset = 18 + _signer.consumed();
         
         // calculate the size
         return _record.size() - offset;

@@ -17,6 +17,7 @@
  *  Dependencies
  */
 #include "extractor.h"
+#include "decompressed.h"
 
 /**
  *  Begin of namespace
@@ -33,7 +34,7 @@ private:
      *  The target server name
      *  @var char[]
      */
-    char _target[MAXDNAME];
+    Decompressed _target;
 
 public:
     /**
@@ -42,14 +43,9 @@ public:
      *  @param  record          the record holding the CNAME
      *  @throws std::runtime_error
      */
-    CNAME(const Response &response, const Record &record) : Extractor(response, record)
-    {
-        // and parse the name from the data
-        if (ns_name_uncompress(response.data(), response.end(), record.data(), _target, MAXDNAME) >= 0) return;
-
-        // this is some kind of illegal record
-        throw std::runtime_error("invalid record");
-    }
+    CNAME(const Response &response, const Record &record) : 
+        Extractor(response, record), 
+        _target(response, record.data()) {}
     
     /**
      *  Destructor
