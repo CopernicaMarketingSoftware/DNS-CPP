@@ -21,3 +21,4 @@
 #include <dnscpp/response.h>
 #include <dnscpp/answer.h>
 #include <dnscpp/a.h>
+#include <dnscpp/rrsig.h>

@@ -51,20 +51,29 @@ RRSIG::RRSIG(const Response &response, const Record &record) : Extractor(respons
  */
 bool RRSIG::covers(const Record &record) const
 {
-    // must be from the same class
-    if (dnsclass() != record.dnsclass()) return false;
-    
-    // ttl's must also match
-    if (ttl() != record.ttl()) return false;
-    
-    // types must be the same
-    if (typeCovered() != record.type()) return false;
-    
-    // get the zonename of the original record
-    if (ZoneName(record.name()) != signer()) return false;
-    
-    // no reason to reject
-    return true;
+    // prevent exceptions (ZoneName could throw)
+    try
+    {
+        // must be from the same class
+        if (dnsclass() != record.dnsclass()) return false;
+        
+        // ttl's must also match
+        if (ttl() != record.ttl()) return false;
+        
+        // types must be the same
+        if (typeCovered() != record.type()) return false;
+        
+        // get the zonename of the original record
+        if (ZoneName(record.name()) != signer()) return false;
+        
+        // no reason to reject
+        return true;
+    }
+    catch (...)
+    {
+        // a pass error occured
+        return false;
+    }
 }
     
 /**

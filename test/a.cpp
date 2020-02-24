@@ -43,7 +43,16 @@ public:
             
             
             switch (record.type()) {
-            case ns_t_a:    std::cout << "  -  " << DNS::A(response, record).ip() << std::endl;
+            case ns_t_a: {   
+                DNS::A a(response, record);
+                std::cout << "  -  " << a.ip() << std::endl;
+                break;
+            }
+            case ns_t_rrsig: {
+                DNS::RRSIG rrsig(response, record);
+                std::cout << "  - " << rrsig.typeCovered() << " " << rrsig.algorithm() << " " << rrsig.validFrom() << " " << rrsig.validUntil() << " " << rrsig.signer() << std::endl; //" " << std::string((const char *)rrsig.signature(), rrsig.size()) << std::endl;
+                break;
+            }
             }
         }
         
