@@ -21,6 +21,7 @@
  *  Dependencies
  */
 #include "extractor.h"
+#include "algorithm.h"
 
 /**
  *  Begin of namespace
@@ -87,11 +88,11 @@ public:
     
     /**
      *  The security algorithm that this public key is meant for
-     *  @return uint8_t
+     *  @return Algorithm
      */
-    uint8_t algorithm() const
+    Algorithm algorithm() const
     {
-        return _record.data()[3];
+        return Algorithm(_record.data()[3]);
     }
     
     /**
@@ -104,9 +105,16 @@ public:
     
     /**
      *  The actual data of the public key
+     * 
      *  The meaning of this data depends on the value of the algorithm, and
      *  we have different classes to extract the actual value from it,
      *  that can be wrapped around this class to find the appropriate key.
+     * 
+     *  Example classes that can be used to analyze this data are
+     * 
+     *      -   DNS::PublicKey::RSA256
+     *      -   DNS::PublicKey::RSA512
+     * 
      *  @return const char
      */
     const unsigned char *data() const

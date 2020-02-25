@@ -23,6 +23,7 @@
 #include <arpa/inet.h>
 #include "extractor.h"
 #include "decompressed.h"
+#include "algorithm.h"
 
 /**
  *  Begin of namespace
@@ -67,11 +68,11 @@ public:
     
     /**
      *  The algorith that is in use
-     *  @return uint8_t
+     *  @return ALgorithm
      */
-    uint8_t algorithm() const
+    Algorithm algorithm() const
     {
-        return _record.data()[2];
+        return Algorithm(_record.data()[2]);
     }
     
     /**

@@ -31,7 +31,7 @@ uint16_t DNSKEY::keytag() const
 
     // for historical reasons, algorithm 1 (rsa/md5, which should not be used)
     // uses a different keytag algorithm
-    if (algorithm() == 1)
+    if (algorithm() == Algorithm::RSAMD5)
     {
         // see https://tools.ietf.org/html/rfc4034#appendix-B.1
         // @todo add implementation
