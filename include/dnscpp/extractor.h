@@ -29,7 +29,6 @@ namespace DNS {
 /**
  *  Class definition
  */
-template <int TYPE>
 class Extractor
 {
 protected:
@@ -43,14 +42,18 @@ protected:
     /**
      *  The constructor is protected because only derived classes like A, 
      *  AAAA, CNAME, MX, etc should be public constructable.
-     *  @param  response        the entire response from which the record was extracted
-     *  @param  record          the record from which data is to be extracted
+     *  @param  record  the record from which data is to be extracted
+     *  @param  type    the required type
+     *  @param  size    the minimal required size
      *  @throws std::runtime_error
      */
-    Extractor(const Response &response, const Record &record) : _record(record)
+    Extractor(const Record &record, ns_type type, size_t size) : _record(record)
     {
         // must be of the right type
-        if (record.type() != TYPE) throw std::runtime_error("type mismatch / wrong record type");
+        if (record.type() != type) throw std::runtime_error("type mismatch / wrong record type");
+        
+        // check size of the record
+        if (record.size() < size) throw std::runtime_error("record too small");
     }
     
     /**

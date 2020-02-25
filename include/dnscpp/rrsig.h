@@ -32,7 +32,7 @@ namespace DNS {
 /**
  *  Class definition
  */
-class RRSIG : public Extractor<ns_t_rrsig>
+class RRSIG : public Extractor
 {
 private:
     /**
@@ -41,21 +41,6 @@ private:
      */
     Decompressed _signer;
 
-    /**
-     *  Helper function to skip a number of bytes
-     *  @param  record          the record to check
-     *  @param  skip            number of byts
-     *  @return const unsigned char *
-     *  @throws std::runtime_error
-     */
-    const unsigned char *skip(const Record &record, size_t bytes)
-    {
-        // check if this works out
-        if (record.size() < bytes) throw std::runtime_error("RRSIG record is too small");
-    
-        // expose the right position
-        return record.data() + bytes;
-    }
     
 public:
     /**

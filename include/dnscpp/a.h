@@ -26,7 +26,7 @@ namespace DNS {
 /**
  *  Class definition
  */
-class A : public Extractor<ns_t_a>
+class A : public Extractor
 {
 private:
     /**
@@ -42,10 +42,8 @@ public:
      *  @param  response
      *  @param  record
      *  @throws std::runtime_error
-     * 
-     *  @todo should we check whether the data size is long enough
      */
-    A(const Response &response, const Record &record) : Extractor(response, record), _ip((struct in_addr *)_record.data()) {}
+    A(const Response &response, const Record &record) : Extractor(record, ns_t_a, 4), _ip((struct in_addr *)_record.data()) {}
     
     /**
      *  Destructor

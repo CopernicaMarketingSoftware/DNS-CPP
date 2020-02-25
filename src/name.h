@@ -109,6 +109,7 @@ private:
         friend std::ostream &operator<<(std::ostream &stream, const Label &label)
         {
             // write just the label
+            // @todo convert to lowercase
             return stream.write(label._label, label._size);
         }
     };

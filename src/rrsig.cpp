@@ -25,8 +25,8 @@ namespace DNS {
  *  @throws std::runtime_error
  */
 RRSIG::RRSIG(const Response &response, const Record &record) : 
-    Extractor(response, record),
-    _signer(response, skip(record, 18)) {}
+    Extractor(record, ns_t_rrsig, 18),
+    _signer(response, _record.data() + 18) {}
     
 /**
  *  Check if the signature is associated with a certain record

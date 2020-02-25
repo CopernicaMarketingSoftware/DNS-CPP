@@ -27,7 +27,7 @@ namespace DNS {
 /**
  *  Class definition
  */
-class OPT : public Extractor<ns_t_opt>
+class OPT : public Extractor
 {
 public:
     /**
@@ -35,10 +35,8 @@ public:
      *  @param  response
      *  @param  record
      *  @throws std::runtime_error
-     * 
-     *  @todo should we check whether the data size is long enough
      */
-    OPT(const Response &response, const Record &record) : Extractor(response, record) {}
+    OPT(const Response &response, const Record &record) : Extractor(record, ns_t_opt, 0) {}
     
     /**
      *  Destructor
