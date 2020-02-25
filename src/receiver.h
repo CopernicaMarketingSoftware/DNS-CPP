@@ -125,13 +125,17 @@ private:
         if (_size >= preferred) return true;
         
         // reallocate the buffer
-        _buffer = (unsigned char *)realloc(_buffer, preferred);
+        auto *newbuffer = (unsigned char *)realloc(_buffer, preferred);
+
+        // leap out on failure
+        if (newbuffer == nullptr) return false;
 
         // the buffer is bigger now
-        _size = _buffer == nullptr ? 0 : preferred;
+        _buffer = newbuffer;
+        _size = preferred;
         
         // report result
-        return _buffer != nullptr;
+        return true;
     }
     
     /**

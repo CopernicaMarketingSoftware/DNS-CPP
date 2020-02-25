@@ -117,7 +117,7 @@ public:
      *  The key-tag value
      *  @return uint16_t
      */
-    uint16_t keyTag() const
+    uint16_t keytag() const
     {
         return ns_get16(_record.data() + 16);
     }
@@ -125,6 +125,8 @@ public:
     /**
      *  The signer's name, this is a null-terminated string
      *  @return const char *
+     * 
+     *  @todo check if this is a parent zone?
      */
     const char *signer() const
     {

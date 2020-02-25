@@ -18,6 +18,7 @@
  */
 #include <arpa/nameser.h>
 #include <stdexcept>
+#include <string.h>
 
 /**
  *  Begin of namespace
@@ -30,6 +31,12 @@ namespace DNS {
 class Response
 {
 private:
+    /**
+     *  Pointer to the response buffer (only if the response is copied around)
+     *  @var unsigned char *
+     */
+    unsigned char *_buffer = nullptr;
+
     /**
      *  Handle to the message
      *  @var ns_msg
@@ -53,15 +60,34 @@ public:
     }
     
     /**
-     *  No copying
+     *  Copy constructor
+     *  It is better not to use this too often as it might not be too efficient to copy responses around
      *  @param  that
+     *  @throws std::runtime_error
      */
-    Response(const Response &that) = delete;
+    Response(const Response &that) : _buffer((unsigned char *)malloc(that.size()))
+    {
+        // buffer should exist
+        if (_buffer == nullptr) throw std::runtime_error("failed memory allocation");
+        
+        // copy the raw data
+        memcpy(_buffer, that.data(), that.size());
+        
+        // try parsing the buffer
+        if (ns_initparse(_buffer, that.size(), &_handle) == 0) return;
+        
+        // on failure we report an error
+        throw std::runtime_error("failed to parse nameserver response");
+    }
     
     /**
      *  Destructor
      */
-    virtual ~Response() = default;
+    virtual ~Response()
+    {
+        // deallocate optional buffer
+        if (_buffer) free(_buffer);
+    }
     
     /**
      *  Get the internal handle

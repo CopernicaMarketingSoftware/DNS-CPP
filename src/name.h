@@ -20,6 +20,7 @@
  *  Dependencies
  */
 #include <iostream>
+#include "canonicalizer.h"
 
 /**
  *  Begin of namespace
@@ -67,6 +68,9 @@ private:
             
             // we do expect _something_
             if (_size == 0) throw std::runtime_error("no label found");
+            
+            // label should not exceed max size
+            if (_size > 63) throw std::runtime_error("label too long");
         }
         
         /**
@@ -98,6 +102,17 @@ private:
             
             // both names have a common prefix, the short label is the first one
             return _size - that._size;
+        }
+
+        /**
+         *  Write the name to a canonical form
+         *  @param  output      output object
+         *  @return bool
+         */
+        bool canonicalize(Canonicalizer &output) const
+        {
+            // write the label size
+            return output.add8(_size) && output.add((const unsigned char *)_label, _size);
         }
 
         /**
@@ -203,6 +218,58 @@ public:
         // the other object still has a label left
         return that.labels() > labels();
     }
+    
+    /**
+     *  Compare for equality
+     *  @param  that
+     *  @return bool
+     */
+    bool operator==(const Name &that) const
+    {
+        // number of labels must match
+        if (labels() != that.labels()) return false;
+        
+        // compare each and every label
+        for (size_t i = 0; i < labels(); ++i)
+        {
+            // compare the labels
+            if (_labels[i].compare(that._labels[i]) != 0) return false;
+        }
+        
+        // we have a match
+        return true;
+    }
+
+    /**
+     *  Compare for equality
+     *  @param  that
+     *  @return bool
+     */
+    bool operator!=(const Name &that) const
+    {
+        // this is the opposite of ==
+        return !operator==(that);
+    }
+        
+    /**
+     *  Write the name to a canonical form
+     *  @todo support for wildcards / label-counter
+     *  @param  output      output object
+     *  @return bool
+     */
+    bool canonicalize(Canonicalizer &output) const
+    {
+        // write all labels
+        for (const auto &label : _labels) 
+        {
+            // canonicalize the label
+            if (!label.canonicalize(output)) return false;
+        }
+        
+        // write null byte to mark the end
+        return output.add8(0);
+    }
+    
     
     /**
      *  Helper function to write the name to a stream

@@ -18,6 +18,11 @@
 #pragma once
 
 /**
+ *  Dependencies
+ */
+#include "extractor.h"
+
+/**
  *  Begin of namespace
  */
 namespace DNS {
@@ -25,7 +30,7 @@ namespace DNS {
 /**
  *  Class definition
  */
-class DNSKEY : public Extractor<ns_t_dnskey>
+class DNSKEY : public Extractor
 {
 private:
 
@@ -36,11 +41,7 @@ public:
      *  @param  record      the record holding a key
      *  @throws runtime_error
      */
-    DNSKEY(const Response &response, const Record &record) : Extractor(response, record)
-    {
-        // we need at least four bytes for the flags, protocol and algorithm
-        if (record.size() < 4) throw std::runtime_error("DNSKEY record is too small");
-    }
+    DNSKEY(const Response &response, const Record &record) : Extractor(record, ns_t_dnskey, 4) {}
     
     /**
      *  Destructor
@@ -58,7 +59,7 @@ public:
         uint8_t byte = _record.data()[0];
         
         // check the seventh bit
-        return byte & 0x1 != 0;
+        return (byte & 0x1) != 0;
     }
     
     /**
@@ -71,7 +72,7 @@ public:
         uint8_t byte = _record.data()[1];
         
         // check the seventh bit
-        return byte & 0x1 != 0;
+        return (byte & 0x1) != 0;
     }
     
     /**
@@ -94,7 +95,18 @@ public:
     }
     
     /**
+     *  The key-tag. This is a sort of key-identifier that should match the
+     *  keytag in the RRSIG record. If it does not match, it is pointless
+     *  to even try validating the signature
+     *  @return uint32_t
+     */
+    uint16_t keytag() const;
+    
+    /**
      *  The actual data of the public key
+     *  The meaning of this data depends on the value of the algorithm, and
+     *  we have different classes to extract the actual value from it,
+     *  that can be wrapped around this class to find the appropriate key.
      *  @return const char
      */
     const unsigned char *data() const

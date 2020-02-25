@@ -27,6 +27,11 @@
 namespace DNS {
 
 /**
+ *  Forward declarations
+ */
+class Canonicalizer;
+
+/**
  *  Class definition
  */
 class Extractor
@@ -97,6 +102,14 @@ public:
     {
         return _record.ttl();
     }
+    
+    /**
+     *  Write the rdata to a canonicalized form
+     *  This method is used internally by the library to check DNSSEC signatures
+     *  @param  canonicalizer
+     *  @return bool
+     */
+    virtual bool rdata(Canonicalizer &canonicalizer) const;
 };
     
 /**

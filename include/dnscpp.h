@@ -22,3 +22,4 @@
 #include <dnscpp/answer.h>
 #include <dnscpp/a.h>
 #include <dnscpp/rrsig.h>
+#include <dnscpp/dnskey.h>
