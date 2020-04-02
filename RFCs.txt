@@ -1,0 +1,13 @@
+RFC 1035: DOMAIN NAMES - IMPLEMENTATION AND SPECIFICATION
+RFC 3110: RSA/SHA-1 SIGs and RSA KEYs in the Domain Name System (DNS)
+RFC 4033: DNS Security Introduction and Requirements
+RFC 4034: Resource Records for the DNS Security Extensions
+RFC 4035: Protocol Modifications for the DNS Security Extensions
+RFC 4470: Minimally Covering NSEC Records and DNSSEC On-line Signing
+RFC 4509: Use of SHA-256 in DNSSEC Delegation Signer (DS) Resource Records (RRs)
+RFC 5702: Use of SHA-2 Algorithms with RSA in DNSKEY and RRSIG Resource Records for DNSSEC
+RFC 5155: DNS Security (DNSSEC) Hashed Authenticated Denial of Existence
+RFC 6014: Cryptographic Algorithm Identifier Allocation for DNSSEC
+RFC 6840: Clarifications and Implementation Notes for DNS Security (DNSSEC)
+RFC 8624: Algorithm Implementation Requirements and Usage Guidance for DNSSEC
+
