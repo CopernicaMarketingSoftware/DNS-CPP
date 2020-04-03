@@ -40,7 +40,7 @@ clean:
 	${RM} *.obj *~* ${SHARED_OBJECTS} ${STATIC_OBJECTS} ${SHARED_LIB} ${STATIC_LIB} ${DEPENDENCIES}
 
 ${SHARED_OBJECTS}:
-	${CPP} ${CPPFLAGS} -fpic -o $@ ${@:%.o=%.cpp}
+	${CPP} ${CPPFLAGS} -fPIC -o $@ ${@:%.o=%.cpp}
 
 ${STATIC_OBJECTS}:
-	${CPP} ${CPPFLAGS} -o $@ ${@:%.s.o=%.cpp}
+	${CPP} ${CPPFLAGS} -fPIC -o $@ ${@:%.s.o=%.cpp}
