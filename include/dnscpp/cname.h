@@ -27,7 +27,7 @@ namespace DNS {
 /**
  *  Class definition
  */
-class CNAME : public Extractor<ns_t_cname>
+class CNAME : public Extractor
 {
 private:
     /**
@@ -44,7 +44,7 @@ public:
      *  @throws std::runtime_error
      */
     CNAME(const Response &response, const Record &record) : 
-        Extractor(response, record), 
+        Extractor(record, ns_t_cname, 0), 
         _target(response, record.data()) {}
     
     /**

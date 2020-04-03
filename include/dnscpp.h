@@ -21,5 +21,8 @@
 #include <dnscpp/response.h>
 #include <dnscpp/answer.h>
 #include <dnscpp/a.h>
+#include <dnscpp/cname.h>
+#include <dnscpp/aaaa.h>
+#include <dnscpp/mx.h>
 #include <dnscpp/rrsig.h>
 #include <dnscpp/dnskey.h>

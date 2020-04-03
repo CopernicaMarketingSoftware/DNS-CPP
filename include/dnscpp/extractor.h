@@ -60,6 +60,13 @@ protected:
         // check size of the record
         if (record.size() < size) throw std::runtime_error("record too small");
     }
+
+    /**
+     *  May not be copied (keeps a reference to _record)
+     *  @param  
+     */
+    Extractor(const Extractor &other) = delete;
+    Extractor& operator=(const Extractor &other) = delete;
     
     /**
      *  Destructor
