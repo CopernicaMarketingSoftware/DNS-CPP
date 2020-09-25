@@ -20,10 +20,11 @@ namespace DNS {
 
 /**
  *  Method that is called when a raw response is received
+ *  @param  operation       the reporting operation
  *  @param  query           the original query
  *  @param  response        the received response
  */
-void Handler::onReceived(const Query &query, const Response &response)
+void Handler::onReceived(const Operation *operation, const Query &query, const Response &response)
 {
     // check if the response was truncated (in which case the nameserver failed to handle tcp requests)
     if (response.truncated())

@@ -76,7 +76,7 @@ double Request::expires() const
 void Request::timeout()
 {
     // report an error
-    _handler->onTimeout(_query);
+    _handler->onTimeout(this, _query);
     
     // self-destruct
     delete this;
@@ -142,7 +142,7 @@ void Request::onReceived(Nameserver *nameserver, const Response &response)
     if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this));
     
     // we have a response, so we can pass that to user space
-    _handler->onReceived(_query, response);
+    _handler->onReceived(this, _query, response);
     
     // we can self-destruct -- this request has been handled
     delete this;
@@ -160,7 +160,7 @@ void Request::onReceived(Connection *connection, const Response &response)
     if (!_query.matches(response)) return;
     
     // we have a response, hand it over to user space
-    _handler->onReceived(_query, response);
+    _handler->onReceived(this, _query, response);
     
     // self-destruct now that the request has been completed
     delete this;
@@ -174,7 +174,7 @@ void Request::onReceived(Connection *connection, const Response &response)
 void Request::onFailure(Connection *connection, const Response &truncated)
 {
     // we failed to get the regular response, so we send back the truncated response
-    _handler->onReceived(_query, truncated);
+    _handler->onReceived(this, _query, truncated);
 
     // self-destruct now that the request has been completed
     delete this;

@@ -27,6 +27,7 @@ class AAAARecords;
 class MXRecords;
 class CNAMERecords;
 class Query;
+class Operation;
 
 /**
  *  Class definition
@@ -39,9 +40,10 @@ public:
      * 
      *  This normally happens when none of the nameservers send back a response.
      * 
+     *  @param  operation       the operation that timed out
      *  @param  query           the query that was attempted
      */
-    virtual void onTimeout(const Query &query) {}
+    virtual void onTimeout(const Operation *operation, const Query &query) {}
     
     /**
      *  Method that is called when a raw response is received
@@ -56,23 +58,25 @@ public:
      *  are retried over TCP, but when this fails you still receive the truncated
      *  response).
      * 
+     *  @param  operation       the operation that finished
      *  @param  query           the original query
      *  @param  response        the received response
      */
-    virtual void onReceived(const Query &query, const Response &response);
+    virtual void onReceived(const Operation *operation, const Query &query, const Response &response);
     
     /**
      *  When you made a call for specific records, you can implement
      *  one or more of the following methods to get exactly the information
      *  that you were looking for.
      *
+     *  @param  operation       the operation that finished
      *  @param  hostname        the hostname for which we were looking for information
      *  @param  records         the received records
      */
-    virtual void onReceived(const char *hostname, const ARecords &records) {}
-    virtual void onReceived(const char *hostname, const AAAARecords &records) {}
-    virtual void onReceived(const char *hostname, const MXRecords &records) {}
-    virtual void onReceived(const char *hostname, const CNAMERecords &records) {}
+    virtual void onReceived(const Operation *operation, const char *hostname, const ARecords &records) {}
+    virtual void onReceived(const Operation *operation, const char *hostname, const AAAARecords &records) {}
+    virtual void onReceived(const Operation *operation, const char *hostname, const MXRecords &records) {}
+    virtual void onReceived(const Operation *operation, const char *hostname, const CNAMERecords &records) {}
 };
 
 /**
