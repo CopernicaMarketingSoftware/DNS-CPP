@@ -18,7 +18,7 @@
 #include <memory>
 #include "../include/dnscpp/nameserver.h"
 #include "../include/dnscpp/timer.h"
-#include "query.h"
+#include "../include/dnscpp/query.h"
 #include "connection.h"
 #include "now.h"
 

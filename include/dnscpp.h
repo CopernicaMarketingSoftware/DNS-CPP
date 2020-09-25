@@ -19,6 +19,7 @@
 #include <dnscpp/loop.h>
 #include <dnscpp/handler.h>
 #include <dnscpp/response.h>
+#include <dnscpp/query.h>
 #include <dnscpp/answer.h>
 #include <dnscpp/a.h>
 #include <dnscpp/cname.h>

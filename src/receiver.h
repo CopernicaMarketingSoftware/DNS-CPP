@@ -14,6 +14,11 @@
 #pragma once
 
 /**
+ *  Dependencies
+ */
+#include "../include/dnscpp/response.h"
+
+/**
  *  Begin of namespace
  */
 namespace DNS {

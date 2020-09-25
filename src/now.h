@@ -13,6 +13,11 @@
 #pragma once
 
 /**
+ *  Dependencies
+ */
+#include <sys/time.h>
+
+/**
  *  Begin of namespace
  */
 namespace DNS {

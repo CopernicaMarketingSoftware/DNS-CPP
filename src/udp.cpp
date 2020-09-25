@@ -14,7 +14,7 @@
 #include "../include/dnscpp/loop.h"
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/response.h"
-#include "query.h"
+#include "../include/dnscpp/query.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdexcept>

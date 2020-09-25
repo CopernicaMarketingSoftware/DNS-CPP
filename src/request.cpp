@@ -76,7 +76,7 @@ double Request::expires() const
 void Request::timeout()
 {
     // report an error
-    _handler->onFailure(this);
+    _handler->onTimeout(this);
     
     // self-destruct
     delete this;

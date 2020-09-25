@@ -38,7 +38,7 @@ public:
      *  This normally happens when the nameserver could not be reached, or 
      *  when it sent back a response that could not be parsed.
      */
-    virtual void onFailure(void *x) {}
+    virtual void onTimeout(void *x) {}
 
     /**
      *  Method that is called when a raw response is received
