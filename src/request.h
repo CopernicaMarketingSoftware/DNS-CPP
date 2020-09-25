@@ -112,7 +112,7 @@ private:
      *  Retry / send a new message to the nameservers
      *  @param  now     current time
      */
-    void retry2(double now);
+    void retry(double now);
 
     /**
      *  Private destructor, the class is self-destructing

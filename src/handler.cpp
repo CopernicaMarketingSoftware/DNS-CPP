@@ -19,6 +19,21 @@
 namespace DNS {
 
 /**
+ *  Method that is called when an operation times out.
+ * 
+ *  This normally happens when none of the nameservers send back a response.
+ * 
+ *  @param  operation       the operation that timed out
+ *  @param  query           the query that was attempted
+ */
+void Handler::onTimeout(const Operation *operation, const Query &query)
+{
+    // @todo add handling to report an error
+    
+    
+}
+
+/**
  *  Method that is called when a raw response is received
  *  @param  operation       the reporting operation
  *  @param  query           the original query
@@ -29,13 +44,13 @@ void Handler::onReceived(const Operation *operation, const Query &query, const R
     // check if the response was truncated (in which case the nameserver failed to handle tcp requests)
     if (response.truncated())
     {
-        // @todo add a default implementation
+        // @todo add handling to report an error
         
         
     }
     else
     {
-        // @todo add default implementation
+        // @todo add handling to report success
     }
 }
     

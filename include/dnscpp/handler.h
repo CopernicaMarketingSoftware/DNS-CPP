@@ -43,7 +43,7 @@ public:
      *  @param  operation       the operation that timed out
      *  @param  query           the query that was attempted
      */
-    virtual void onTimeout(const Operation *operation, const Query &query) {}
+    virtual void onTimeout(const Operation *operation, const Query &query);
     
     /**
      *  Method that is called when a raw response is received

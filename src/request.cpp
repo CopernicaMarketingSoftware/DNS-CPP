@@ -86,7 +86,7 @@ void Request::timeout()
  *  Retry / send a new message to the nameservers
  *  @param  now     current timestamp
  */
-void Request::retry2(double now)
+void Request::retry(double now)
 {
     // send a datagram to each nameserver
     for (auto &nameserver : _core->nameservers())
@@ -118,7 +118,7 @@ void Request::expire()
     if (now >= expires()) return timeout();
     
     // if we do not yet have a tcp connection we send out more dgrams
-    if (!_connection) return retry2(now);
+    if (!_connection) return retry(now);
     
     // we set a new timer for when the entire request times out
     _timer = _core->loop()->timer(expires() - now, this);
