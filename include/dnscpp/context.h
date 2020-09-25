@@ -28,6 +28,7 @@ namespace DNS {
  *  Forward declarations
  */
 class Handler;
+class Operation;
 
 /**
  *  Class definition
@@ -64,18 +65,12 @@ public:
     
     /**
      *  Do a dns lookup
-     *  @param  query       the query to send
-     *  @param  handler     object that will be notified when the query is ready
-     */
-//    void query(const Query &query, Handler *handler);
-    
-    /**
-     *  Do a dns lookup
      *  @param  name        the record name to look for
      *  @param  type        type of record (normally you ask for an 'a' record)
      *  @param  handler     object that will be notified when the query is ready
+     *  @return operation   object to interact with the operation while it is in progress
      */
-    void query(const char *domain, ns_type type, Handler *handler);
+    Operation *query(const char *domain, ns_type type, Handler *handler);
 };
     
 /**

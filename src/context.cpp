@@ -23,12 +23,12 @@ namespace DNS {
  *  @param  name        the record name to look for
  *  @param  type        type of record (normally you ask for an 'a' record)
  *  @param  handler     object that will be notified when the query is ready
+ *  @return Operation   object to interact with the operation while it is in progress
  */
-void Context::query(const char *domain, ns_type type, Handler *handler)
+Operation *Context::query(const char *domain, ns_type type, Handler *handler)
 {
     // we are going to create a self-destructing request
-    new Request(this, domain, type, handler);
-    
+    return new Request(this, domain, type, handler);
 }
 
 /**

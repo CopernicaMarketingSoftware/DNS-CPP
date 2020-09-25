@@ -19,6 +19,7 @@
 #include "../include/dnscpp/nameserver.h"
 #include "../include/dnscpp/timer.h"
 #include "../include/dnscpp/query.h"
+#include "../include/dnscpp/operation.h"
 #include "connection.h"
 #include "now.h"
 
@@ -36,7 +37,7 @@ class Handler;
 /**
  *  Class definition
  */
-class Request : private Nameserver::Handler, private Connection::Handler, private Timer
+class Request : public Operation, private Nameserver::Handler, private Connection::Handler, private Timer
 {
 private:
     /**
@@ -68,13 +69,6 @@ private:
      *  @var Connection
      */
     std::unique_ptr<Connection> _connection;
-    
-    /**
-     *  User space object that handles this request
-     *  @var Handler
-     */
-    DNS::Handler *_handler;
-    
     
 
     /**
