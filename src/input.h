@@ -55,7 +55,7 @@ public:
     {
         // add all properties of the signature
         add16(_rrsig.typeCovered());
-        add8(_rrsig.algorithm());
+        add8((uint8_t)_rrsig.algorithm());
         add8(_rrsig.labels());
         add32(_rrsig.originalTtl());
         add32(_rrsig.validUntil());

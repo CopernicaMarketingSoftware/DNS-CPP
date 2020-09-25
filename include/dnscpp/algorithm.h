@@ -20,7 +20,7 @@ namespace DNS {
 /**
  *  This is an enumeration type
  */
-enum class Algorithm 
+enum class Algorithm : uint8_t
 {
     RSAMD5          = 1,
     DH              = 2,
