@@ -65,6 +65,8 @@ public:
     
     /**
      *  Do a dns lookup
+     *  When you supply invalid parameters (for example a syntactivally invalid
+     *  domain or an unsupported type) this method returns null.
      *  @param  name        the record name to look for
      *  @param  type        type of record (normally you ask for an 'a' record)
      *  @param  handler     object that will be notified when the query is ready

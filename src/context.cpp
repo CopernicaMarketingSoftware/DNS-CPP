@@ -27,8 +27,17 @@ namespace DNS {
  */
 Operation *Context::query(const char *domain, ns_type type, Handler *handler)
 {
-    // we are going to create a self-destructing request
-    return new Request(this, domain, type, handler);
+    // the request can throw (for example when the domain is invalid
+    try
+    {
+        // we are going to create a self-destructing request
+        return new Request(this, domain, type, handler);
+    }
+    catch (...)
+    {
+        // invalid parameters were supplied
+        return nullptr;
+    }
 }
 
 /**

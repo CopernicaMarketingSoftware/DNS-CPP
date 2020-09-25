@@ -20,17 +20,13 @@ namespace DNS {
 
 /**
  *  Method that is called when an operation times out.
- * 
- *  This normally happens when none of the nameservers send back a response.
- * 
  *  @param  operation       the operation that timed out
  *  @param  query           the query that was attempted
  */
 void Handler::onTimeout(const Operation *operation, const Query &query)
 {
-    // @todo add handling to report an error
-    
-    
+    // we treat this as a server-failure
+    onError(operation, query, ns_r_servfail);
 }
 
 /**
@@ -39,19 +35,27 @@ void Handler::onTimeout(const Operation *operation, const Query &query)
  *  @param  query           the original query
  *  @param  response        the received response
  */
-void Handler::onReceived(const Operation *operation, const Query &query, const Response &response)
+void Handler::onResponse(const Operation *operation, const Query &query, const Response &response)
 {
-    // check if the response was truncated (in which case the nameserver failed to handle tcp requests)
-    if (response.truncated())
-    {
-        // @todo add handling to report an error
-        
-        
-    }
-    else
-    {
-        // @todo add handling to report success
-    }
+    // was there an error of any sort?
+    if (response.rcode() != 0) return onError(operation, query, response.rcode());
+    
+    // if the message was truncated we also treat is as an error because from our perspective the server failed to respond
+    if (response.truncated()) return onError(operation, query, ns_r_servfail);
+    
+    // we have a successful response
+    onSuccess(operation, query, response);
+}
+
+/**
+ *  Method that is called when a valid response was received.
+ *  @param  operation       the operation that finished
+ *  @param  query           the original query
+ *  @param  response        the received response
+ */
+void Handler::onSuccess(const Operation *operation, const Query &query, const Response &response)
+{
+    // @todo inspect the response and call the most appropriate onReceived() method
 }
     
 /**
