@@ -30,12 +30,14 @@ uint16_t DNSKEY::keytag() const
     auto *key = _record.data();
 
     // for historical reasons, algorithm 1 (rsa/md5, which should not be used)
-    // uses a different keytag algorithm
+    // uses a different keytag algorithm, see https://tools.ietf.org/html/rfc4034#appendix-B.1
     if (algorithm() == Algorithm::RSAMD5)
     {
-        // see https://tools.ietf.org/html/rfc4034#appendix-B.1
-        // @todo add implementation
-        return 1234;
+        // we expect more than four bytes
+        if (keysize <= 4) return 0;
+        
+        // get the first two of the last three bytes
+        return ns_get16(key + keysize - 3);
     }
     else
     {

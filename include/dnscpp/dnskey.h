@@ -106,14 +106,13 @@ public:
     /**
      *  The actual data of the public key
      * 
-     *  The meaning of this data depends on the value of the algorithm, and
-     *  we have different classes to extract the actual value from it,
-     *  that can be wrapped around this class to find the appropriate key.
+     *  The meaning of this data depends on the value of the algorithm. 
+     *  There are other classes in DNS-CPP to extract the actual value 
+     *  from this data. Example classes that can be used to analyze this 
+     *  data are for example:
      * 
-     *  Example classes that can be used to analyze this data are
-     * 
-     *      -   DNS::PublicKey::RSA256
-     *      -   DNS::PublicKey::RSA512
+     *      -   DNS::Crypto::RSA256
+     *      -   DNS::Crypto::RSA512
      * 
      *  @return const char
      */

@@ -1,8 +1,8 @@
 /**
- *  RSA.h
+ *  RSASHA.h
  * 
- *  Given a DNSKEY record, the RSA base class can be used to extract
- *  the various elements from the RSA based key (this could be a RSA1,
+ *  Given a DNSKEY record, the RSASHA class can be used to extract
+ *  the various elements from the RSA based key (this could be a SHA1,
  *  SHA256, SHA512 and possibly some others.
  * 
  *  See RFC 
@@ -19,12 +19,12 @@
 /**
  *  Begin of namespace
  */
-namespace DNS { namespace PublicKey {
+namespace DNS {
 
 /**
  *  Class definition
  */
-class SHA
+class RSASHA
 {
 protected:
     /**
@@ -44,13 +44,23 @@ protected:
         return _key.data()[0] == 0 ? 3 : 1;
     }
     
+    
+public:
     /**
      *  The constructor is protected because we should only use this as base class
      *  @param  key     the extracted public key info
      *  @throws std::runtime_error
      */
-    SHA(const DNS::DNSKEY &key) : _key(key) 
+    RSASHA(const DNS::DNSKEY &key) : _key(key) 
     {
+        // check the protocol
+        switch (key.algorithm()) {
+        case Algorith::RSA_SHA1:    break;
+        case Algorith::RSA_SHA256:  break;
+        case Algorith::RSA_SHA512:  break;
+        default:                    throw std::runtime_error("Invalid algorithm for RSA-SHA");
+        }
+
         // we need at least one byte for the size
         if (_key.size() == 0) throw std::runtime_error("not enough key data");
         
@@ -64,10 +74,8 @@ protected:
     /**
      *  Protected destructor
      */
-    virtual ~SHA() = default;
+    virtual ~RSASHA() = default;
 
-    
-public:
     /**
      *  The size of the exponent-number of the public key
      *  The "exponent" in a primary key is a very-big-number (much bigger than
