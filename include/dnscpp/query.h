@@ -130,7 +130,8 @@ public:
     Query(int op, const char *dname, int type, const unsigned char *data = nullptr);
 
     /**
-     *  No copying
+     *  No copying (disabled because copying is expensive and we want the compiler
+     *  to warn is in case we accidentally do rely on a copy-operation)
      *  @param that
      */
     Query(const Query &that) = delete;

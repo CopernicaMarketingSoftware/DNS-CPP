@@ -76,7 +76,7 @@ double Request::expires() const
 void Request::timeout()
 {
     // report an error
-    _handler->onTimeout(this);
+    _handler->onTimeout(_query);
     
     // self-destruct
     delete this;
@@ -86,7 +86,7 @@ void Request::timeout()
  *  Retry / send a new message to the nameservers
  *  @param  now     current timestamp
  */
-void Request::retry(double now)
+void Request::retry2(double now)
 {
     // send a datagram to each nameserver
     for (auto &nameserver : _core->nameservers())
@@ -118,7 +118,7 @@ void Request::expire()
     if (now >= expires()) return timeout();
     
     // if we do not yet have a tcp connection we send out more dgrams
-    if (!_connection) return retry(now);
+    if (!_connection) return retry2(now);
     
     // we set a new timer for when the entire request times out
     _timer = _core->loop()->timer(expires() - now, this);
@@ -139,10 +139,10 @@ void Request::onReceived(Nameserver *nameserver, const Response &response)
     if (_connection) return;
     
     // if the response was truncated, we ignore it and start a tcp connection
-    if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, this));
+    if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this));
     
     // we have a response, so we can pass that to user space
-    _handler->onReceived(response);
+    _handler->onReceived(_query, response);
     
     // we can self-destruct -- this request has been handled
     delete this;
@@ -160,7 +160,7 @@ void Request::onReceived(Connection *connection, const Response &response)
     if (!_query.matches(response)) return;
     
     // we have a response, hand it over to user space
-    _handler->onReceived(response);
+    _handler->onReceived(_query, response);
     
     // self-destruct now that the request has been completed
     delete this;
@@ -168,11 +168,16 @@ void Request::onReceived(Connection *connection, const Response &response)
 
 /**
  *  Called when the connection could not be used
- *  @param  connection
+ *  @param  connector   the reporting connection
+ *  @param  response    the original answer (the original truncated one)
  */
-void Request::onFailure(Connection *connection)
+void Request::onFailure(Connection *connection, const Response &truncated)
 {
-    // @todo come up with an implementation
+    // we failed to get the regular response, so we send back the truncated response
+    _handler->onReceived(_query, truncated);
+
+    // self-destruct now that the request has been completed
+    delete this;
 }
 
 

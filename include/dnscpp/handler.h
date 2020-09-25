@@ -26,6 +26,7 @@ class ARecords;
 class AAAARecords;
 class MXRecords;
 class CNAMERecords;
+class Query;
 
 /**
  *  Class definition
@@ -34,22 +35,31 @@ class Handler
 {
 public:
     /**
-     *  Method that is called when an operation has failed
-     *  This normally happens when the nameserver could not be reached, or 
-     *  when it sent back a response that could not be parsed.
+     *  Method that is called when an operation times out.
+     * 
+     *  This normally happens when none of the nameservers send back a response.
+     * 
+     *  @param  query           the query that was attempted
      */
-    virtual void onTimeout(void *x) {}
-
+    virtual void onTimeout(const Query &query) {}
+    
     /**
      *  Method that is called when a raw response is received
-     *  The default implementation of this method reads out the properties
-     *  of the response, and passes it on to one of the other methods.
-     *  However, if you want to read out the original response yourself,
-     *  you can override this method.
      * 
+     *  The default implementation of this method reads out the properties
+     *  of the response, and passes it on to one of the other, more specific,
+     *  onReceived() methods. However, if you want to read out the original response 
+     *  yourself, you can override this method.
+     * 
+     *  Watch out: the response might be truncated in case the nameserver was
+     *  not capable of handling a TCP connections (normally all truncated responses
+     *  are retried over TCP, but when this fails you still receive the truncated
+     *  response).
+     * 
+     *  @param  query           the original query
      *  @param  response        the received response
      */
-    virtual void onReceived(const Response &response);
+    virtual void onReceived(const Query &query, const Response &response);
     
     /**
      *  When you made a call for specific records, you can implement

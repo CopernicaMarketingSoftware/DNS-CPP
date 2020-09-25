@@ -86,17 +86,18 @@ private:
 
     /**
      *  Called when the response has been received over tcp
-     *  @param  connection
-     *  @param  response
+     *  @param  connection  the reporting connection
+     *  @param  response    the received answer
      */
     virtual void onReceived(Connection *connection, const Response &response) override;
     
     /**
      *  Called when the connection could not be used
-     *  @param  connector
+     *  @param  connector   the reporting connection
+     *  @param  response    the original answer (the original truncated one)
      */
-    virtual void onFailure(Connection *connection) override;
-    
+    virtual void onFailure(Connection *connection, const Response &truncated) override;
+
     /**
      *  Method that is called by user space when the timer expires
      */
@@ -117,7 +118,7 @@ private:
      *  Retry / send a new message to the nameservers
      *  @param  now     current time
      */
-    void retry(double now);
+    void retry2(double now);
 
     /**
      *  Private destructor, the class is self-destructing

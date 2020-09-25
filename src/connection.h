@@ -38,16 +38,17 @@ public:
     public:
         /**
          *  Called when the response has been received
-         *  @param  connection
-         *  @param  response
+         *  @param  connection      the reporting connection
+         *  @param  response        the received response
          */
         virtual void onReceived(Connection *connection, const Response &response) = 0;
         
         /**
          *  Called when the connection could not be used
-         *  @param  connector
+         *  @param  connector       the reporting connection
+         *  @param  response        the original response (the truncated one, the reason why a tcp-connection was attempted)
          */
-        virtual void onFailure(Connection *connection) = 0;
+        virtual void onFailure(Connection *connection, const Response &response) = 0;
     };
 
 private:
@@ -79,6 +80,12 @@ private:
     const Query &_query;
     
     /**
+     *  The truncated response that we already received
+     *  @var Response
+     */
+    Response _truncated;
+    
+    /**
      *  The handler that will receive the response
      *  @var Handler
      */
@@ -97,7 +104,7 @@ private:
         if (_tcp.send(_query)) _receiver.start();
         
         // the query could not be sent, report this as an error
-        else _handler->onFailure(this);
+        else _handler->onFailure(this, _truncated);
     }
     
     /**
@@ -108,7 +115,7 @@ private:
     virtual void onFailure(Connector *connector, Tcp *tcp) override
     {
         // connection could not be set up, report this
-        _handler->onFailure(this);
+        _handler->onFailure(this, _truncated);
     }
     
     /**
@@ -132,7 +139,7 @@ private:
     virtual void onFailure(Receiver *receiver) override
     {
         // error while receiving data, pass on
-        _handler->onFailure(this);
+        _handler->onFailure(this, _truncated);
     }
 
 public:
@@ -141,13 +148,15 @@ public:
      *  @param  loop        the event loop
      *  @param  ip          the IP address to connect to
      *  @param  query       the query to send over the connection
+     *  @param  response    the response that was already received
      *  @param  handler     parent object that is notified about the result
      */
-    Connection(Loop *loop, const Ip &ip, const Query &query, Handler *handler) :
+    Connection(Loop *loop, const Ip &ip, const Query &query, const Response &response, Handler *handler) :
         _tcp(loop, ip),
         _connector(&_tcp, ip, this),
         _receiver(&_tcp, this),
         _query(query),
+        _truncated(response),
         _handler(handler) {}
         
     /**
