@@ -26,6 +26,7 @@
 #include <dnscpp/aaaa.h>
 #include <dnscpp/mx.h>
 #include <dnscpp/txt.h>
+#include <dnscpp/caa.h>
 #include <dnscpp/records.h>
 #include <dnscpp/rrsig.h>
 #include <dnscpp/dnskey.h>
