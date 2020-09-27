@@ -19,6 +19,7 @@
  *  Dependencies
  */
 #include "nameserver.h"
+#include "resolvconf.h"
 #include <list>
 
 /**
@@ -73,6 +74,21 @@ protected:
      *  @param  loop        your event loop
      */
     Core(Loop *loop) : _loop(loop) {}
+
+    /**
+     *  Protected constructor, only the derived class may construct it
+     *  @param  loop        your event loop
+     *  @param  settings    settings from the resolv.conf file
+     */
+    Core(Loop *loop, const ResolvConf &settings) : _loop(loop) 
+    {
+        // construct the nameservers
+        for (size_t i = 0; i < settings.nameservers(); ++i)
+        {
+            // construct a nameserver
+            _nameservers.emplace_back(_loop, settings.nameserver(i));
+        }
+    }
     
     /**
      *  Destructor

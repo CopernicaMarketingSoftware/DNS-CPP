@@ -42,6 +42,13 @@ public:
      *  @param  loop        your event loop
      */
     Context(Loop *loop) : Core(loop) {}
+
+    /**
+     *  Constructor
+     *  @param  loop        your event loop
+     *  @param  settings    settings parsed from the /etc/resolv.conf file
+     */
+    Context(Loop *loop, const ResolvConf &settings) : Core(loop, settings) {}
     
     /**
      *  No copying
