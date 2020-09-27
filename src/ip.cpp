@@ -11,6 +11,7 @@
  *  Dependencies
  */
 #include "../include/dnscpp/ip.h"
+#include "../include/dnscpp/printable.h"
 
 /**
  *  Begin of namespace
@@ -198,6 +199,19 @@ Ip &Ip::operator=(const struct in6_addr *ip)
     // allow chaining
     return *this;
 }
+
+/**
+ *  Write to a stream
+ *  @param  stream
+ *  @param  ip
+ *  @return std::ostream
+ */
+std::ostream &operator<<(std::ostream &stream, const Ip &ip)
+{
+    // convert to printable representation, and print that
+    return stream << Printable(ip);
+}
+
     
 /**
  *  End of namespace

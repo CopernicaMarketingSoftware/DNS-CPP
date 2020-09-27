@@ -231,37 +231,6 @@ public:
     }
     
     /**
-     *  Convert the address to a string
-     *  @return std::string
-     */
-    std::string str() const
-    {
-        // check version
-        if (_version == 4)
-        {
-            // construct a buffer
-            char buffer[INET_ADDRSTRLEN];
-
-            // convert
-            inet_ntop(AF_INET, &_data.ipv4, buffer, INET_ADDRSTRLEN);
-
-            // done
-            return std::string(buffer);
-        }
-        else
-        {
-            // construct a buffer
-            char buffer[INET6_ADDRSTRLEN];
-
-            // convert
-            inet_ntop(AF_INET6, &_data.ipv6, buffer, INET6_ADDRSTRLEN);
-            
-            // done
-            return std::string(buffer);
-        }
-    }
-
-    /**
      *  Cast to a "struct in_addr"
      *  @return struct in_addr
      */
@@ -383,32 +352,7 @@ public:
      *  @param  ip
      *  @return std::ostream
      */
-    friend std::ostream &operator<<(std::ostream &stream, const Ip &ip)
-    {
-        // check version
-        if (ip._version == 4)
-        {
-            // construct a buffer
-            char buffer[INET_ADDRSTRLEN];
-
-            // convert
-            inet_ntop(AF_INET, &ip._data.ipv4, buffer, INET_ADDRSTRLEN);
-
-            // write buffer
-            return stream << buffer;
-        }
-        else
-        {
-            // construct a buffer
-            char buffer[INET6_ADDRSTRLEN];
-
-            // convert
-            inet_ntop(AF_INET6, &ip._data.ipv6, buffer, INET6_ADDRSTRLEN);
-            
-            // write buffer
-            return stream << buffer;
-        }
-    }
+    friend std::ostream &operator<<(std::ostream &stream, const Ip &ip);
 };
     
 /**

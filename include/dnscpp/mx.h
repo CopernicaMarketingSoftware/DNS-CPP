@@ -71,7 +71,7 @@ public:
 
     /**
      *  The hostname
-     *  @return std::string
+     *  @return const char *
      */
     const char *hostname() const
     {
