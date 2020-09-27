@@ -62,8 +62,8 @@ protected:
     }
 
     /**
-     *  May not be copied (keeps a reference to _record)
-     *  @param  
+     *  May not be copied to user-space (because a reference to _record is stored)
+     *  @param  other
      */
     Extractor(const Extractor &other) = delete;
     Extractor& operator=(const Extractor &other) = delete;

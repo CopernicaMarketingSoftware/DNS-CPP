@@ -52,6 +52,40 @@ ns_rcode Response::rcode() const
 }
 
 /**
+ *  Number of records of a certain type in a certain section
+ *  @param  section     the type of section
+ *  @param  type        the record type
+ *  @param  dnsclass    the dnsclass
+ *  @return uint16_t
+ */
+uint16_t Response::records(ns_sect section, uint16_t type, uint16_t dnsclass)
+{
+    // the result
+    size_t result = 0;
+    
+    // the max number of records
+    size_t max = records(section);
+    
+    // iterate over the records
+    for (size_t i = 0; i < max; ++i)
+    {
+        // avoid exceptions
+        try
+        {
+            // parse the record
+            Record record(*this, section, i);
+            
+            // do we have a match
+            if (record.type() == type && record.dnsclass() == dnsclass) result += 1;
+        }
+        catch (...) {}
+    }
+    
+    // done
+    return result;
+}
+
+/**
  *  End of namespace
  */
 }

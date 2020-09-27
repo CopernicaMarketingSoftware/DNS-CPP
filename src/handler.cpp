@@ -10,8 +10,10 @@
 /**
  *  Dependencies
  */
-#include "../include/dnscpp/handler.h"
 #include "../include/dnscpp/response.h"
+#include "../include/dnscpp/question.h"
+#include "../include/dnscpp/handler.h"
+
 
 /**
  *  Begin of namespace
@@ -23,39 +25,27 @@ namespace DNS {
  *  @param  operation       the operation that timed out
  *  @param  query           the query that was attempted
  */
-void Handler::onTimeout(const Operation *operation, const Query &query)
+void Handler::onTimeout(const Operation *operation)
 {
     // we treat this as a server-failure
-    onError(operation, query, ns_r_servfail);
+    onFailure(operation, ns_r_servfail);
 }
 
 /**
  *  Method that is called when a raw response is received
  *  @param  operation       the reporting operation
- *  @param  query           the original query
  *  @param  response        the received response
  */
-void Handler::onResponse(const Operation *operation, const Query &query, const Response &response)
+void Handler::onReceived(const Operation *operation, const Response &response)
 {
     // was there an error of any sort?
-    if (response.rcode() != 0) return onError(operation, query, response.rcode());
+    if (response.rcode() != 0) return onFailure(operation, response.rcode());
     
     // if the message was truncated we also treat is as an error because from our perspective the server failed to respond
-    if (response.truncated()) return onError(operation, query, ns_r_servfail);
+    if (response.truncated()) return onFailure(operation, ns_r_servfail);
     
     // we have a successful response
-    onSuccess(operation, query, response);
-}
-
-/**
- *  Method that is called when a valid response was received.
- *  @param  operation       the operation that finished
- *  @param  query           the original query
- *  @param  response        the received response
- */
-void Handler::onSuccess(const Operation *operation, const Query &query, const Response &response)
-{
-    // @todo inspect the response and call the most appropriate onReceived() method
+    onResolved(operation, response);
 }
     
 /**

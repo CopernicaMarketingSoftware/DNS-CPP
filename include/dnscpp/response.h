@@ -199,7 +199,8 @@ public:
     ns_opcode opcode() const { return (ns_opcode)ns_msg_getflag(_handle, ns_f_opcode); }
     
     /**
-     *  The opcode, see arpa/nameser.h for supported opcodes
+     *  The result code, see arpa/nameser.h for supported opcodes
+     *  A result-code of zero is generally good, other codes indicate an error
      *  @return ns_rcode
      */
     ns_rcode rcode() const;
@@ -210,7 +211,16 @@ public:
      *  @return uint16_t
      */
     uint16_t records(ns_sect section) const { return ns_msg_count(_handle, section); }
-    
+
+    /**
+     *  Number of records of a certain type in a certain section
+     *  @param  section     the type of section
+     *  @param  type        the record type
+     *  @param  dnsclass    the dnsclass
+     *  @return uint16_t
+     */
+    uint16_t records(ns_sect section, uint16_t type, uint16_t dnsclass = ns_c_in);
+
     /**
      *  Methods to return the number of records in one specific section
      *  To get access to these records, use the Record class (or one of the

@@ -17,6 +17,7 @@
  *  Dependencies
  */
 #include "extractor.h"
+#include "ip.h"
 
 /**
  *  Begin of namespace
