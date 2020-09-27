@@ -1,7 +1,7 @@
 /**
- *  NS.h
+ *  PTR.h
  *
- *  If you have a Record object that holds a NS record, you can use
+ *  If you have a Record object that holds a PTR record, you can use
  *  this extra class to extract the value hostname from it.
  *
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
@@ -27,7 +27,7 @@ namespace DNS {
 /**
  *  Class definition
  */
-class NS : public Extractor
+class PTR : public Extractor
 {
 private:
     /**
@@ -40,17 +40,17 @@ public:
     /**
      *  The constructor
      *  @param  response        the response from which the record was extracted
-     *  @param  record          the record holding the NS
+     *  @param  record          the record holding the PTR
      *  @throws std::runtime_error
      */
-    NS(const Response &response, const Record &record) : 
-        Extractor(record, ns_t_ns, 0), 
+    PTR(const Response &response, const Record &record) : 
+        Extractor(record, ns_t_ptr, 0), 
         _target(response, record.data()) {}
     
     /**
      *  Destructor
      */
-    virtual ~NS() = default;
+    virtual ~PTR() = default;
     
     /**
      *  The target hostname
