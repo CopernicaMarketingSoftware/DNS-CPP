@@ -18,6 +18,7 @@
 #include <vector>
 #include <arpa/nameser.h>
 #include "core.h"
+#include "reverse.h"
 
 /**
  *  Begin of namespace
@@ -73,6 +74,14 @@ public:
      *  @return operation   object to interact with the operation while it is in progress
      */
     Operation *query(const char *domain, ns_type type, Handler *handler);
+    
+    /**
+     *  Do a reverse IP lookup, this is only meaningful for PTR lookups
+     *  @param  ip          the ip address to lookup
+     *  @param  handler     object that will be notified when the query is ready
+     *  @return operation   object to interact with the operation while it is in progress
+     */
+    Operation *query(const Ip &ip, Handler *handler) { return query(Reverse(ip), ns_t_ptr, handler); }
 };
     
 /**
