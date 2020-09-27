@@ -34,6 +34,7 @@ public:
     /**
      *  Constructor
      *  @param  ip
+     *  @throws std::runtime_error
      */
     Printable(const Ip &ip)
     {
