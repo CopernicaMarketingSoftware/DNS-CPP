@@ -31,10 +31,10 @@ class NS : public Extractor
 {
 private:
     /**
-     *  The target server name
+     *  The nameserver name
      *  @var char[]
      */
-    Decompressed _target;
+    Decompressed _nameserver;
 
 public:
     /**
@@ -45,7 +45,7 @@ public:
      */
     NS(const Response &response, const Record &record) : 
         Extractor(record, ns_t_ns, 0), 
-        _target(response, record.data()) {}
+        _nameserver(response, record.data()) {}
     
     /**
      *  Destructor
@@ -53,12 +53,12 @@ public:
     virtual ~NS() = default;
     
     /**
-     *  The target hostname
+     *  The nameserver hostname
      *  @return const char *
      */
-    const char *target() const
+    const char *nameserver() const
     {
-        return _target;
+        return _nameserver;
     }
 };
     
