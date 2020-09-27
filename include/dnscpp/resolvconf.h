@@ -78,10 +78,11 @@ private:
 public:
     /**
      *  Constructor
-     *  @param  filename
+     *  @param  filename            the file to parse
+     *  @param  strict              run in strict mode (do not allow any unsupported or unrecognized data
      *  @throws std::runtime_error
      */
-    ResolvConf(const char *filename = "/etc/resolv.conf");
+    ResolvConf(const char *filename = "/etc/resolv.conf", bool strict = false);
 
     /**
      *  Destructor

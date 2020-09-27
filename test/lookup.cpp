@@ -50,7 +50,11 @@ public:
      */
     virtual void onTimeout(const DNS::Operation *operation) override
     {
+        // report the error
         std::cout << "timeout" << std::endl;
+        
+        // stop the event loop
+        ev_break(EV_DEFAULT, EVBREAK_ONE);
     }
     
     /**
@@ -79,6 +83,9 @@ public:
         printsection(response, "QUESTION", ns_s_qd);
         printsection(response, "ANSWER", ns_s_an);
         printsection(response, "AUTHORITY", ns_s_ns);
+
+        // stop the event loop
+        ev_break(EV_DEFAULT, EVBREAK_ONE);
     }
 
 private:
@@ -152,15 +159,15 @@ int main(int argc, const char *argv[])
         // the event loop
         struct ev_loop *loop = EV_DEFAULT;
     
+        // parse the /etc/resolv.conf file
+        DNS::ResolvConf config;
+    
         // wrap the loop to make it accessible by dns-cpp
         DNS::LibEv myloop(loop);
-    
-        // create a dns context
-        DNS::Context context(&myloop);
         
-        // make sure to have a nameserver
-        context.nameserver(DNS::Ip("8.8.8.8"));
-
+        // create a dns context
+        DNS::Context context(&myloop, config);
+        
         // check usage
         if (argc != 3) throw std::runtime_error(std::string("usage: ") + argv[0] + " type value");
         

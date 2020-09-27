@@ -59,7 +59,7 @@ public:
     uint16_t priority() const
     {
         // extract the value
-        return ns_get16(record.data());
+        return ns_get16(_record.data());
     }
 
     /**

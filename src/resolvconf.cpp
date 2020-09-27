@@ -35,7 +35,7 @@ static size_t linesize(const char *line, size_t size)
     while (size > trim && isspace(line[size-1-trim])) ++trim;
     
     // done
-    return trim;
+    return size - trim;
 }
     
 /**
@@ -69,10 +69,11 @@ static size_t check(const char *line, size_t size, const char *required)
 
 /**
  *  Constructor
- *  @param  filename
+ *  @param  filename        the file to parse
+ *  @param  strict          run in strict mode (do not allow unsupported options)
  *  @throws std::runtime_error
  */
-ResolvConf::ResolvConf(const char *filename)
+ResolvConf::ResolvConf(const char *filename, bool strict)
 {
     // open the file for reading
     std::ifstream stream(filename);
@@ -80,11 +81,11 @@ ResolvConf::ResolvConf(const char *filename)
     // file should be open by now
     if (!stream.is_open()) throw std::runtime_error(std::string(filename) + ": failed to open file");
     
-    // catch exceptions to reformat them
-    try
+    // keep readling lines until the end
+    while (!stream.eof())
     {
-        // keep readling lines until the end
-        while (!stream.eof())
+        // catch exceptions to reformat them
+        try
         {
             // we are going to read lines, we need a local variable for that
             std::string line;
@@ -98,11 +99,11 @@ ResolvConf::ResolvConf(const char *filename)
             // parse the line
             parse(line.data(), line.size());
         }
-    }
-    catch (const std::runtime_error &error)
-    {
-        // reformat the error
-        throw std::runtime_error(std::string(filename) + ": " + error.what());
+        catch (const std::runtime_error &error)
+        {
+            // ignore the error if not running in strict mode, otherwise reformat it
+            if (strict) throw std::runtime_error(std::string(filename) + ": " + error.what());
+        }
     }
 }
 
@@ -119,12 +120,12 @@ void ResolvConf::parse(const char *line, size_t size)
     
     // helper variable
     size_t skip = 0;
-    
+     
     // check the instruction
-    if ((skip = check(line, size, "nameserver")) > 0) nameserver(line+skip, size-skip);
-    if ((skip = check(line, size, "options")) > 0) options(line+skip, size-skip);
-    if ((skip = check(line, size, "domain")) > 0) domain(line+skip, size-skip);
-    if ((skip = check(line, size, "search")) > 0) search(line+skip, size-skip);
+    if ((skip = check(line, size, "nameserver")) > 0) return nameserver(line+skip, size-skip);
+    if ((skip = check(line, size, "options"))    > 0) return options(line+skip, size-skip);
+    if ((skip = check(line, size, "domain"))     > 0) return domain(line+skip, size-skip);
+    if ((skip = check(line, size, "search"))     > 0) return search(line+skip, size-skip);
     
     // invalid line
     throw std::runtime_error(std::string("unrecognized: ") + line);
@@ -151,7 +152,7 @@ void ResolvConf::nameserver(const char *line, size_t size)
 void ResolvConf::domain(const char *line, size_t size)
 {
     // report error
-    throw std::runtime_error(std::string("not implemented: ") + line);
+    throw std::runtime_error(std::string("not implemented: domain ") + line);
 }
 
 /**
@@ -163,7 +164,7 @@ void ResolvConf::domain(const char *line, size_t size)
 void ResolvConf::search(const char *line, size_t size)
 {
     // report error
-    throw std::runtime_error(std::string("not implemented: ") + line);
+    throw std::runtime_error(std::string("not implemented: search ") + line);
 }
 
 /**
@@ -175,7 +176,7 @@ void ResolvConf::search(const char *line, size_t size)
 void ResolvConf::options(const char *line, size_t size)
 {
     // report error
-    throw std::runtime_error(std::string("not implemented: ") + line);
+    throw std::runtime_error(std::string("not implemented: options ") + line);
 }
   
 /**

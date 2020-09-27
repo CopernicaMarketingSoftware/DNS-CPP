@@ -50,7 +50,7 @@ public:
      *  @throws std::runtime_error
      */
     SOA(const Response &response, const Record &record) : 
-        Extractor(record, ns_t_soa, 20)
+        Extractor(record, ns_t_soa, 20),
         _nameserver(response, record.data()),
         _email     (response, record.data() + _nameserver.consumed()) {}
     
