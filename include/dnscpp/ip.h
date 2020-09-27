@@ -157,78 +157,40 @@ public:
         default:    return 0;
         }
     }
-    
+
     /**
-     *  Compare addresses
-     *  @param  address
+     *  Compare two addresses
+     *  This returns < 0 if this IP address is smaller, > 0 if this is bigger
+     *  Zero is returned if both addresses are equal
+     *  @param  ip
+     *  @return integer
      */
-    bool operator==(const Ip &ip) const
+    int compare(const Ip &ip) const
     {
         // identical objects
-        if (this == &ip) return true;
+        if (this == &ip) return 0;
     
-        // ip versions should be identical
-        if (_version != ip._version) return false;
+        // ip versions should be identical (we consider ipv4 to be smaller than ipv6)
+        if (_version != ip._version) return _version - ip._version;
         
         // compare data
         switch (_version) {
-        case 4: return memcmp(&_data.ipv4, &ip._data.ipv4, sizeof(struct in_addr)) == 0;
-        case 6: return memcmp(&_data.ipv6, &ip._data.ipv6, sizeof(struct in6_addr)) == 0;
-        default:return true;
+        case 4: return memcmp(&_data.ipv4, &ip._data.ipv4, sizeof(struct in_addr));
+        case 6: return memcmp(&_data.ipv6, &ip._data.ipv6, sizeof(struct in6_addr));
+        default:return 0;
         }
     }
-
-    /**
-     *  Compare two IP addresses
-     *  @param  ip      The address to compare
-     *  @return bool
-     */
-    bool operator!=(const Ip &address) const
-    {
-        return !operator==(address);
-    }
-
+    
     /**
      *  Compare addresses
-     *  @param  address
-     *  @return bool
+     *  @param  ip
      */
-    bool operator<(const Ip &ip) const
-    {
-        // identical objects
-        if (this == &ip) return false;
-    
-        // ip versions should be identical
-        if (_version != ip._version) return _version < ip._version;
-        
-        // compare data
-        switch (_version) {
-        case 4: return memcmp(&_data.ipv4, &ip._data.ipv4, sizeof(struct in_addr)) < 0;
-        case 6: return memcmp(&_data.ipv6, &ip._data.ipv6, sizeof(struct in6_addr)) < 0;
-        default:return false;
-        }
-    }
-
-    /**
-     *  Compare addresses
-     *  @param  address
-     *  @return bool
-     */
-    bool operator>(const Ip &ip) const
-    {
-        // identical objects
-        if (this == &ip) return false;
-    
-        // ip versions should be identical
-        if (_version != ip._version) return _version > ip._version;
-        
-        // compare data
-        switch (_version) {
-        case 4: return memcmp(&_data.ipv4, &ip._data.ipv4, sizeof(struct in_addr)) > 0;
-        case 6: return memcmp(&_data.ipv6, &ip._data.ipv6, sizeof(struct in6_addr)) > 0;
-        default:return false;
-        }
-    }
+    bool operator==(const Ip &ip) const { return compare(ip) == 0; }
+    bool operator!=(const Ip &ip) const { return compare(ip) != 0; }
+    bool operator< (const Ip &ip) const { return compare(ip) <  0; }
+    bool operator> (const Ip &ip) const { return compare(ip) >  0; }
+    bool operator<=(const Ip &ip) const { return compare(ip) <= 0; }
+    bool operator>=(const Ip &ip) const { return compare(ip) >= 0; }
     
     /**
      *  Cast to a "struct in_addr"
