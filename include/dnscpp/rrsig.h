@@ -68,7 +68,7 @@ public:
     
     /**
      *  The algorith that is in use
-     *  @return ALgorithm
+     *  @return Algorithm
      */
     Algorithm algorithm() const
     {

@@ -41,36 +41,6 @@ private:
      */
     Decompressed _email;
     
-    /**
-     *  Serial number
-     *  @var uint32_t
-     */
-    uint32_t _serial;
-    
-    /**
-     *  Interval before zone should be refreshed
-     *  @var uint32_t
-     */
-    uint32_t _interval;
-    
-    /**
-     *  Wait period between retries if a refresh fails
-     *  @var uint32_t
-     */
-    uint32_t _retry;
-    
-    /**
-     *  The upper limit on the interval that can elapse before the zone is no longer authoritative.
-     *  @var uint32_t
-     */
-    uint32_t _expire;
-    
-    /**
-     *  Minimum TTL for records in this zone
-     *  @var uint32_t
-     */
-    uint32_t _minimum;
-
 
 public:
     /**
@@ -80,14 +50,9 @@ public:
      *  @throws std::runtime_error
      */
     SOA(const Response &response, const Record &record) : 
-        Extractor(record, ns_t_soa, 0), 
+        Extractor(record, ns_t_soa, 20)
         _nameserver(response, record.data()),
-        _email     (response, record.data() + _nameserver.consumed()),
-        _serial    (ns_get32( record.data() + _nameserver.consumed() + _email.consumed())),
-        _interval  (ns_get32( record.data() + _nameserver.consumed() + _email.consumed() + 4)),
-        _retry     (ns_get32( record.data() + _nameserver.consumed() + _email.consumed() + 8)),
-        _expire    (ns_get32( record.data() + _nameserver.consumed() + _email.consumed() + 12)),
-        _minimum   (ns_get32( record.data() + _nameserver.consumed() + _email.consumed() + 16)) {}
+        _email     (response, record.data() + _nameserver.consumed()) {}
     
     /**
      *  Destructor
@@ -110,31 +75,31 @@ public:
      *  Serial number
      *  @return uint32_t
      */
-    uint32_t serial() const { return _serial; }
+    uint32_t serial() const { return ns_get32(_record.data() + _nameserver.consumed() + _email.consumed()); }
     
     /**
      *  Interval before zone should be refreshed
      *  @return uint32_t
      */
-    uint32_t interval() const { return _interval; }
+    uint32_t interval() const { return ns_get32(_record.data() + _nameserver.consumed() + _email.consumed() + 4); }
     
     /**
      *  Wait period between retries if a refresh fails
      *  @return uint32_t
      */
-    uint32_t retry() const { return _retry; }
+    uint32_t retry() const { return ns_get32(_record.data() + _nameserver.consumed() + _email.consumed() + 8); }
     
     /**
      *  The upper limit on the interval that can elapse before the zone is no longer authoritative.
      *  @return uint32_t
      */
-    uint32_t expire() const { return _expire; }
+    uint32_t expire() const { return ns_get32(_record.data() + _nameserver.consumed() + _email.consumed() + 12); }
     
     /**
      *  Minimum TTL for records in this zone
      *  @return uint32_t
      */
-    uint32_t minimum() const { return _minimum; }
+    uint32_t minimum() const { return ns_get32(_record.data() + _nameserver.consumed() + _email.consumed() + 16); }
 };
     
 /**

@@ -31,12 +31,6 @@ class MX : public Extractor
 {
 private:
     /**
-     *  The priority
-     *  @var uint16_t
-     */
-    uint16_t _priority = 0;
-
-    /**
      *  The target server name
      *  @var char[]
      */
@@ -51,8 +45,7 @@ public:
      */
     MX(const Response &response, const Record &record) : 
         Extractor(record, ns_t_mx, 2),
-        _priority(ns_get16(record.data())),
-        _target(response, record.data() + 2)  {}
+        _target(response, record.data() + 2)  {} // first two bytes of the priority are skipped
     
     /**
      *  Destructor
@@ -65,8 +58,8 @@ public:
      */
     uint16_t priority() const
     {
-        // return the extracted value
-        return _priority;
+        // extract the value
+        return ns_get16(record.data());
     }
 
     /**
