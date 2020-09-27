@@ -201,6 +201,69 @@ Ip &Ip::operator=(const struct in6_addr *ip)
 }
 
 /**
+ *  Bitwise assignment OR operator (x |= y)
+ *  @param  that        The other IP
+ *  @return Ip
+ */
+Ip &Ip::operator|=(const Ip &that)
+{
+    // skip for version-mismatch
+    if (_version != that._version) return *this;
+    
+    // implementation depends on ip version
+    if (_version == 6)
+    {
+        // get the two addresses
+        auto *this_address = _data.ipv6.s6_addr;
+        auto *that_address = that._data.ipv6.s6_addr;
+        
+        // iterate over the entire address
+        for (unsigned i = 0; i < 16; ++i) this_address[i] |= that_address[i];
+    }
+    else
+    {
+        // ipv4 can use a single cpu operation
+        _data.ipv4.s_addr |= that._data.ipv4.s_addr;
+    }
+    
+    // done
+    return *this;
+}
+
+/**
+ *  Bitwise assignment AND operator (x &= y)
+ *  This only works if both objects have the same version (both ipv4 or both ipv6),
+ *  if the other object is of a different version, the behavior is undefined.
+ *  @param  that        The other IP
+ *  @return Ip
+ */
+Ip &Ip::operator&=(const Ip &that)
+{
+    // skip for version-mismatch
+    if (_version != that._version) return *this;
+    
+    // implementation depends on ip version
+    if (_version == 6)
+    {
+        // get the two addresses
+        auto *this_address = _data.ipv6.s6_addr;
+        auto *that_address = that._data.ipv6.s6_addr;
+        
+        // iterate over the entire address
+        for (unsigned i = 0; i < 16; ++i) this_address[i] &= that_address[i];
+    }
+    else
+    {
+        // ipv4 can use a single cpu operation
+        _data.ipv4.s_addr &= that._data.ipv4.s_addr;
+    }
+    
+    // done
+    return *this;
+}
+
+
+/**
  *  Write to a stream
  *  @param  stream
  *  @param  ip

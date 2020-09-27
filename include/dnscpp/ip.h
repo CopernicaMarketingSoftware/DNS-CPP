@@ -345,6 +345,54 @@ public:
     {
         return any();
     }
+
+    /**
+     *  Bitwise assignment OR operator (x |= y)
+     *  This only works if both objects have the same version (both ipv4 or both ipv6),
+     *  if the other object is of a different version, the behavior is undefined.
+     *  @param  that        The other IP
+     *  @return Ip
+     */
+    Ip &operator|=(const Ip &that);
+    
+    /**
+     *  Regular bitwise OR operator (x = a | b)
+     *  Result is undefined if the two objects do not share the same version
+     *  @param  that        The other IP
+     *  @return Dns::Ip
+     */
+    Ip operator|(const Ip &that) const
+    {
+        // result object
+        Ip result(*this);
+        
+        // perform the operation
+        return result |= that;
+    }
+    
+    /**
+     *  Bitwise assignment AND operator (x &= y)
+     *  This only works if both objects have the same version (both ipv4 or both ipv6),
+     *  if the other object is of a different version, the behavior is undefined.
+     *  @param  that        The other IP
+     *  @return Ip
+     */
+    Ip &operator&=(const Ip &that);
+
+    /**
+     *  Regular bitwise AND operator (x = a & b)
+     *  Result is undefined if the two objects do not share the same version
+     *  @param  that        The other IP
+     *  @return Ip
+     */
+    Ip operator&(const Ip &that) const
+    {
+        // result object
+        Ip result(*this);
+        
+        // perform the operation
+        return result &= that;
+    }
     
     /**
      *  Write to a stream
