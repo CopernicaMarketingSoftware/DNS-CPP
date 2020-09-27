@@ -79,20 +79,20 @@ public:
      *  @param  record          the record holding the CNAME
      *  @throws std::runtime_error
      */
-    CNAME(const Response &response, const Record &record) : 
-        Extractor(record, ns_t_cname, 0), 
+    SOA(const Response &response, const Record &record) : 
+        Extractor(record, ns_t_soa, 0), 
         _nameserver(response, record.data()),
         _email     (response, record.data() + _nameserver.consumed()),
         _serial    (ns_get32( record.data() + _nameserver.consumed() + _email.consumed())),
         _interval  (ns_get32( record.data() + _nameserver.consumed() + _email.consumed() + 4)),
         _retry     (ns_get32( record.data() + _nameserver.consumed() + _email.consumed() + 8)),
         _expire    (ns_get32( record.data() + _nameserver.consumed() + _email.consumed() + 12)),
-        _minimum   (ns_get32( record.data() + _nameserver.consumed() + _email.consumed() + 16)),
+        _minimum   (ns_get32( record.data() + _nameserver.consumed() + _email.consumed() + 16)) {}
     
     /**
      *  Destructor
      */
-    virtual ~CNAME() = default;
+    virtual ~SOA() = default;
     
     /**
      *  The name of the nameserver that is the original or primary source for the domain

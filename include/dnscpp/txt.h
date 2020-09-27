@@ -45,7 +45,7 @@ public:
     /**
      *  The constructor
      *  @param  response        the response from which the record was extracted
-     *  @param  record          the record holding the CNAME
+     *  @param  record          the record holding the TXT record
      *  @throws std::runtime_error
      */
     TXT(const Response &response, const Record &record) : Extractor(record, ns_t_txt, 0)
