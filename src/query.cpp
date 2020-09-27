@@ -31,10 +31,11 @@ namespace DNS {
  *  @param  op          the type of operation (normally a regular query)
  *  @param  dname       the domain to lookup
  *  @param  type        record type to look up
+ *  @param  dnssec      ask for dnssec data in response
  *  @param  data        optional data (only for type = ns_o_notify)
  *  @throws std::runtime_error
  */
-Query::Query(int op, const char *dname, int type, const unsigned char *data) : _size(HFIXEDSZ)
+Query::Query(int op, const char *dname, int type, bool dnssec, const unsigned char *data) : _size(HFIXEDSZ)
 {
     // check if parameters fit in the header
     if (type < 0 || type > 65535) throw std::runtime_error("invalid type passed to dns query");
@@ -107,7 +108,7 @@ Query::Query(int op, const char *dname, int type, const unsigned char *data) : _
     while (false);
     
     // add the edns-pseudo-section
-    edns();
+    edns(dnssec);
 }
 
 /**
@@ -168,9 +169,10 @@ bool Query::contains(const Question &record) const
  *  solves this by allowing an extra pseudo-record to be added to each
  *  message with room for some additional flags and properties. This method
  *  adds that extra pseudo-section to the query.
+ *  @param  dnssec      do we want to have DNSSEC responses?
  *  @return bool
  */
-bool Query::edns()
+bool Query::edns(bool dnssec)
 {
     // check if there is enough room
     if (remaining() < 11) return false;
@@ -194,7 +196,7 @@ bool Query::edns()
     _buffer[_size++] = 0;
     
     // extra flags to say that dnssec is supported
-    put16(NS_OPT_DNSSEC_OK);
+    put16(dnssec ? NS_OPT_DNSSEC_OK : 0);
     
     // the next section contains a key-value list of extra options, but
     // since we do not support such extra options, we have a zero-length list

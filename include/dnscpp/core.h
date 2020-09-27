@@ -61,6 +61,11 @@ protected:
      */
     double _interval = 2.0;
     
+    /**
+     *  Is DNSSEC-querying enabled?
+     *  @var bool
+     */
+    bool _dnssec = true;
 
 protected:
     /**
@@ -98,6 +103,12 @@ public:
      *  @return double
      */
     double expire() const { return _expire; }
+    
+    /**
+     *  Should we also query for dnssec properties?
+     *  @return bool
+     */
+    bool dnssec() const { return _dnssec; }
     
     /**
      *  Expose the nameservers

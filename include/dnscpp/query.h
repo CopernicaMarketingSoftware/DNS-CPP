@@ -114,9 +114,10 @@ private:
      *  solves this by allowing an extra pseudo-record to be added to each
      *  message with room for some additional flags and properties. This method
      *  adds that extra pseudo-section to the query.
+     *  @param  dnssec      should we query for dnssec-related data?
      *  @return bool
      */
-    bool edns();
+    bool edns(bool dnssec);
 
 public:
     /**
@@ -124,10 +125,11 @@ public:
      *  @param  op          the type of operation (normally a regular query)
      *  @param  dname       the domain to lookup
      *  @param  type        record type to look up
+     *  @param  dnssec      should we ask for dnssec data
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Query(int op, const char *dname, int type, const unsigned char *data = nullptr);
+    Query(int op, const char *dname, int type, bool dnssec, const unsigned char *data = nullptr);
 
     /**
      *  No copying (disabled because copying is expensive and we want the compiler

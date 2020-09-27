@@ -65,6 +65,16 @@ public:
     }
     
     /**
+     *  Enable or disable dnssec
+     *  @param  bool
+     */
+    void dnssec(bool dnssec)
+    {
+        // store property
+        _dnssec = dnssec;
+    }
+    
+    /**
      *  Do a dns lookup
      *  When you supply invalid parameters (for example a syntactivally invalid
      *  domain or an unsupported type) this method returns null.

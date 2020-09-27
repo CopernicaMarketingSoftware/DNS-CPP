@@ -32,7 +32,7 @@ namespace DNS {
 Request::Request(Core *core, const char *domain, ns_type type, DNS::Handler *handler) : 
     Operation(handler),
     _core(core), 
-    _query(ns_o_query, domain, type)
+    _query(ns_o_query, domain, type, _core->dnssec())
 {
     // iterate over the nameservers because we will send a datagram to each one of them
     for (auto &nameserver : core->nameservers())
