@@ -132,19 +132,27 @@ bool Hosts::parse(const char *line, size_t size)
 /**
  *  Lookup an IP address given a hostname
  *  This method returns nullptr if there is no match
- *  @param  hostname
+ *  @param  hostname        hostname for which we're looking for an ip
+ *  @param  version         ip version (0 for nom matter)
  *  @return Ip
  */
-const Ip *Hosts::lookup(const char *hostname) const
+const Ip *Hosts::lookup(const char *hostname, unsigned int version) const
 {
     // look for a match
-    const auto &iter = _host2ip.find(hostname);
+    const auto &range = _host2ip.equal_range(hostname);
     
-    // if there is no match
-    if (iter == _host2ip.end()) return nullptr;
+    // go check the entire range
+    for (auto iter = range.first; iter != range.second; ++iter)
+    {
+        // get a reference to the ip
+        const auto &ip = iter->second;
+        
+        // is this a match?
+        if (version == 0 || ip.version() == version) return &ip;
+    }
     
-    // expose the ip
-    return &iter->second;
+    // no match
+    return nullptr;
 }
 
 /**

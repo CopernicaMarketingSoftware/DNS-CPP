@@ -92,10 +92,11 @@ public:
     /**
      *  Lookup an IP address given a hostname
      *  This method returns nullptr if there is no match
-     *  @param  hostname
+     *  @param  hostname        hostname to lookup
+     *  @param  version         required ip version (0 for no matter)
      *  @return Ip
      */
-    const Ip *lookup(const char *hostname) const;
+    const Ip *lookup(const char *hostname, unsigned int version = 0) const;
     
     /**
      *  Lookup a hostname given an IP address
