@@ -97,11 +97,11 @@ Ip::Ip(const char *ip)
         break;
     }
 
-    // throw error when protocol is invalid
-    if (_version == 0) throw std::runtime_error("wrong IP protocol version supplied");
-
     // release memory
     freeaddrinfo(result);
+
+    // throw error when protocol is invalid
+    if (_version == 0) throw std::runtime_error("wrong IP protocol version supplied");
 }
 
 /**
