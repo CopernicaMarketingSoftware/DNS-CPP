@@ -33,3 +33,4 @@
 #include <dnscpp/rrsig.h>
 #include <dnscpp/dnskey.h>
 #include <dnscpp/printable.h>
+#include <dnscpp/hosts.h>
