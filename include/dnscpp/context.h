@@ -62,6 +62,15 @@ public:
     virtual ~Context() = default;
     
     /**
+     *  Clear the list of nameservers
+     */
+    void clear()
+    {
+        // empty the list
+        _nameservers.clear();
+    }
+    
+    /**
      *  Add a nameserver
      *  @param  ip
      */
