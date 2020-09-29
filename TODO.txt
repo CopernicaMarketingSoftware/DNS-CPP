@@ -1,0 +1,5 @@
+- The /etc/hosts files should add syntax-checking for hostnames
+- During resolving we should also check /etc/hosts
+- What to do when /etc/resolv.conf or /etc/hosts changes during runtime?
+- Should we read gai.conf (or so) to learn about ipv4/ivp6 preference?
+- The servfail error that we pass around on error maybe has to be changed in something else for parse/network errors
