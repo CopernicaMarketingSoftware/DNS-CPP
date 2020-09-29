@@ -44,7 +44,6 @@ protected:
      */
     const Query _query;
     
-protected:
     /**
      *  Constructor
      *  @param  handler     user space handler
@@ -59,15 +58,16 @@ protected:
         _handler(handler), _query(op, dname, type, dnssec, data) {}
 
     /**
+     *  Destructor
+     */
+    virtual ~Operation() = default;
+
+public:
+    /**
      *  No copying
      *  @param  that
      */
     Operation(const Operation &that) = delete;
-    
-    /**
-     *  Destructor
-     */
-    virtual ~Operation() = default;
 
     /**
      *  Expose the original query

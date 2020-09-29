@@ -36,3 +36,4 @@
 #include <dnscpp/hosts.h>
 #include <dnscpp/operation.h>
 #include <dnscpp/request.h>
+#include <dnscpp/question.h>

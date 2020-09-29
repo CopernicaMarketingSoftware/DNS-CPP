@@ -36,7 +36,7 @@ public:
      *  Constructor
      *  @param  operation   the running operation
      */
-    Request(const Operation *operation) : Message(operation->query()) {}
+    Request(const Operation *operation) : Request(operation->query()) {}
     
     /**
      *  Destructor
