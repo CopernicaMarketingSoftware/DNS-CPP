@@ -44,7 +44,7 @@ public:
      *  @throws std::runtime_error
      */
     PTR(const Response &response, const Record &record) : 
-        Extractor(record, ns_t_ptr, 0), 
+        Extractor(record, TYPE_PTR, 0), 
         _target(response, record.data()) {}
     
     /**

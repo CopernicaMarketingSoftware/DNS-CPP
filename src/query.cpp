@@ -182,7 +182,7 @@ bool Query::edns(bool dnssec)
     _buffer[_size++] = 0;
     
     // the type of the pseudo-record is "opt"
-    put16(ns_t_opt);
+    put16(TYPE_OPT);
     
     // we advertise that we support 1200 bytes for our response buffer size, 
     // this is the same buffer size as libresolv seems to use. Their ratio

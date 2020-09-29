@@ -42,7 +42,7 @@ public:
      *  @param  record      the record holding a key
      *  @throws runtime_error
      */
-    DNSKEY(const Response &response, const Record &record) : Extractor(record, ns_t_dnskey, 4) {}
+    DNSKEY(const Response &response, const Record &record) : Extractor(record, TYPE_DNSKEY, 4) {}
     
     /**
      *  Destructor

@@ -44,7 +44,7 @@ public:
      *  @throws std::runtime_error
      */
     MX(const Response &response, const Record &record) : 
-        Extractor(record, ns_t_mx, 2),
+        Extractor(record, TYPE_MX, 2),
         _target(response, record.data() + 2)  {} // first two bytes of the priority are skipped
     
     /**

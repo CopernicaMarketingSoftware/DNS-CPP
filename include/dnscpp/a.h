@@ -44,7 +44,7 @@ public:
      *  @param  record
      *  @throws std::runtime_error
      */
-    A(const Response &response, const Record &record) : Extractor(record, ns_t_a, 4), _ip((struct in_addr *)_record.data()) {}
+    A(const Response &response, const Record &record) : Extractor(record, TYPE_A, 4), _ip((struct in_addr *)_record.data()) {}
     
     /**
      *  Destructor

@@ -43,7 +43,7 @@ public:
      *  @param  record
      *  @throws std::runtime_error
      */
-    AAAA(const Response &response, const Record &record) : Extractor(record, ns_t_aaaa, 16), _ip((struct in6_addr *)_record.data()) {}
+    AAAA(const Response &response, const Record &record) : Extractor(record, TYPE_AAAA, 16), _ip((struct in6_addr *)_record.data()) {}
     
     /**
      *  Destructor

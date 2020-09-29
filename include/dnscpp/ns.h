@@ -44,7 +44,7 @@ public:
      *  @throws std::runtime_error
      */
     NS(const Response &response, const Record &record) : 
-        Extractor(record, ns_t_ns, 0), 
+        Extractor(record, TYPE_NS, 0), 
         _nameserver(response, record.data()) {}
     
     /**

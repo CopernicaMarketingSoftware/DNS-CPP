@@ -36,7 +36,7 @@ public:
      *  @param  record
      *  @throws std::runtime_error
      */
-    OPT(const Message &message, const Record &record) : Extractor(record, ns_t_opt, 0) {}
+    OPT(const Message &message, const Record &record) : Extractor(record, TYPE_OPT, 0) {}
     
     /**
      *  Destructor

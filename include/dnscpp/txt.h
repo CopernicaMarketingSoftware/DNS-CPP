@@ -48,7 +48,7 @@ public:
      *  @param  record          the record holding the TXT record
      *  @throws std::runtime_error
      */
-    TXT(const Response &response, const Record &record) : Extractor(record, ns_t_txt, 0)
+    TXT(const Response &response, const Record &record) : Extractor(record, TYPE_TXT, 0)
     {
         // get input data
         auto *buffer = _record.data();

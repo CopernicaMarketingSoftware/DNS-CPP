@@ -44,7 +44,7 @@ public:
      *  @throws std::runtime_error
      */
     CNAME(const Response &response, const Record &record) : 
-        Extractor(record, ns_t_cname, 0), 
+        Extractor(record, TYPE_CNAME, 0), 
         _target(response, record.data()) {}
     
     /**

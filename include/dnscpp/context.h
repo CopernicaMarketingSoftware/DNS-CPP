@@ -16,7 +16,7 @@
  *  Dependencies
  */
 #include <vector>
-#include <arpa/nameser.h>
+#include "type.h"
 #include "core.h"
 #include "reverse.h"
 
@@ -107,7 +107,7 @@ public:
      *  @param  handler     object that will be notified when the query is ready
      *  @return operation   object to interact with the operation while it is in progress
      */
-    Operation *query(const Ip &ip, Handler *handler) { return query(Reverse(ip), ns_t_ptr, handler); }
+    Operation *query(const Ip &ip, Handler *handler) { return query(Reverse(ip), TYPE_PTR, handler); }
 };
     
 /**

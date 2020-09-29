@@ -62,7 +62,7 @@ public:
      *  @throws std::runtime_error
      */
     CAA(const Response &response, const Record &record) : 
-        Extractor(record, ns_t_caa, 3)
+        Extractor(record, TYPE_CAA, 3)
     {
         // get input data
         auto *buffer = _record.data();

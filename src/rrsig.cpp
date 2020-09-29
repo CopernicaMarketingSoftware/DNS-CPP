@@ -26,7 +26,7 @@ namespace DNS {
  *  @throws std::runtime_error
  */
 RRSIG::RRSIG(const Response &response, const Record &record) : 
-    Extractor(record, ns_t_rrsig, 18),
+    Extractor(record, TYPE_RRSIG, 18),
     _signer(response, _record.data() + 18) {}
     
 /**
