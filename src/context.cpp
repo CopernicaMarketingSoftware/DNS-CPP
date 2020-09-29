@@ -11,7 +11,7 @@
  *  Dependencies
  */
 #include "../include/dnscpp/context.h"
-#include "request.h"
+#include "job.h"
 
 /**
  *  Begin of namespace
@@ -31,7 +31,7 @@ Operation *Context::query(const char *domain, ns_type type, Handler *handler)
     try
     {
         // we are going to create a self-destructing request
-        return new Request(this, domain, type, handler);
+        return new Job(this, domain, type, handler);
     }
     catch (...)
     {

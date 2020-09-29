@@ -1,7 +1,7 @@
 /**
- *  Request.cpp
+ *  Job.cpp
  *  
- *  Implementation file for the Requet class
+ *  Implementation file for the Job class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2020 Copernica BV
@@ -10,7 +10,7 @@
 /**
  *  Dependencies
  */
-#include "request.h"
+#include "job.h"
 #include "connection.h"
 #include "../include/dnscpp/core.h"
 #include "../include/dnscpp/response.h"
@@ -29,7 +29,7 @@ namespace DNS {
  *  @param  type        the type of the request
  *  @param  handler     user space object
  */
-Request::Request(Core *core, const char *domain, ns_type type, DNS::Handler *handler) : 
+Job::Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler) : 
     Operation(handler),
     _core(core), 
     _query(ns_o_query, domain, type, _core->dnssec())
@@ -51,7 +51,7 @@ Request::Request(Core *core, const char *domain, ns_type type, DNS::Handler *han
 /**
  *  Destructor
  */
-Request::~Request()
+Job::~Job()
 {
     // unsubscribe from the nameservers
     for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this);
@@ -61,19 +61,19 @@ Request::~Request()
 }
 
 /**
- *  When does the request expire?
+ *  When does the job expire?
  *  @return double
  */
-double Request::expires() const
+double Job::expires() const
 {
     // get the max time
     return _started + _core->expire();
 }
 
 /** 
- *  Time out the request because no appropriate response was received in time
+ *  Time out the job because no appropriate response was received in time
  */
-void Request::timeout()
+void Job::timeout()
 {
     // report an error
     _handler->onTimeout(this);
@@ -86,7 +86,7 @@ void Request::timeout()
  *  Retry / send a new message to the nameservers
  *  @param  now     current timestamp
  */
-void Request::retry(double now)
+void Job::retry(double now)
 {
     // send a datagram to each nameserver
     for (auto &nameserver : _core->nameservers())
@@ -98,7 +98,7 @@ void Request::retry(double now)
     // when is the next attempt?
     double next = std::min(now + _core->interval(), expires());
 
-    // we set a new timer for when the entire request times out
+    // we set a new timer for when the entire job times out
     _timer = _core->loop()->timer(next - now, this);
 }
 
@@ -106,7 +106,7 @@ void Request::retry(double now)
  *  When the timer expires
  *  This method is called from the event loop in user space
  */
-void Request::expire()
+void Job::expire()
 {
     // find the current time
     Now now;
@@ -114,13 +114,13 @@ void Request::expire()
     // the timer has expired
     _timer = nullptr;
     
-    // did the entire request expire?
+    // did the entire job expire?
     if (now >= expires()) return timeout();
     
     // if we do not yet have a tcp connection we send out more dgrams
     if (!_connection) return retry(now);
     
-    // we set a new timer for when the entire request times out
+    // we set a new timer for when the entire job times out
     _timer = _core->loop()->timer(expires() - now, this);
 }
 
@@ -129,7 +129,7 @@ void Request::expire()
  *  @param  nameserver  the reporting nameserver
  *  @param  response    the received response
  */
-void Request::onReceived(Nameserver *nameserver, const Response &response)
+void Job::onReceived(Nameserver *nameserver, const Response &response)
 {
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
@@ -144,7 +144,7 @@ void Request::onReceived(Nameserver *nameserver, const Response &response)
     // we have a response, so we can pass that to user space
     _handler->onReceived(this, response);
     
-    // we can self-destruct -- this request has been handled
+    // we can self-destruct -- this job has been handled
     delete this;
 }
 
@@ -153,7 +153,7 @@ void Request::onReceived(Nameserver *nameserver, const Response &response)
  *  @param  connection
  *  @param  response
  */
-void Request::onReceived(Connection *connection, const Response &response)
+void Job::onReceived(Connection *connection, const Response &response)
 {
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
@@ -162,7 +162,7 @@ void Request::onReceived(Connection *connection, const Response &response)
     // we have a response, hand it over to user space
     _handler->onReceived(this, response);
     
-    // self-destruct now that the request has been completed
+    // self-destruct now that the job has been completed
     delete this;
 }
 
@@ -171,12 +171,12 @@ void Request::onReceived(Connection *connection, const Response &response)
  *  @param  connector   the reporting connection
  *  @param  response    the original answer (the original truncated one)
  */
-void Request::onFailure(Connection *connection, const Response &truncated)
+void Job::onFailure(Connection *connection, const Response &truncated)
 {
     // we failed to get the regular response, so we send back the truncated response
     _handler->onReceived(this, truncated);
 
-    // self-destruct now that the request has been completed
+    // self-destruct now that the job has been completed
     delete this;
 }
 

@@ -1,5 +1,5 @@
 /**
- *  Request.h
+ *  Job.h
  * 
  *  Class that encapsulates all data that is needed for a single request
  * 
@@ -37,7 +37,7 @@ class Handler;
 /**
  *  Class definition
  */
-class Request : public Operation, private Nameserver::Handler, private Connection::Handler, private Timer
+class Job : public Operation, private Nameserver::Handler, private Connection::Handler, private Timer
 {
 private:
     /**
@@ -53,7 +53,7 @@ private:
     Query _query;
     
     /**
-     *  When was the request started?
+     *  When was the job started?
      *  @var Now
      */
     Now _started;
@@ -98,13 +98,13 @@ private:
     virtual void expire() override;
 
     /**
-     *  When does the request expire?
+     *  When does the job expire?
      *  @return double
      */
     double expires() const;
 
     /** 
-     *  Time out the request because no appropriate response was received in time
+     *  Time out the job because no appropriate response was received in time
      */
     void timeout();
 
@@ -117,7 +117,7 @@ private:
     /**
      *  Private destructor, the class is self-destructing
      */
-    virtual ~Request();
+    virtual ~Job();
 
 public:
     /**
@@ -127,13 +127,13 @@ public:
      *  @param  type        type of records to look for
      *  @param  handler     user space object interested in the result
      */
-    Request(Core *core, const char *domain, ns_type type, DNS::Handler *handler);
+    Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler);
     
     /**
      *  No copying
      *  @param  that
      */
-    Request(const Request &request) = delete;
+    Job(const Job &that) = delete;
 };
 
 /**
