@@ -1,8 +1,7 @@
 /**
  *  Record.h
  * 
- *  Class to extract a single record from a response. If you have a
- *  response object, you can extr
+ *  Class to extract a single record from a message.
  *
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2020 Copernica BV
@@ -16,7 +15,7 @@
 /**
  *  Dependencies
  */
-#include "response.h"
+#include "message.h"
 #include <string.h>
 
 /**
@@ -39,7 +38,7 @@ protected:
 public:
     /**
      *  Constructor
-     *  @param  message         the response from which the record should be extracted
+     *  @param  message         the message from which the record should be extracted
      *  @param  section         the section to extract the record from
      *  @param  index           the record-number inside the section
      *  @throws std::runtime_error
@@ -55,12 +54,12 @@ public:
 
     /**
      *  Constructor
-     *  @param  response        the response from which the record should be extracted
+     *  @param  message         the message from which the record should be extracted
      *  @param  section         the section to extract the record from
      *  @param  index           the record-number inside the section
      *  @throws std::runtime_error
      */
-    Record(const Response &response, ns_sect section, int index) : Record(response.handle(), section, index) {}
+    Record(const Message &message, ns_sect section, int index) : Record(message.handle(), section, index) {}
     
     /**
      *  Copy constructor 
@@ -114,7 +113,7 @@ public:
     }
     
     /**
-     *  The raw response data
+     *  The raw message data
      * 
      *  You normally should not access the result data directly. It is
      *  better to use a class like A, AAAA, MX, CNAME, etc to extract
@@ -128,7 +127,7 @@ public:
     }
     
     /**
-     *  Size of the raw response data
+     *  Size of the raw message data
      *  @return uint16_t
      */
     uint16_t size() const

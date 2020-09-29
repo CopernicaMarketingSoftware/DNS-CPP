@@ -2,7 +2,7 @@
  *  Additional.h
  * 
  *  Helper class that can be used to extract a record from the "additional"
- *  section in a respoonse.
+ *  section in a message.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2020 Copernica BV
@@ -31,11 +31,11 @@ class Additional : public Record
 public:
     /**
      *  Constructor
-     *  @param  response    the full response
+     *  @param  mess age    the full message
      *  @param  index       the question-number
      */
-    Additional(const Response &response, size_t index = 0) : 
-        Record(response, ns_s_ar, index) {}
+    Additional(const Message &message, size_t index = 0) : 
+        Record(message, ns_s_ar, index) {}
         
     /**
      *  Destructor

@@ -31,11 +31,11 @@ class Question : public Record
 public:
     /**
      *  Constructor
-     *  @param  response    the full response
+     *  @param  message     the full message
      *  @param  index       the question-number
      */
-    Question(const Response &response, size_t index = 0) : 
-        Record(response, ns_s_qd, index) {}
+    Question(const Message &message, size_t index = 0) : 
+        Record(message, ns_s_qd, index) {}
         
     /**
      *  Destructor

@@ -1,7 +1,7 @@
 /**
- *  Response.cpp
+ *  Message.cpp
  * 
- *  Implementation file for the response class
+ *  Implementation file for the Message class
  *  
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2020 Copernica BV
@@ -10,7 +10,7 @@
 /**
  *  Dependencies
  */
-#include "../include/dnscpp/response.h"
+#include "../include/dnscpp/message.h"
 #include "../include/dnscpp/additional.h"
 #include "../include/dnscpp/opt.h"
 
@@ -23,7 +23,7 @@ namespace DNS {
  *  The opcode, see arpa/nameser.h for supported opcodes
  *  @return ns_rcode
  */
-ns_rcode Response::rcode() const 
+ns_rcode Message::rcode() const 
 {
     // get the code from the regular header
     auto rcode = ns_msg_getflag(_handle, ns_f_rcode);
@@ -58,7 +58,7 @@ ns_rcode Response::rcode() const
  *  @param  dnsclass    the dnsclass
  *  @return uint16_t
  */
-uint16_t Response::records(ns_sect section, uint16_t type, uint16_t dnsclass)
+uint16_t Message::records(ns_sect section, uint16_t type, uint16_t dnsclass)
 {
     // the result
     size_t result = 0;

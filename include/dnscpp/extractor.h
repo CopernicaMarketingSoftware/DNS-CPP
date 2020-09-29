@@ -2,7 +2,7 @@
  *  Extractor.h
  *
  *  When you have a Record object, and you want to extract informataion
- *  from the raw response data, you need to use extra objects to do so.
+ *  from the raw message data, you need to use extra objects to do so.
  *  For example, the A or AAAA classes to extract the IP address, and
  *  the MX class to extract the priority and domain name. All these
  *  classes use the Extractor as their base.

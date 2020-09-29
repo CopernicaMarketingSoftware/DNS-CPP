@@ -32,11 +32,11 @@ class OPT : public Extractor
 public:
     /**
      *  The constructor
-     *  @param  response
+     *  @param  message
      *  @param  record
      *  @throws std::runtime_error
      */
-    OPT(const Response &response, const Record &record) : Extractor(record, ns_t_opt, 0) {}
+    OPT(const Message &message, const Record &record) : Extractor(record, ns_t_opt, 0) {}
     
     /**
      *  Destructor

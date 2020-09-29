@@ -10,6 +10,7 @@
 /**
  *  Dependencies
  */
+#include "../include/dnscpp/response.h"
 #include "../include/dnscpp/rrsig.h"
 #include "zonename.h"
 
