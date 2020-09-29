@@ -187,7 +187,7 @@ public:
      *  @param  response
      *  @return bool
      */
-    bool matches(const Response &response);
+    bool matches(const Response &response) const;
 };
     
 /**

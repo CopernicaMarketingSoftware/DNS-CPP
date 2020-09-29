@@ -257,7 +257,7 @@ size_t Query::questions() const
  *  @param  response
  *  @return bool
  */
-bool Query::matches(const Response &response)
+bool Query::matches(const Response &response) const
 {
     // prevent exceptions (parsing a record could fail)
     try

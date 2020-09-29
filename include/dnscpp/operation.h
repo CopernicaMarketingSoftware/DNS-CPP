@@ -38,13 +38,26 @@ protected:
      */
     Handler *_handler;
     
+    /**
+     *  The query that we're going to send
+     *  @var Query
+     */
+    const Query _query;
+    
 protected:
     /**
-     *  Constructor is protected - user-space is not supposed to instantiate
-     *  @param  handler
+     *  Constructor
+     *  @param  handler     user space handler
+     *  @param  op          the type of operation (normally a regular query)
+     *  @param  dname       the domain to lookup
+     *  @param  type        record type to look up
+     *  @param  dnssec      should we ask for dnssec data
+     *  @param  data        optional data (only for type = ns_o_notify)
+     *  @throws std::runtime_error
      */
-    Operation(Handler *handler) : _handler(handler) {}
-    
+    Operation(Handler *handler, int op, const char *dname, int type, bool dnssec, const unsigned char *data = nullptr) : 
+        _handler(handler), _query(op, dname, type, dnssec, data) {}
+
     /**
      *  No copying
      *  @param  that
@@ -55,6 +68,12 @@ protected:
      *  Destructor
      */
     virtual ~Operation() = default;
+
+    /**
+     *  Expose the original query
+     *  @return Query
+     */
+    const Query &query() const { return _query; }
     
     /**
      *  Change the handler / install a different object to be notified of changes

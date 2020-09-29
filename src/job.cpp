@@ -30,9 +30,7 @@ namespace DNS {
  *  @param  handler     user space object
  */
 Job::Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler) : 
-    Operation(handler),
-    _core(core), 
-    _query(ns_o_query, domain, type, _core->dnssec())
+    Operation(handler, ns_o_query, domain, type, core->dnssec()), _core(core)
 {
     // iterate over the nameservers because we will send a datagram to each one of them
     for (auto &nameserver : core->nameservers())

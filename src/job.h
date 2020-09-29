@@ -47,12 +47,6 @@ private:
     Core *_core;
 
     /**
-     *  The query that we're going to send
-     *  @var Query
-     */
-    Query _query;
-    
-    /**
      *  When was the job started?
      *  @var Now
      */

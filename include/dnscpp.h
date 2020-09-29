@@ -34,4 +34,5 @@
 #include <dnscpp/dnskey.h>
 #include <dnscpp/printable.h>
 #include <dnscpp/hosts.h>
+#include <dnscpp/operation.h>
 #include <dnscpp/request.h>
