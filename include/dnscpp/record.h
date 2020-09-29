@@ -39,19 +39,28 @@ protected:
 public:
     /**
      *  Constructor
+     *  @param  message         the response from which the record should be extracted
+     *  @param  section         the section to extract the record from
+     *  @param  index           the record-number inside the section
+     *  @throws std::runtime_error
+     */
+    Record(const ns_msg *message, ns_sect section, int index)
+    {
+        // parse the buffer (we cast to non-const because that is what libs oddly enough needs)
+        if (ns_parserr((ns_msg *)message, section, index, &_record) == 0) return;
+        
+        // report an error
+        throw std::runtime_error("failed to parse record");
+    }
+
+    /**
+     *  Constructor
      *  @param  response        the response from which the record should be extracted
      *  @param  section         the section to extract the record from
      *  @param  index           the record-number inside the section
      *  @throws std::runtime_error
      */
-    Record(const Response &response, ns_sect section, int index)
-    {
-        // parse the buffer (we cast to non-const)
-        if (ns_parserr((ns_msg *)response.handle(), section, index, &_record) == 0) return;
-        
-        // report an error
-        throw std::runtime_error("failed to parse record");
-    }
+    Record(const Response &response, ns_sect section, int index) : Record(response.handle(), section, index) {}
     
     /**
      *  Copy constructor 
