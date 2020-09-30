@@ -10,6 +10,7 @@
 /**
  *  Dependencies
  */
+#include "../include/dnscpp/type.h"
 #include "../include/dnscpp/response.h"
 #include "../include/dnscpp/dnskey.h"
 

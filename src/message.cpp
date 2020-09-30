@@ -12,6 +12,7 @@
  */
 #include "../include/dnscpp/message.h"
 #include "../include/dnscpp/additional.h"
+#include "../include/dnscpp/type.h"
 #include "../include/dnscpp/opt.h"
 
 /**

@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include "randombits.h"
 #include "compressor.h"
+#include "../include/dnscpp/type.h"
 #include "../include/dnscpp/question.h"
 #include "../include/dnscpp/response.h"
 #include "../include/dnscpp/decompressed.h"
