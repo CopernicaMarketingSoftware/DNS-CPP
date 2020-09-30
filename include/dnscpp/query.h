@@ -16,6 +16,7 @@
  *  Dependencies
  */
 #include <arpa/nameser.h>
+#include <stdint.h>
 
 /**
  *  Begin of namespace
