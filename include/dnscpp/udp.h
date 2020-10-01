@@ -67,13 +67,13 @@ private:
      *  The filedescriptor of the socket
      *  @var int
      */
-    int _fd;
+    int _fd = -1;
     
     /**
      *  User space identifier of this monitor
      *  @var void *
      */
-    void *_identifier;
+    void *_identifier = nullptr;
     
     /**
      *  The object that is interested in handling responses
@@ -96,15 +96,21 @@ private:
      */
     bool send(const struct sockaddr *address, size_t size, const Query &query);
 
+    /**
+     *  Open the socket (this is optional, the socket is automatically opened when you start sending to it)
+     *  @param  version
+     *  @return bool
+     */
+    bool open(int version);
+
 public:
     /**
      *  Constructor
      *  @param  loop        event loop in user space
-     *  @param  version     IP version (ipv4 or ipv6)
      *  @param  handler     object that will receive all incoming responses
      *  @throws std::runtime_error
      */
-    Udp(Loop *loop, int version, Handler *handler);
+    Udp(Loop *loop, Handler *handler);
     
     /**
      *  No copying
@@ -118,8 +124,16 @@ public:
     virtual ~Udp();
 
     /**
-     *  Send a query to a nameserver
-     *  @param  ip      IP address of the nameserver
+     *  Close the socket (this is useful if you do not expect incoming data anymore)
+     *  The socket will be automatically opened if you start sending to it
+     *  @return bool
+     */
+    bool close();
+
+    /**
+     *  Send a query to the socket
+     *  Watch out: you need to be consistent in calling this with either ipv4 or ipv6 addresses
+     *  @param  ip      IP address of the target nameserver
      *  @param  query   the query to send
      *  @return bool
      */

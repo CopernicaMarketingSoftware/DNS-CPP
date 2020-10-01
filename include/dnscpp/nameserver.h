@@ -94,10 +94,7 @@ public:
      *  @param  ip      nameserver IP
      *  @throws std::runtime_error
      */
-    Nameserver(Loop *loop, const Ip &ip) : _ip(ip), _udp(loop, _ip.version(), this)
-    {
-        
-    }
+    Nameserver(Loop *loop, const Ip &ip) : _ip(ip), _udp(loop, this) {}
     
     /**
      *  No copying
@@ -145,6 +142,9 @@ public:
     {
         // remove from the vector
         _handlers.erase(std::remove(_handlers.begin(), _handlers.end(), handler), _handlers.end());
+        
+        // if nobody is listening to the socket, we can just as well close it
+        if (_handlers.empty()) _udp.close();
     }
 };
 

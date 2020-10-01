@@ -28,20 +28,13 @@ namespace DNS {
 /**
  *  Constructor
  *  @param  loop        event loop
- *  @param  version     ip version
  *  @param  handler     object that is notified about incoming messages
  *  @throws std::runtime_error
  */
-Udp::Udp(Loop *loop, int version, Handler *handler) : 
+Udp::Udp(Loop *loop, Handler *handler) : 
     _loop(loop), 
-    _fd(socket(version == 6 ? AF_INET6 : AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)),
     _handler(handler)
 {
-    // check for success
-    if (_fd < 0) throw std::runtime_error("failed to open udp socket");
-    
-    // we want to be notified when the socket receives data
-    _identifier = _loop->add(_fd, 1, this);
 }
 
 /**
@@ -49,11 +42,53 @@ Udp::Udp(Loop *loop, int version, Handler *handler) :
  */
 Udp::~Udp()
 {
+    // close the socket
+    close();
+}
+
+/**
+ *  Open the socket
+ *  @param  version
+ *  @return bool
+ */
+bool Udp::open(int version)
+{
+    // if already open
+    if (_fd >= 0) return true;
+    
+    // try to open it
+    _fd = socket(version == 6 ? AF_INET6 : AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    
+    // check for success
+    if (_fd < 0) return false;
+    
+    // we want to be notified when the socket receives data
+    _identifier = _loop->add(_fd, 1, this);
+    
+    // done
+    return true;
+}
+
+/**
+ *  Close the socket
+ *  @return bool
+ */
+bool Udp::close()
+{
+    // if already closed
+    if (_fd < 0) return false;
+
     // tell the event loop that we no longer are interested in notifications
     _loop->remove(_identifier, _fd, this);
     
     // close the socket
-    close(_fd);
+    ::close(_fd);
+    
+    // remember that socket is closed
+    _fd = -1; _identifier = nullptr;
+    
+    // done
+    return true;
 }
 
 /**
@@ -65,6 +100,9 @@ void Udp::notify()
     // prevent exceptions (parsing the ip or the response could fail)
     try
     {
+        // do nothing if there is no socket (how is that possible!?)
+        if (_fd < 0) return;
+        
         // the buffer to receive the response in
         // @todo use a macro
         unsigned char buffer[65536];
@@ -88,13 +126,16 @@ void Udp::notify()
 }
 
 /**
- *  Send a query to a nameserver
+ *  Send a query to a nameserver (+open the socket when needed)
  *  @param  ip      IP address of the nameserver
  *  @param  query   the query to send
  *  @return bool
  */
 bool Udp::send(const Ip &ip, const Query &query)
 {
+    // if the socket is not yet open we need to open it
+    if (_fd < 0 && !open(ip.version())) return false;
+
     // should we bind in the ipv4 or ipv6 fashion?
     if (ip.version() == 6)
     {
@@ -141,7 +182,7 @@ bool Udp::send(const struct sockaddr *address, size_t size, const Query &query)
 {
     // send over the socket
     // @todo include MSG_DONTWAIT + implement non-blocking????
-    return sendto(_fd, query.data(), query.size(), MSG_NOSIGNAL, address, size);
+    return sendto(_fd, query.data(), query.size(), MSG_NOSIGNAL, address, size) >= 0;
 }
 
 /**
