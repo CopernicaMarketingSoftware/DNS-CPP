@@ -34,6 +34,56 @@ private:
      *  @var char[]
      */
     char _buffer[128];
+
+
+    /**
+     *  Scan the buffer as ipv4 address
+     *  @return Ip
+     */
+    Ip scanipv4() const
+    {
+        // the integers that will be filled
+        unsigned int bytes[4];
+        
+        // scan the input-string
+        sscanf(_buffer, "%u.%u.%u.%u", &bytes[3], &bytes[2], &bytes[1], &bytes[0]);
+
+        // the address that we will fill
+        struct in_addr address;
+        
+        // fill the bytes
+        address.s_addr = (bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0];
+        
+        // expose the address
+        return Ip(address);
+    }
+
+    /**
+     *  Scan the buffer as ipv6 address
+     *  @return Ip
+     */
+    Ip scanipv6() const
+    {
+        // the integers that will be filled
+        unsigned int bytes[32];
+        
+        // scan the input-string
+        sscanf(_buffer, "%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x.%x", 
+            &bytes[31], &bytes[30], &bytes[29], &bytes[28], &bytes[27], &bytes[26], &bytes[25], &bytes[24],
+            &bytes[23], &bytes[22], &bytes[21], &bytes[20], &bytes[19], &bytes[18], &bytes[17], &bytes[16],
+            &bytes[15], &bytes[14], &bytes[13], &bytes[12], &bytes[11], &bytes[10], &bytes[ 9], &bytes[ 8],
+            &bytes[ 7], &bytes[ 6], &bytes[ 5], &bytes[ 4], &bytes[ 3], &bytes[ 2], &bytes[ 1], &bytes[ 0]
+        );
+
+        // the address that we will fill
+        struct in6_addr address;
+        
+        // fill the bytes
+        for (size_t i = 0; i < 16; ++i) address.s6_addr[i] = (bytes[i * 2] << 4) | bytes[i * 2 + 1];
+        
+        // expose the address
+        return Ip(address);
+    }
     
 public:
     /**
@@ -77,9 +127,55 @@ public:
     }
     
     /**
+     *  Constructor to parse an existing reverse-address
+     *  @param  address
+     *  @throws std::runtime_error
+     */
+    Reverse(const char *address)
+    {
+        // address should not be too long
+        if (strlen(address) >= sizeof(_buffer)) throw std::runtime_error("address is too long to contain an IPv4 address");
+        
+        // copy the address
+        strcpy(_buffer, address);
+    
+        // check version, it should be valid now
+        if (!version()) throw std::runtime_error("address is not in reverse notation");
+    }
+    
+    /**
      *  Destructor
      */
     virtual ~Reverse() = default;
+
+    /**
+     *  The IP version
+     *  @return int
+     */
+    int version() const
+    {
+        // we need the size a number of times
+        size_t size = this->size();
+        
+        // does it end with "in-addr.arpa"? then we have an ipv4 address
+        if (size > 13 && strcasecmp(_buffer + size - 13, ".in-addr.arpa") == 0) return 4;
+
+        // does it end with "ip6.arpa"? then it's a ipv6 address
+        if (size > 9 && strcasecmp(_buffer + size - 9, ".ip6.arpa") == 0) return 6;
+        
+        // this should not be possible
+        return 0;
+    }
+    
+    /**
+     *  Restore the original IP address
+     *  @return Ip
+     */
+    Ip ip() const
+    {
+        // check the version
+        return version() == 4 ? scanipv4() : scanipv6();
+    }
 
     /**
      *  Expose the IP address
