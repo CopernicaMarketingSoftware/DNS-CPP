@@ -109,9 +109,14 @@ private:
     void retry(double now);
 
     /**
+     *  Cleanup the object
+     */
+    void cleanup();
+
+    /**
      *  Private destructor, the class is self-destructing
      */
-    virtual ~Job();
+    virtual ~Job() = default;
 
 public:
     /**

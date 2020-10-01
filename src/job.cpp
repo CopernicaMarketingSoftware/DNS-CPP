@@ -47,15 +47,20 @@ Job::Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler) :
 }
 
 /**
- *  Destructor
+ *  Cleanup the object
+ *  We want to cleanup the job _before_ it is destructed, to handle the situation
+ *  where user-space already destructs _core while the job is reporting its result
  */
-Job::~Job()
+void Job::cleanup()
 {
     // unsubscribe from the nameservers
     for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this);
     
     // stop the timer
     if (_timer) _core->loop()->cancel(_timer, this);
+    
+    // forget the timer
+    _timer = nullptr;
 }
 
 /**
@@ -73,6 +78,9 @@ double Job::expires() const
  */
 void Job::timeout()
 {
+    // before we report to userspace we cleanup the object
+    cleanup();
+    
     // report an error
     _handler->onTimeout(this);
     
@@ -139,6 +147,9 @@ void Job::onReceived(Nameserver *nameserver, const Response &response)
     // if the response was truncated, we ignore it and start a tcp connection
     if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this));
     
+    // before we report to userspace we cleanup the object
+    cleanup();
+
     // we have a response, so we can pass that to user space
     _handler->onReceived(this, response);
     
@@ -156,6 +167,9 @@ void Job::onReceived(Connection *connection, const Response &response)
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
     if (!_query.matches(response)) return;
+
+    // before we report to userspace we cleanup the object
+    cleanup();
     
     // we have a response, hand it over to user space
     _handler->onReceived(this, response);
@@ -171,6 +185,9 @@ void Job::onReceived(Connection *connection, const Response &response)
  */
 void Job::onFailure(Connection *connection, const Response &truncated)
 {
+    // before we report to userspace we cleanup the object
+    cleanup();
+
     // we failed to get the regular response, so we send back the truncated response
     _handler->onReceived(this, truncated);
 
