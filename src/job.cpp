@@ -117,6 +117,9 @@ void Job::expire()
     // find the current time
     Now now;
     
+    // cancel (deallocate) the timer
+    _core->loop()->cancel(_timer, this);
+    
     // the timer has expired
     _timer = nullptr;
     

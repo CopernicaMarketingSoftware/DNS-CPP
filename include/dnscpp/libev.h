@@ -34,6 +34,12 @@ private:
      *  @var ev_loop
      */
     struct ev_loop *_loop;
+    
+    /**
+     *  Should the operations persist the loop?
+     *  @var bool
+     */
+    bool _persist;
 
     /**
      *  Callback method that is called when a filedescriptor becomes active
@@ -68,9 +74,14 @@ private:
 public:
     /**
      *  Constructor
+     *  You can pass a boolean value to make the event loop persistent. This means
+     *  that when an operation is in progress, the event loop automatically stays
+     *  active. If persist=false the watchers that are created on the event loop
+     *  do not keep the event loop alive.
      *  @param  loop        the libev event loop that is wrapped
+     *  @param  persist     make the event loop persistent
      */
-    LibEv(struct ev_loop *loop) : _loop(loop) {}
+    LibEv(struct ev_loop *loop, bool persist = true) : _loop(loop), _persist(persist) {}
     
     /**
      *  No copying
@@ -103,6 +114,9 @@ public:
         
         // start monitoring for activity
         ev_io_start(_loop, watcher);
+        
+        // dont affect refcount
+        if (!_persist) ev_unref(_loop);
         
         // expose the watcher as identifier
         return watcher;
@@ -137,6 +151,9 @@ public:
      */
     virtual void remove(void *identifier, int fd, Monitor *monitor) override
     {
+        // restore refcount
+        if (!_persist) ev_ref(_loop);
+        
         // the identifier is a watcher
         ev_io *watcher = (ev_io *)identifier;
         
@@ -166,6 +183,9 @@ public:
         
         // start monitoring for activity
         ev_timer_start(_loop, watcher);
+
+        // dont affect refcount
+        if (!_persist) ev_unref(_loop);
         
         // expose the watcher as identifier
         return watcher;
@@ -180,6 +200,9 @@ public:
      */
     virtual void cancel(void *identifier, Timer *timer) override
     {
+        // restore refcount
+        if (!_persist) ev_ref(_loop);
+
         // the identifier is a watcher
         ev_timer *watcher = (ev_timer *)identifier;
         
