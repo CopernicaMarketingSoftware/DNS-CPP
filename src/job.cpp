@@ -111,11 +111,12 @@ void Job::timeout()
  */
 void Job::retry(double now)
 {
-    // we need some "random" identity because we do not want all jobs to start with nameserver[0]
-    size_t id = _started * 1000;
+    // we need some "random" identity because we do not want all jobs to start with 
+    // nameserver[0] -- for this we use the starttime as it is random-enough to distribute requests
+    size_t id = _started * 100000;
     
     // which nameserver should we sent now?
-    auto target = _core->nameservers().size() % (_count + id);
+    size_t target = (_count + id) % _core->nameservers().size();
     
     // iterator for the next loop
     size_t i = 0;
@@ -126,7 +127,7 @@ void Job::retry(double now)
         // is this the target nameserver? (we use ++ postfix operator on purpose)
         if (target != i++) continue;
         
-        // send a datagram, and register ourselves as subscriber
+        // send a datagram to this server
         nameserver.datagram(_query);
 
         // one more message has been sent
