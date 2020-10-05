@@ -55,7 +55,7 @@ public:
      */
     operator double () const
     {
-        return _time.tv_sec + _time.tv_usec * 1000000;
+        return _time.tv_sec + _time.tv_usec * 1e-6;
     }
 };
     
