@@ -32,11 +32,12 @@ namespace DNS {
 Job::Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler) : 
     Operation(handler, ns_o_query, domain, type, core->dnssec()), _core(core)
 {
-    // iterate over the nameservers to subscribe to incoming responses
-    for (auto &nameserver : core->nameservers()) nameserver.subscribe(this);
+    // call "retry" to send the first datagram to the first nameserver
+    if (!_core->nameservers().empty()) retry(_started);
     
-    // "retry" sending a datagram
-    retry(_started);
+    // if there are no nameservers, we set a timer to expire immediately
+    else _timer = _core->loop()->timer(0.0, this);
+
 }
 
 /**
@@ -86,6 +87,9 @@ void Job::cleanup()
  */
 double Job::expires() const
 {
+    // if there are no nameservers, the call expires immediately (waiting is pointless)
+    if (_core->nameservers().empty()) return _started;
+    
     // get the max time
     return _started + _core->expire();
 }
@@ -106,7 +110,7 @@ void Job::timeout()
 }
 
 /**
- *  Retry / send a new message to the nameservers
+ *  Retry / send a new message to one of the nameservers
  *  @param  now     current timestamp
  */
 void Job::retry(double now)
@@ -115,20 +119,27 @@ void Job::retry(double now)
     // nameserver[0] -- for this we use the starttime as it is random-enough to distribute requests
     size_t id = _started * 100000;
     
+    // access to the nameservers + the number we have
+    auto &nameservers = _core->nameservers();
+    size_t nscount = nameservers.size();
+    
     // which nameserver should we sent now?
-    size_t target = (_count + id) % _core->nameservers().size();
+    size_t target = (_count + id) % nscount;
     
     // iterator for the next loop
     size_t i = 0;
     
     // send a datagram to each nameserver
-    for (auto &nameserver : _core->nameservers())
+    for (auto &nameserver : nameservers)
     {
         // is this the target nameserver? (we use ++ postfix operator on purpose)
         if (target != i++) continue;
         
         // send a datagram to this server
         nameserver.datagram(_query);
+        
+        // in the first iteration we have not yet subscribed
+        if (_count < nscount) nameserver.subscribe(this);
 
         // one more message has been sent
         _count += 1;
@@ -147,14 +158,14 @@ void Job::retry(double now)
  */
 void Job::expire()
 {
-    // find the current time
-    Now now;
-    
     // cancel (deallocate) the timer
     _core->loop()->cancel(_timer, this);
     
     // the timer has expired
     _timer = nullptr;
+
+    // find the current time
+    Now now;
     
     // did the entire job expire?
     if (now >= expires()) return timeout();
