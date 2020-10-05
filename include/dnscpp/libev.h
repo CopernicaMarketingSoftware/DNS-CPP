@@ -182,7 +182,7 @@ public:
         ev_timer_init(watcher, expire, timeout, 0.0);
         
         // timers have a low priority (we rather wait a little longer if we're dealing with other data too)
-        ev_set_priority(watcher, EV_MINPRIO);
+        ev_set_priority(watcher, EV_MINPRI);
         
         // start monitoring for activity
         ev_timer_start(_loop, watcher);
