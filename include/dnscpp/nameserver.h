@@ -22,6 +22,7 @@
  */
 #include "udp.h"
 #include "ip.h"
+#include "response.h"
 
 /**
  *  Begin of the namespace
@@ -71,19 +72,34 @@ private:
     /**
      *  Method that is called when a response is received
      *  @param  ip          the ip of the nameserver from which it is received
-     *  @param  response    the received response
+     *  @param  buffer      the received response
+     *  @param  size        size of the response
      */
-    virtual void onReceived(const Ip &ip, const Response &response) override
+    virtual void onReceived(const Ip &ip, const unsigned char *buffer, size_t size) override
     {
-        // ignore responses from other ips
-        // @todo also ignore messages that do not come from port 53???
-        if (ip != _ip) return;
-        
-        // make a copy of the handlers because the vector could be reshufled when we call the handlers
-        decltype(_handlers) handlers(_handlers);
+        // avoid exceptions (parsing the response could fail)
+        try
+        {
+            // ignore responses from other ips
+            // @todo also ignore messages that do not come from port 53???
+            if (ip != _ip) return;
+            
+            // if nobody is interested there is no point in parsing the message
+            if (_handlers.empty()) return;
+            
+            // parse the response
+            Response response(buffer, size);
+            
+            // make a copy of the handlers because the vector could be reshufled when we call the handlers
+            decltype(_handlers) handlers(_handlers);
 
-        // notify each handler
-        for (auto *handler : handlers) handler->onReceived(this, response);
+            // notify each handler
+            for (auto *handler : handlers) handler->onReceived(this, response);
+        }
+        catch (...)
+        {
+            // parsing the response failed
+        }
     }
 
 

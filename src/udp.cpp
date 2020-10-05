@@ -13,7 +13,6 @@
 #include "../include/dnscpp/udp.h"
 #include "../include/dnscpp/loop.h"
 #include "../include/dnscpp/ip.h"
-#include "../include/dnscpp/response.h"
 #include "../include/dnscpp/query.h"
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -97,7 +96,7 @@ bool Udp::close()
  */
 void Udp::notify()
 {
-    // prevent exceptions (parsing the ip or the response could fail)
+    // prevent exceptions (parsing the ip could fail)
     try
     {
         // do nothing if there is no socket (how is that possible!?)
@@ -117,7 +116,7 @@ void Udp::notify()
         Ip ip((struct sockaddr *)&from);
         
         // notify the handler
-        _handler->onReceived(ip, Response(buffer, bytes));
+        _handler->onReceived(ip, buffer, bytes);
     }
     catch (const std::runtime_error &error)
     {

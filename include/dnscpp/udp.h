@@ -52,8 +52,9 @@ public:
          *  Method that is called when a response is received
          *  @param  ip          the ip of the nameserver from which it is received
          *  @param  response    the received response
+         *  @param  size        size of the response
          */
-        virtual void onReceived(const Ip &ip, const Response &response) = 0;
+        virtual void onReceived(const Ip &ip, const unsigned char *response, size_t size) = 0;
     };
     
 private:
