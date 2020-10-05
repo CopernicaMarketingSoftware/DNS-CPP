@@ -53,6 +53,12 @@ private:
     Now _started;
     
     /**
+     *  Number of messages that have already been sent
+     *  @var size_t
+     */
+    size_t _count = 0;
+    
+    /**
      *  Identifier of the timer
      *  @var void*
      */
@@ -101,6 +107,13 @@ private:
      *  Time out the job because no appropriate response was received in time
      */
     void timeout();
+
+    /**
+     *  How long should we wait until the next message?
+     *  @param  now     current time
+     *  @return double
+     */
+    double delay(double now) const;
 
     /**
      *  Retry / send a new message to the nameservers

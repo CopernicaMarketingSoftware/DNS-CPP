@@ -32,18 +32,35 @@ namespace DNS {
 Job::Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler) : 
     Operation(handler, ns_o_query, domain, type, core->dnssec()), _core(core)
 {
-    // iterate over the nameservers because we will send a datagram to each one of them
-    for (auto &nameserver : core->nameservers())
-    {
-        // send a datagram, and register ourselves as subscriber
-        nameserver.datagram(_query);
-        
-        // we want to be notified when a response comes in
-        nameserver.subscribe(this);
-    }
+    // iterate over the nameservers to subscribe to incoming responses
+    for (auto &nameserver : core->nameservers()) nameserver.subscribe(this);
     
-    // we set a timer to repeat the call
-    _timer = core->loop()->timer(_core->interval(), this);
+    // "retry" sending a datagram
+    retry(_started);
+}
+
+/**
+ *  How long should we wait until the next message?
+ *  @param  now         Current time
+ *  @return double
+ */
+double Job::delay(double now) const
+{
+    // the number of servers that we have
+    size_t servers = _core->nameservers().size();
+    
+    // have we already completed a full round of all nameservers? if that is not yet
+    // the case we send the next message soon, with a small delay to spread out the messages
+    if (_count % servers != 0) return _core->spread();
+    
+    // a full round has been completed, how many rounds have we had?
+    size_t rounds = _count / servers;
+    
+    // calculate the time when to start round + 1
+    double nexttime = _started + rounds * _core->interval();
+    
+    // calculate delay based on this time
+    return std::max(std::min(nexttime, expires()) - now, 0.0);
 }
 
 /**
@@ -94,18 +111,33 @@ void Job::timeout()
  */
 void Job::retry(double now)
 {
+    // we need some "random" identity because we do not want all jobs to start with nameserver[0]
+    size_t id = _started * 1000;
+    
+    // which nameserver should we sent now?
+    auto target = _core->nameservers().size() % (_count + id);
+    
+    // iterator for the next loop
+    size_t i = 0;
+    
     // send a datagram to each nameserver
     for (auto &nameserver : _core->nameservers())
     {
+        // is this the target nameserver? (we use ++ postfix operator on purpose)
+        if (target != i++) continue;
+        
         // send a datagram, and register ourselves as subscriber
         nameserver.datagram(_query);
+
+        // one more message has been sent
+        _count += 1;
+        
+        // for now we do not yet send the next message
+        break;
     }
     
-    // when is the next attempt?
-    double next = std::min(now + _core->interval(), expires());
-
     // we set a new timer for when the entire job times out
-    _timer = _core->loop()->timer(next - now, this);
+    _timer = _core->loop()->timer(delay(now), this);
 }
 
 /**

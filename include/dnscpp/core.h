@@ -57,7 +57,14 @@ protected:
     double _expire = 60.0;
     
     /**
-     *  Interval between attempts, after this period a new dgram is sent
+     *  During each attempt all nameservers are contacted at the same time,
+     *  with a small interval between them - this is that interval
+     *  @var double
+     */
+    double _spread = 0.1;
+    
+    /**
+     *  Interval before a datagram is repeated to the same server, in seconds
      *  @var double
      */
     double _interval = 2.0;
@@ -109,10 +116,16 @@ public:
     Loop *loop() { return _loop; }
     
     /**
-     *  The period between sending a new datagram in seconds
+     *  The period between sending a new datagram to the same nameserver in seconds
      *  @return double
      */
     double interval() const { return _interval; }
+    
+    /**
+     *  Interval between sending datagrams to different servers
+     *  @return double
+     */
+    double spread() const { return _spread; }
     
     /**
      *  The expire time for a request in seconds
