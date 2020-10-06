@@ -37,7 +37,22 @@ Job::Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler) :
     
     // if there are no nameservers, we set a timer to expire immediately
     else _timer = _core->loop()->timer(0.0, this);
+}
 
+/**
+ *  Destructor
+ */
+Job::~Job()
+{
+    // no need to cleanup if the job was already over
+    if (_timer == nullptr) return;
+    
+    // cleanup the job (note that we have this cleanup-function because we
+    // normally want to cleanup _before_ we report back to userspace, because
+    // you never know what userspace will do (maybe even destruct the _core pointer),
+    // but if userspace decided to kill the job (by calling job->cancel()) we still
+    // have to do some cleaning ourselves
+    cleanup();
 }
 
 /**

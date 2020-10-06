@@ -129,7 +129,7 @@ private:
     /**
      *  Private destructor, the class is self-destructing
      */
-    virtual ~Job() = default;
+    virtual ~Job();
 
 public:
     /**
