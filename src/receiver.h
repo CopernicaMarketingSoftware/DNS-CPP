@@ -194,7 +194,8 @@ public:
         _buffer((unsigned char *)malloc(4096)),
         _size(4096),
         _received(0), 
-        _handler(handler) {}
+        _handler(handler),
+        _identifier(nullptr) {}
     
     /**
      *  Destructor

@@ -86,6 +86,9 @@ double Job::delay(double now) const
  */
 void Job::cleanup()
 {
+    // forget the tcp connection
+    _connection.reset();
+    
     // unsubscribe from the nameservers
     for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this);
     
