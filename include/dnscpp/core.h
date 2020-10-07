@@ -73,7 +73,7 @@ protected:
      *  Is DNSSEC-querying enabled?
      *  @var bool
      */
-    bool _dnssec = true;
+    bool _dnssec = false;
 
 protected:
     /**
