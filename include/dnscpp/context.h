@@ -40,7 +40,9 @@ public:
     /**
      *  Constructor
      *  You can specify whether the system defaults from /etc/resolv.conf and
-     *  /etc/hosts should be loaded or not.
+     *  /etc/hosts should be loaded or not. If you decide to no load the system
+     *  defaults, you must explicitly assign nameservers to the context before
+     *  you can run any queries.
      *  @param  loop        your event loop
      *  @param  defaults    should system settings be loaded
      */
