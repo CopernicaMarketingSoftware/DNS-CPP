@@ -14,6 +14,11 @@
 #pragma once
 
 /**
+ *  Dependencies
+ */
+#include <arpa/nameser.h>
+
+/**
  *  Begin of namespace
  */
 namespace DNS {

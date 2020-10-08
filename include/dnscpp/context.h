@@ -39,14 +39,19 @@ class Context : private Core
 public:
     /**
      *  Constructor
+     *  You can specify whether the system defaults from /etc/resolv.conf and
+     *  /etc/hosts should be loaded or not.
      *  @param  loop        your event loop
+     *  @param  defaults    should system settings be loaded
      */
-    Context(Loop *loop) : Core(loop) {}
+    Context(Loop *loop, bool defaults = true) : Core(loop, true) {}
 
     /**
      *  Constructor
      *  @param  loop        your event loop
      *  @param  settings    settings parsed from the /etc/resolv.conf file
+     * 
+     *  @deprecated
      */
     Context(Loop *loop, const ResolvConf &settings) : Core(loop, settings) {}
     
@@ -107,7 +112,7 @@ public:
      *  @param  handler     object that will be notified when the query is ready
      *  @return operation   object to interact with the operation while it is in progress
      */
-    Operation *query(const Ip &ip, Handler *handler) { return query(Reverse(ip), TYPE_PTR, handler); }
+    Operation *query(const Ip &ip, Handler *handler);
 };
     
 /**

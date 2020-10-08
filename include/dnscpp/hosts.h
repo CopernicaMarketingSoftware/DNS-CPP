@@ -17,11 +17,19 @@
  *  Dependencies
  */
 #include <map>
+#include <list>
 
 /**
  *  Begin of namespace
  */
 namespace DNS {
+    
+/**
+ *  Forward declarations
+ */
+class Handler;
+class Operation;
+class Request;
 
 /**
  *  Class definition
@@ -72,11 +80,17 @@ private:
 
 public:
     /**
-     *  Constructor
+     *  Default constructor
+     *  This does not yet read the /etc/hosts file, you need to call load() for that
+     */
+    Hosts() = default;
+
+    /**
+     *  Constructor that immediately reads a file
      *  @param  filename        the filename to parse
      *  @throws std::runtime_error
      */
-    Hosts(const char *filename = "/etc/hosts");
+    Hosts(const char *filename);
     
     /**
      *  No copying
@@ -88,6 +102,14 @@ public:
      *  Destructor
      */
     virtual ~Hosts() = default;
+    
+    /**
+     *  Load a certain file
+     *  All lines in the file are merged with the lines already in memory
+     *  @param  filename
+     *  @return bool
+     */
+    bool load(const char *filename = "/etc/hosts");
     
     /**
      *  Lookup an IP address given a hostname
@@ -105,6 +127,16 @@ public:
      *  @return const char *
      */
     const char *lookup(const Ip &hostname) const;
+    
+    /**
+     *  Notify a user-space handler about a certain hostname to ip combination
+     *  @param  request         the original request
+     *  @param  handler         user-space object that should be notified
+     *  @param  operation       the operation-pointer that should be passed
+     *  @return bool            was the handler called?
+     */
+    bool notify(const Request &request, Handler *handler, const Operation *operation) const;
+    
 };
     
 /**

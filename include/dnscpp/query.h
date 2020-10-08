@@ -59,7 +59,6 @@ private:
 
     /**
      *  End of the buffer
-     *  This is non-const because we also use it for writing
      *  @return unsigned char *
      */
     const unsigned char *end() const

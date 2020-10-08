@@ -20,6 +20,7 @@
  */
 #include "nameserver.h"
 #include "resolvconf.h"
+#include "hosts.h"
 #include <list>
 
 /**
@@ -51,6 +52,12 @@ protected:
     std::list<Nameserver> _nameservers;
     
     /**
+     *  The contents of the /etc/hosts file
+     *  @var Hosts
+     */
+    Hosts _hosts;
+    
+    /**
      *  Max time that a request may last in seconds
      *  @var double
      */
@@ -79,13 +86,17 @@ protected:
     /**
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
+     *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
+     *  @throws std::runtime_error
      */
-    Core(Loop *loop) : _loop(loop) {}
+    Core(Loop *loop, bool defaults);
 
     /**
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
      *  @param  settings    settings from the resolv.conf file
+     * 
+     *  @deprecated
      */
     Core(Loop *loop, const ResolvConf &settings) : _loop(loop) 
     {

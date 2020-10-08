@@ -136,7 +136,7 @@ public:
     }
     
     /**
-     *  Access to the raw binary data, in host-byte-order
+     *  Access to the raw binary data, in network-byte-order
      *  @return const char *
      */
     const char *data() const

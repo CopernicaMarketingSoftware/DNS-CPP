@@ -15,6 +15,11 @@
 #include <list>
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/hosts.h"
+#include "../include/dnscpp/response.h"
+#include "../include/dnscpp/handler.h"
+#include "../include/dnscpp/question.h"
+#include "../include/dnscpp/reverse.h"
+#include "fakeresponse.h"
 
 /**
  *  Begin of namespace
@@ -46,11 +51,23 @@ static size_t linesize(const char *line, size_t size)
  */
 Hosts::Hosts(const char *filename)
 {
+    // load initial file
+    if (!load(filename)) throw std::runtime_error(std::string(filename) + ": failed to open file");
+}
+
+/**
+ *  Load a certain file
+ *  All lines in the file are merged with the lines already in memory
+ *  @param  filename
+ *  @return bool
+ */
+bool Hosts::load(const char *filename)
+{
     // open the file for reading
     std::ifstream stream(filename);
     
     // file should be open by now
-    if (!stream.is_open()) throw std::runtime_error(std::string(filename) + ": failed to open file");
+    if (!stream.is_open()) return false;
     
     // keep readling lines until the end
     while (!stream.eof())
@@ -67,6 +84,9 @@ Hosts::Hosts(const char *filename)
         // parse the line
         parse(line.data(), line.size());
     }
+    
+    // done
+    return true;
 }
 
 /**
@@ -171,6 +191,60 @@ const char *Hosts::lookup(const Ip &ip) const
     
     // expose the ip
     return iter->second;
+}
+
+/**
+ *  Notify a user-space handler about a certain hostname to ip combination
+ *  @param  request        the original request
+ *  @param  handler         user-space object that should be notified
+ *  @param  operation       the operation-pointer that should be passed
+ *  @return bool
+ */
+bool Hosts::notify(const Request &request, Handler *handler, const Operation *operation) const
+{
+    // extract the question
+    Question question(request);
+    
+    // construct the fake response message that we will pass to user-space
+    FakeResponse response(request, question);
+
+    // is this a reverse lookup?
+    if (question.type() == TYPE_PTR)
+    {
+        // parse the reverse name
+        Reverse reverse(question.name());
+        
+        // get the associated hostname
+        auto *hostname = lookup(reverse.ip());
+        
+        // add to the response message
+        if (hostname) response.append(question.name(), hostname);
+    }
+    else
+    {
+        // do the lookup of ip-addresses of the requested host
+        const auto &range = _host2ip.equal_range(question.name());
+    
+        // look for matches
+        for (auto iter = range.first; iter != range.second; ++iter)
+        {
+            // get a reference to the ip
+            const auto &ip = iter->second;
+            
+            // is this a match?
+            if (ip.version() == 4 && question.type() != TYPE_A) continue;
+            if (ip.version() == 6 && question.type() != TYPE_AAAA) continue;
+            
+            // we have a matc
+            response.append(question.name(), ip);
+        }
+    }
+    
+    // send back the answer
+    handler->onReceived(operation, Response(response.data(), response.size()));
+    
+    // done
+    return true;
 }
 
 /**

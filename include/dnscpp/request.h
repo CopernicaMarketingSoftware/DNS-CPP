@@ -15,6 +15,12 @@
 #pragma once
 
 /**
+ *  Dependencies
+ */
+#include "query.h"
+#include "operation.h"
+
+/**
  *  Begin of namespace
  */
 namespace DNS {
