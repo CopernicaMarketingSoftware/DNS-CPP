@@ -11,7 +11,7 @@
  *  Dependencies
  */
 #include "../include/dnscpp/context.h"
-#include "job.h"
+#include "remotelookup.h"
 #include "locallookup.h"
 
 /**
@@ -36,7 +36,7 @@ Operation *Context::query(const char *domain, ns_type type, Handler *handler)
     try
     {
         // we are going to create a self-destructing request
-        return new Job(this, domain, type, handler);
+        return new RemoteLookup(this, domain, type, handler);
     }
     catch (...)
     {

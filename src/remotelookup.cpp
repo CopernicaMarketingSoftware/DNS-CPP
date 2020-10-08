@@ -1,7 +1,7 @@
 /**
- *  Job.cpp
+ *  RemoteLookup.cpp
  *  
- *  Implementation file for the Job class
+ *  Implementation file for the RemoteLookup class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2020 Copernica BV
@@ -10,7 +10,7 @@
 /**
  *  Dependencies
  */
-#include "job.h"
+#include "remotelookup.h"
 #include "connection.h"
 #include "../include/dnscpp/core.h"
 #include "../include/dnscpp/response.h"
@@ -29,7 +29,7 @@ namespace DNS {
  *  @param  type        the type of the request
  *  @param  handler     user space object
  */
-Job::Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler) : 
+RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, DNS::Handler *handler) : 
     Operation(handler, ns_o_query, domain, type, core->dnssec()), _core(core)
 {
     // call "retry" to send the first datagram to the first nameserver
@@ -42,7 +42,7 @@ Job::Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler) :
 /**
  *  Destructor
  */
-Job::~Job()
+RemoteLookup::~RemoteLookup()
 {
     // no need to cleanup if the job was already over
     if (_timer == nullptr) return;
@@ -60,7 +60,7 @@ Job::~Job()
  *  @param  now         Current time
  *  @return double
  */
-double Job::delay(double now) const
+double RemoteLookup::delay(double now) const
 {
     // the number of servers that we have
     size_t servers = _core->nameservers().size();
@@ -84,7 +84,7 @@ double Job::delay(double now) const
  *  We want to cleanup the job _before_ it is destructed, to handle the situation
  *  where user-space already destructs _core while the job is reporting its result
  */
-void Job::cleanup()
+void RemoteLookup::cleanup()
 {
     // forget the tcp connection
     _connection.reset();
@@ -103,7 +103,7 @@ void Job::cleanup()
  *  When does the job expire?
  *  @return double
  */
-double Job::expires() const
+double RemoteLookup::expires() const
 {
     // if there are no nameservers, the call expires immediately (waiting is pointless)
     if (_core->nameservers().empty()) return _started;
@@ -115,7 +115,7 @@ double Job::expires() const
 /** 
  *  Time out the job because no appropriate response was received in time
  */
-void Job::timeout()
+void RemoteLookup::timeout()
 {
     // before we report to userspace we cleanup the object
     cleanup();
@@ -131,7 +131,7 @@ void Job::timeout()
  *  Retry / send a new message to one of the nameservers
  *  @param  now     current timestamp
  */
-void Job::retry(double now)
+void RemoteLookup::retry(double now)
 {
     // we need some "random" identity because we do not want all jobs to start with 
     // nameserver[0] -- for this we use the starttime as it is random-enough to distribute requests
@@ -174,7 +174,7 @@ void Job::retry(double now)
  *  When the timer expires
  *  This method is called from the event loop in user space
  */
-void Job::expire()
+void RemoteLookup::expire()
 {
     // cancel (deallocate) the timer
     _core->loop()->cancel(_timer, this);
@@ -200,7 +200,7 @@ void Job::expire()
  *  @param  nameserver  the reporting nameserver
  *  @param  response    the received response
  */
-void Job::onReceived(Nameserver *nameserver, const Response &response)
+void RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
 {
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
@@ -227,7 +227,7 @@ void Job::onReceived(Nameserver *nameserver, const Response &response)
  *  @param  connection
  *  @param  response
  */
-void Job::onReceived(Connection *connection, const Response &response)
+void RemoteLookup::onReceived(Connection *connection, const Response &response)
 {
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
@@ -248,7 +248,7 @@ void Job::onReceived(Connection *connection, const Response &response)
  *  @param  connector   the reporting connection
  *  @param  response    the original answer (the original truncated one)
  */
-void Job::onFailure(Connection *connection, const Response &truncated)
+void RemoteLookup::onFailure(Connection *connection, const Response &truncated)
 {
     // before we report to userspace we cleanup the object
     cleanup();

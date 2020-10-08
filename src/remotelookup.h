@@ -1,5 +1,5 @@
 /**
- *  Job.h
+ *  RemoteLookup.h
  * 
  *  Class that encapsulates all data that is needed for a single request
  * 
@@ -37,7 +37,7 @@ class Handler;
 /**
  *  Class definition
  */
-class Job : public Operation, private Nameserver::Handler, private Connection::Handler, private Timer
+class RemoteLookup : public Operation, private Nameserver::Handler, private Connection::Handler, private Timer
 {
 private:
     /**
@@ -129,7 +129,7 @@ private:
     /**
      *  Private destructor, the class is self-destructing
      */
-    virtual ~Job();
+    virtual ~RemoteLookup();
 
 public:
     /**
@@ -139,13 +139,13 @@ public:
      *  @param  type        type of records to look for
      *  @param  handler     user space object interested in the result
      */
-    Job(Core *core, const char *domain, ns_type type, DNS::Handler *handler);
+    RemoteLookup(Core *core, const char *domain, ns_type type, DNS::Handler *handler);
     
     /**
      *  No copying
      *  @param  that
      */
-    Job(const Job &that) = delete;
+    RemoteLookup(const RemoteLookup &that) = delete;
 };
 
 /**
