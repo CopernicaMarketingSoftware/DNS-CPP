@@ -60,6 +60,32 @@ Operation *Context::query(const Ip &ip, Handler *handler)
     return query(Reverse(ip), TYPE_PTR, handler);
 }
 
+/**
+ *  Do a dns lookup and pass the result to callbacks
+ *  @param  name        the record name to look for
+ *  @param  type        type of record (normally you ask for an 'a' record)
+ *  @param  success     function that will be called on success
+ *  @param  failure     function that will be called on failure
+ *  @return operation   object to interact with the operation while it is in progress
+ */
+Operation *Context::query(const char *domain, ns_type type, const SuccessCallback &success, const FailureCallback &failure)
+{
+    // use a self-destructing wrapper for the handler
+    return query(domain, type, new Callbacks(success, failure));
+}
+
+/**
+ *  Do a reverse dns lookup and pass the result to callbacks
+ *  @param  ip          the ip address to lookup
+ *  @param  success     function that will be called on success
+ *  @param  failure     function that will be called on failure
+ *  @return operation   object to interact with the operation while it is in progress
+ */
+Operation *Context::query(const DNS::Ip &ip, const SuccessCallback &success, const FailureCallback &failure)
+{
+    // use a self-destructing wrapper for the handler
+    return query(ip, new Callbacks(success, failure));
+}
 
 /**
  *  End of namespace

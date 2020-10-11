@@ -17,6 +17,7 @@
  */
 #include "../include/dnscpp/request.h"
 #include "../include/dnscpp/question.h"
+#include "../include/dnscpp/reverse.h"
 
 /**
  *  Begin of namespace
@@ -74,6 +75,10 @@ private:
         
         // stop the timer
         _loop->cancel(_timer, this);
+        
+        // if the operation is destructed while the timer was still running, it means that the
+        // operation was prematurely cancelled from user-space, let the handler know
+        _handler->onCancelled(this);
     }
 
 public:

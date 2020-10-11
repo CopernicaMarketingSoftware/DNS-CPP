@@ -53,6 +53,10 @@ RemoteLookup::~RemoteLookup()
     // but if userspace decided to kill the job (by calling job->cancel()) we still
     // have to do some cleaning ourselves
     cleanup();
+
+    // if the operation is destructed while the timer was still running, it means that the
+    // operation was prematurely cancelled from user-space, let the handler know
+    _handler->onCancelled(this);
 }
 
 /**

@@ -37,3 +37,4 @@
 #include <dnscpp/operation.h>
 #include <dnscpp/request.h>
 #include <dnscpp/question.h>
+#include <dnscpp/reverse.h>

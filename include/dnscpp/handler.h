@@ -55,7 +55,7 @@ public:
      *  @param  operation       the operation that finished
      *  @param  rcode           the received rcode
      */
-    virtual void onFailure(const Operation *operation, int rrcode) {}
+    virtual void onFailure(const Operation *operation, int rcode) {}
 
     /**
      *  Method that is called when an operation times out.
@@ -80,6 +80,14 @@ public:
      *  @param  response        the received response
      */
     virtual void onReceived(const Operation *operation, const Response &response);
+    
+    /**
+     *  Method that is called when the operation is cancelled
+     *  This method is immediately triggered when operation->cancel() is called.
+     * 
+     *  @param  operation       the operation that was cancelled
+     */
+    virtual void onCancelled(const Operation *operation) {}
 };
 
 /**
