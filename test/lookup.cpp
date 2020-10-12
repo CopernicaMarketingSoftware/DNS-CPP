@@ -179,7 +179,10 @@ int main(int argc, const char *argv[])
         MyHandler handler;
         
         // do the lookup
-        context.query(value, type, &handler);
+        auto *operation = context.query(value, type, &handler);
+        
+        // check if the query could not even be started
+        if (operation == nullptr) throw std::runtime_error(std::string("failed to query ") + value);
         
         // run the event loop
         ev_run(loop);
