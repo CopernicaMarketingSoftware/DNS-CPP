@@ -12,6 +12,11 @@
  */
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/printable.h"
+#include "../include/dnscpp/record.h"
+#include "../include/dnscpp/type.h"
+#include "../include/dnscpp/response.h"
+#include "../include/dnscpp/a.h"
+#include "../include/dnscpp/aaaa.h"
 
 /**
  *  Begin of namespace
@@ -37,6 +42,21 @@ static bool isv4mapped(const struct in6_addr &addr)
     return addr.s6_addr[10] == 0xff && addr.s6_addr[11] == 0xff;
 }
     
+/**
+ *  Helper function to extract an IP from a record (only works for A and AAAA)
+ *  @param  record
+ *  @return Ip
+ *  @throws std::runtime_error
+ */
+static Ip extract(const Record &record)
+{
+    // check the record
+    switch (record.type()) {
+    case TYPE_A:    return A(record).ip();
+    case TYPE_AAAA: return AAAA(record).ip();
+    default:        throw std::runtime_error("Ips can only be extracted from A and AAAA records");
+    }
+}
     
 /**
  *  Constructor based on a string representation
@@ -170,6 +190,14 @@ Ip::Ip(const struct sockaddr *addr)
         throw std::runtime_error("wrong type");
     }
 }
+
+/**
+ *  Methods to extract IP addresses from records
+ *  @param  record
+ */
+Ip::Ip(const A &record) : Ip(record.ip()) {}
+Ip::Ip(const AAAA &record) : Ip(record.ip()) {}
+Ip::Ip(const Record &record) : Ip(extract(record)) {}
 
 /**
  *  Assignment operators

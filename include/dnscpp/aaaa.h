@@ -44,6 +44,13 @@ public:
      *  @throws std::runtime_error
      */
     AAAA(const Response &response, const Record &record) : Extractor(record, TYPE_AAAA, 16), _ip((struct in6_addr *)_record.data()) {}
+
+    /**
+     *  The constructor
+     *  @param  record
+     *  @throws std::runtime_error
+     */
+    AAAA(const Record &record) : Extractor(record, TYPE_AAAA, 16), _ip((struct in6_addr *)_record.data()) {}
     
     /**
      *  Destructor

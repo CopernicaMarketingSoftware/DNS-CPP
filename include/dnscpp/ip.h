@@ -31,6 +31,14 @@
 namespace DNS {
 
 /**
+ *  Forward declarations
+ */
+class Record;
+class A;
+class AAAA;
+class PTR;
+
+/**
  *  Class definition
  */
 class Ip
@@ -50,7 +58,7 @@ private:
         struct in_addr  ipv4;
         struct in6_addr ipv6;
     } _data;
-
+    
 public:
     /**
      *  Constructor for the default 0.0.0.0 address
@@ -119,6 +127,14 @@ public:
     explicit Ip(const struct sockaddr_in *ip) : Ip(ip->sin_addr) {}
     explicit Ip(const struct sockaddr_in6 &ip) : Ip(ip.sin6_addr) {}
     explicit Ip(const struct sockaddr_in6 *ip) : Ip(ip->sin6_addr) {}
+
+    /**
+     *  Constructor that extracts the IP address out of an A or AAAA record
+     *  @param  record
+     */
+    explicit Ip(const A &record);
+    explicit Ip(const AAAA &record);
+    explicit Ip(const Record &record);
 
     /**
      *  Destructor
