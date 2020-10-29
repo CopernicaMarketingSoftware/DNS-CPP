@@ -23,6 +23,7 @@
 #include "udp.h"
 #include "ip.h"
 #include "response.h"
+#include <unordered_map>
 
 /**
  *  Begin of the namespace
@@ -64,10 +65,12 @@ private:
     Udp _udp;
 
     /**
-     *  All the objects that are interested in handling responses
-     *  @var std::vector<Handler>
+     *  Multimap with the handlers. We use an unordered_multimap instead of an unordered_set
+     *  because we actually need to iterate over all the elements with the same id (there may be
+     *  multiple elements with the same id, although in practice this doesn't happen often).
+     *  @var set
      */
-    std::vector<Handler*> _handlers;
+    std::unordered_multimap<uint16_t,Handler*> _handlers;
 
     /**
      *  Method that is called when a response is received
@@ -89,12 +92,19 @@ private:
             
             // parse the response
             Response response(buffer, size);
-            
-            // make a copy of the handlers because the vector could be reshufled when we call the handlers
-            decltype(_handlers) handlers(_handlers);
+        
+            // filter on the response id
+            auto range = _handlers.equal_range(response.id());
 
-            // notify each handler
-            for (auto *handler : handlers) handler->onReceived(this, response);
+            // iterate over those elements, notifying each handler
+            for (auto iter = range.first; iter != range.second; ) 
+            {
+                // first we make a copy of the new iterator (since the onReceived might invalidate it)
+                auto element = iter++;
+
+                // call the onreceived for the element
+                element->second->onReceived(this, response);
+            }
         }
         catch (...)
         {
@@ -143,24 +153,30 @@ public:
     /**
      *  Subscribe to the socket if you want to be notified about incoming responses
      *  @param  handler     the handler that wants to receive an answer
+     *  @param  id          id of the response that the handler is interested in
      */
-    void subscribe(Handler *handler)
+    void subscribe(Handler *handler, uint16_t id)
     {
-        // add to the vector
-        _handlers.push_back(handler);
+        // emplace the handler
+        _handlers.emplace(id, handler);
     }
     
     /**
      *  Unsubscribe from the socket, this is the counterpart of subscribe()
      *  @param  handler     the handler that unsubscribes
+     *  @param  id          id of the response that the handler is interested in
      */
-    void unsubscribe(Handler *handler)
+    void unsubscribe(Handler *handler, uint16_t id)
     {
-        // remove from the vector. we use partition, because it does not keep the ordering and that is 
-        // not a requirement for us, so the removal is actually a lot faster since it also moves the elements
-        // to the end but simply by swapping them with the elements that were there to begin with.
-        _handlers.erase(std::partition(_handlers.begin(), _handlers.end(), [handler](Handler *other) { return handler != other; }), _handlers.end());
-        
+        // find the iterator within a range
+        auto range = _handlers.equal_range(id);
+
+        // actually find the handler to erase
+        auto iter = std::find_if(range.first, range.second, [handler](const decltype(_handlers)::value_type &other) { return other.second == handler; });
+
+        // erase that element
+        _handlers.erase(iter);
+
         // if nobody is listening to the socket, we can just as well close it
         if (_handlers.empty()) _udp.close();
     }

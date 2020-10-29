@@ -94,7 +94,7 @@ void RemoteLookup::cleanup()
     _connection.reset();
     
     // unsubscribe from the nameservers
-    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this);
+    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this, _query.id());
     
     // stop the timer
     if (_timer) _core->loop()->cancel(_timer, this);
@@ -161,7 +161,7 @@ void RemoteLookup::retry(double now)
         nameserver.datagram(_query);
         
         // in the first iteration we have not yet subscribed
-        if (_count < nscount) nameserver.subscribe(this);
+        if (_count < nscount) nameserver.subscribe(this, _query.id());
 
         // one more message has been sent
         _count += 1;
