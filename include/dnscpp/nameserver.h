@@ -9,6 +9,7 @@
  *  to multiple nameservers in parallel via the Conext class.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
+ *  @author Michael van der Werve <michael.vanderwerve@mailerq.com>
  *  @copyright 2020 Copernica BV
  */
 
@@ -23,7 +24,7 @@
 #include "udp.h"
 #include "ip.h"
 #include "response.h"
-#include <unordered_map>
+#include <set>
 
 /**
  *  Begin of the namespace
@@ -65,12 +66,16 @@ private:
     Udp _udp;
 
     /**
-     *  Multimap with the handlers. We use an unordered_multimap instead of an unordered_set
-     *  because we actually need to iterate over all the elements with the same id (there may be
-     *  multiple elements with the same id, although in practice this doesn't happen often).
+     *  Set with the handlers
      *  @var set
      */
-    std::unordered_multimap<uint16_t,Handler*> _handlers;
+    std::set<std::pair<uint16_t,Handler*>> _handlers;
+
+    /**
+     *  The next iterator we're going to use in onReceived.
+     *  @var _handlers::const_iterator
+     */
+    decltype(_handlers)::const_iterator _iter;
 
     /**
      *  Method that is called when a response is received
@@ -93,17 +98,27 @@ private:
             // parse the response
             Response response(buffer, size);
         
-            // filter on the response id
-            auto range = _handlers.equal_range(response.id());
+            // filter on the response, the beginning is simply the handler at nullptr
+            auto begin = _handlers.lower_bound(std::make_pair(response.id(), nullptr));
+
+            // we store the next iterator we're going to use. normally, we wouldn't do this, but since this
+            // is the 'core' of the actual resolution, we do not want to make copies of the handlers and we 
+            // need to be aware of iterator invalidations. this way, we can simply take the next element once
+            // we invalidate it, not breaking the loop. if we do not do this and only invalidate the 'current'
+            // element (or store the next one), we will (potentially) crash once another job is cancelled. 
+            _iter = begin;
 
             // iterate over those elements, notifying each handler
-            for (auto iter = range.first; iter != range.second; ) 
+            for (auto iter = _iter; iter != _handlers.end(); iter = _iter) 
             {
-                // first we make a copy of the new iterator (since the onReceived might invalidate it)
-                auto element = iter++;
+                // if this element is not applicable any more, we're going to leap out (we're done)
+                if (iter->first != response.id()) return;
+
+                // store the iterator we're going to work on
+                _iter = std::next(iter);
 
                 // call the onreceived for the element
-                element->second->onReceived(this, response);
+                iter->second->onReceived(this, response);
             }
         }
         catch (...)
@@ -158,7 +173,7 @@ public:
     void subscribe(Handler *handler, uint16_t id)
     {
         // emplace the handler
-        _handlers.emplace(id, handler);
+        _handlers.insert(std::make_pair(id, handler));
     }
     
     /**
@@ -168,16 +183,20 @@ public:
      */
     void unsubscribe(Handler *handler, uint16_t id)
     {
-        // find the iterator within a range
-        auto range = _handlers.equal_range(id);
+        // find the element
+        auto iter = _handlers.find(std::make_pair(id, handler));
 
-        // actually find the handler to erase
-        auto iter = std::find_if(range.first, range.second, [handler](const decltype(_handlers)::value_type &other) { return other.second == handler; });
+        // if it is not found, we leap out (this should not happen)
+        if (iter == _handlers.end()) return;
 
-        // erase that element
-        _handlers.erase(iter);
+        // if we happen to erase the element we're working on, the iterator will be invalidated so 
+        // we need to move that iterator
+        if (iter == _iter) _iter = _handlers.erase(iter);
 
-        // if nobody is listening to the socket, we can just as well close it
+        // otherwise we can simply erase it
+        else _handlers.erase(iter);
+
+        // if nobody is listening to the socket any more, we can just as well close it
         if (_handlers.empty()) _udp.close();
     }
 };
