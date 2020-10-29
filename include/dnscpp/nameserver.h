@@ -9,6 +9,7 @@
  *  to multiple nameservers in parallel via the Conext class.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
+ *  @author Michael van der Werve <michael.vanderwerve@mailerq.com>
  *  @copyright 2020 Copernica BV
  */
 
@@ -23,6 +24,7 @@
 #include "udp.h"
 #include "ip.h"
 #include "response.h"
+#include <set>
 
 /**
  *  Begin of the namespace
@@ -64,10 +66,16 @@ private:
     Udp _udp;
 
     /**
-     *  All the objects that are interested in handling responses
-     *  @var std::vector<Handler>
+     *  Set with the handlers
+     *  @var set
      */
-    std::vector<Handler*> _handlers;
+    std::set<std::pair<uint16_t,Handler*>> _handlers;
+
+    /**
+     *  The next iterator we're going to use in onReceived.
+     *  @var _handlers::const_iterator
+     */
+    decltype(_handlers)::const_iterator _iter;
 
     /**
      *  Method that is called when a response is received
@@ -89,12 +97,29 @@ private:
             
             // parse the response
             Response response(buffer, size);
-            
-            // make a copy of the handlers because the vector could be reshufled when we call the handlers
-            decltype(_handlers) handlers(_handlers);
+        
+            // filter on the response, the beginning is simply the handler at nullptr
+            auto begin = _handlers.lower_bound(std::make_pair(response.id(), nullptr));
 
-            // notify each handler
-            for (auto *handler : handlers) handler->onReceived(this, response);
+            // we store the next iterator we're going to use. normally, we wouldn't do this, but since this
+            // is the 'core' of the actual resolution, we do not want to make copies of the handlers and we 
+            // need to be aware of iterator invalidations. this way, we can simply take the next element once
+            // we invalidate it, not breaking the loop. if we do not do this and only invalidate the 'current'
+            // element (or store the next one), we will (potentially) crash once another job is cancelled. 
+            _iter = begin;
+
+            // iterate over those elements, notifying each handler
+            for (auto iter = _iter; iter != _handlers.end(); iter = _iter) 
+            {
+                // if this element is not applicable any more, we're going to leap out (we're done)
+                if (iter->first != response.id()) return;
+
+                // store the iterator we're going to work on
+                _iter = std::next(iter);
+
+                // call the onreceived for the element
+                iter->second->onReceived(this, response);
+            }
         }
         catch (...)
         {
@@ -143,25 +168,35 @@ public:
     /**
      *  Subscribe to the socket if you want to be notified about incoming responses
      *  @param  handler     the handler that wants to receive an answer
+     *  @param  id          id of the response that the handler is interested in
      */
-    void subscribe(Handler *handler)
+    void subscribe(Handler *handler, uint16_t id)
     {
-        // add to the vector
-        _handlers.push_back(handler);
+        // emplace the handler
+        _handlers.insert(std::make_pair(id, handler));
     }
     
     /**
      *  Unsubscribe from the socket, this is the counterpart of subscribe()
      *  @param  handler     the handler that unsubscribes
+     *  @param  id          id of the response that the handler is interested in
      */
-    void unsubscribe(Handler *handler)
+    void unsubscribe(Handler *handler, uint16_t id)
     {
-        // remove from the vector. we use partition, because it does not keep the ordering and that is 
-        // not a requirement for us, so the removal is actually a lot faster since it also moves the elements
-        // to the end but simply by swapping them with the elements that were there to begin with.
-        _handlers.erase(std::partition(_handlers.begin(), _handlers.end(), [handler](Handler *other) { return handler != other; }), _handlers.end());
-        
-        // if nobody is listening to the socket, we can just as well close it
+        // find the element
+        auto iter = _handlers.find(std::make_pair(id, handler));
+
+        // if it is not found, we leap out (this should not happen)
+        if (iter == _handlers.end()) return;
+
+        // if we happen to erase the element we're working on, the iterator will be invalidated so 
+        // we need to move that iterator
+        if (iter == _iter) _iter = _handlers.erase(iter);
+
+        // otherwise we can simply erase it
+        else _handlers.erase(iter);
+
+        // if nobody is listening to the socket any more, we can just as well close it
         if (_handlers.empty()) _udp.close();
     }
 };
