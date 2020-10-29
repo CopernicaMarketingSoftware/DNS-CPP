@@ -156,8 +156,10 @@ public:
      */
     void unsubscribe(Handler *handler)
     {
-        // remove from the vector
-        _handlers.erase(std::remove(_handlers.begin(), _handlers.end(), handler), _handlers.end());
+        // remove from the vector. we use partition, because it does not keep the ordering and that is 
+        // not a requirement for us, so the removal is actually a lot faster since it also moves the elements
+        // to the end but simply by swapping them with the elements that were there to begin with.
+        _handlers.erase(std::partition(_handlers.begin(), _handlers.end(), [handler](Handler *other) { return handler != other; }), _handlers.end());
         
         // if nobody is listening to the socket, we can just as well close it
         if (_handlers.empty()) _udp.close();
