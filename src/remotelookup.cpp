@@ -218,7 +218,7 @@ void RemoteLookup::report(const Response &response)
     
     // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
     // file does have a record for this hostname, check this
-    if (_core->exists(question.name())) return _handler->onReceived(this, response);
+    if (!_core->exists(question.name())) return _handler->onReceived(this, response);
     
     // get the original request (so that the response can match the request)
     Request request(this);
