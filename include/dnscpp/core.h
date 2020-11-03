@@ -151,6 +151,13 @@ public:
     bool dnssec() const { return _dnssec; }
     
     /**
+     *  Does a certain hostname exists in /etc/hosts? In that case a NXDOMAIN error should not be given
+     *  @param  hostname        hostname to check
+     *  @return bool            does it exists in /etc/hosts?
+     */
+    bool exists(const char *hostname) const { return _hosts.lookup(hostname) != nullptr; }
+    
+    /**
      *  Expose the nameservers
      *  @return std::list<Nameserver>
      */

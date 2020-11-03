@@ -20,6 +20,7 @@
 #include "../include/dnscpp/timer.h"
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/operation.h"
+#include "../include/dnscpp/request.h"
 #include "connection.h"
 #include "now.h"
 
@@ -120,6 +121,12 @@ private:
      *  @param  now     current time
      */
     void retry(double now);
+
+    /**
+     *  Method to report the response
+     *  @param  response
+     */
+    void report(const Response &response);
 
     /**
      *  Cleanup the object

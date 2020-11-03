@@ -16,6 +16,8 @@
 #include "../include/dnscpp/response.h"
 #include "../include/dnscpp/answer.h"
 #include "../include/dnscpp/handler.h"
+#include "../include/dnscpp/question.h"
+#include "fakeresponse.h"
 
 /**
  *  Begin of namespace
@@ -200,6 +202,35 @@ void RemoteLookup::expire()
 }
 
 /**
+ *  Method to report the response
+ *  This method checks if there is an NXDOMAIN error, if that is the case
+ *  it is turned into an empty response if the /etc/hosts file holds a record for the host
+ *  @param  response
+ */
+void RemoteLookup::report(const Response &response)
+{
+    // for NXDOMAIN errors we need special treatment (maybe the hostname _does_ exists in 
+    // /etc/hosts?) For all other type of results the message can be passed to userspace
+    if (response.rcode() != ns_r_nxdomain) return _handler->onReceived(this, response);
+
+    // extract the original question, to find out the host for which we were looking
+    Question question(response);
+    
+    // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
+    // file does have a record for this hostname, check this
+    if (_core->exists(question.name())) return _handler->onReceived(this, response);
+    
+    // get the original request (so that the response can match the request)
+    Request request(this);
+    
+    // construct a fake-response message (it is fake because we have not actually received it)
+    FakeResponse fake(request, question);
+
+    // send the fake-response to user-space
+    _handler->onReceived(this, Response(fake.data(), fake.size()));
+}
+
+/**
  *  Method that is called when a response is received
  *  @param  nameserver  the reporting nameserver
  *  @param  response    the received response
@@ -220,7 +251,7 @@ void RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
     cleanup();
 
     // we have a response, so we can pass that to user space
-    _handler->onReceived(this, response);
+    report(response);
     
     // we can self-destruct -- this job has been handled
     delete this;
@@ -241,7 +272,7 @@ void RemoteLookup::onReceived(Connection *connection, const Response &response)
     cleanup();
     
     // we have a response, hand it over to user space
-    _handler->onReceived(this, response);
+    report(response);
     
     // self-destruct now that the job has been completed
     delete this;
