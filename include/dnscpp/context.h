@@ -46,7 +46,7 @@ public:
      *  @param  loop        your event loop
      *  @param  defaults    should system settings be loaded
      */
-    Context(Loop *loop, bool defaults = true) : Core(loop, true) {}
+    Context(Loop *loop, bool defaults = true) : Core(loop, defaults) {}
 
     /**
      *  Constructor
