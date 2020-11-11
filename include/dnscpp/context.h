@@ -88,6 +88,36 @@ public:
     }
     
     /**
+     *  Set max time that a request may last in seconds.
+     *  @param expire       time in seconds. default is 60.0, minimum is 0.1
+     */
+    void expire(double expire)
+    {
+        // store property, make sure the numbers are reasonably clamped
+        _expire = std::max(expire, 0.1);
+    }
+    
+    /**
+     *  Set interval in seconds to wait before contacting the next server.
+     *  @param  spread      time in seconds. default is 0.1, minimum is 0.0.
+     */
+    void spread(double spread)
+    {
+        // store property, make sure the numbers are reasonably clamped
+        _spread = std::max(spread, 0.0);
+    }
+    
+    /**
+     *  Set interval before a datagram is repeated to the same server, in seconds.
+     *  @param  interval    time in seconds. default is 2.0, minimum is 0.1.
+     */
+    void interval(double interval)
+    {
+        // store property, make sure the numbers are reasonably clamped
+        _interval = std::max(interval, 0.1);
+    }
+
+    /**
      *  Enable or disable dnssec
      *  @param  bool
      */
