@@ -137,14 +137,33 @@ public:
 
     /**
      *  The length of the certificate assocation data.
-     * @return length
+     *  @return length
      */
     size_t certificateAssociationDataSize() const { return _record.size() - 3; }
 
 private:
+    /**
+     *  The certificate usage
+     *  @var CertificateUsage
+     */
     CertificateUsage _usage;
+
+    /**
+     *  The selector
+     *  @var Selector
+     */
     Selector _selector;
+
+    /**
+     *  The matching type
+     *  @var MatchingType
+     */
     MatchingType _matching;
+
+    /**
+     *  The association data
+     *  @var unsigned char *
+     */
     const unsigned char *_association;
 };
 
