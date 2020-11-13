@@ -89,44 +89,13 @@ public:
         do_SHA512 = 2
     };
 
-private:
-    /**
-     *  The certificate usage
-     *  @var CertificateUsage
-     */
-    CertificateUsage _usage;
-
-    /**
-     *  The selector
-     *  @var Selector
-     */
-    Selector _selector;
-
-    /**
-     *  The matching type
-     *  @var MatchingType
-     */
-    MatchingType _matching;
-
-    /**
-     *  The association data
-     *  @var unsigned char *
-     */
-    const unsigned char *_association;
-
-public:
     /**
      *  The constructor
      *  @param  response        the response from which the record was extracted
      *  @param  record          the record holding the CNAME
      *  @throws std::runtime_error
      */
-    TLSA(const Response &response, const Record &record) :
-        Extractor(record, TYPE_TLSA, 3),
-        _usage(static_cast<CertificateUsage>(record.data()[0])),
-        _selector(static_cast<Selector>(record.data()[1])),
-        _matching(static_cast<MatchingType>(record.data()[2])),
-        _association(record.data() + 3) {}
+    TLSA(const Response &response, const Record &record) : Extractor(record, TYPE_TLSA, 3) {}
 
     /**
      *  Destructor
@@ -137,25 +106,25 @@ public:
      *  How to verify the certificate?
      *  @return the certificate usage
      */
-    CertificateUsage certificateUsage() const { return _usage; }
+    CertificateUsage certificateUsage() const { return static_cast<CertificateUsage>(_record.data()[0]); }
 
     /**
      *  When a certificate is received, which parts of it should be checked?
      *  @return the selector
      */
-    Selector selector() const { return _selector; }
+    Selector selector() const { return static_cast<Selector>(_record.data()[1]); }
 
     /**
      *  How do we declare it a match?
      *  @return the matching type
      */
-    MatchingType matchingType() const { return _matching; }
+    MatchingType matchingType() const { return static_cast<MatchingType>(_record.data()[2]); }
 
     /**
      *  The actual data to be matched given the settings of the other fields.
      *  @return a text string of hexadecimal data
      */
-    const unsigned char *certificateAssociationData() const { return _association; }
+    const unsigned char *certificateAssociationData() const { return _record.data() + 3; }
 
     /**
      *  The length of the certificate assocation data.
