@@ -97,14 +97,11 @@ public:
      *  @throws std::runtime_error
      */
     TLSA(const Response &response, const Record &record) :
-        Extractor(record, TYPE_TLSA, 3)
-    {
-        const unsigned char *p = record.data();
-        _usage = static_cast<CertificateUsage>(*p++);
-        _selector = static_cast<Selector>(*p++);
-        _matching = static_cast<MatchingType>(*p++);
-        _association = p;
-    }
+        Extractor(record, TYPE_TLSA, 3),
+        _usage(static_cast<CertificateUsage>(record.data()[0])),
+        _selector(static_cast<Selector>(record.data()[1])),
+        _matching(static_cast<MatchingType>(record.data()[2])),
+        _association(record.data() + 3) {}
 
     /**
      *  Destructor
