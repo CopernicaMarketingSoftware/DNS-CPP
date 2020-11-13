@@ -38,3 +38,4 @@
 #include <dnscpp/request.h>
 #include <dnscpp/question.h>
 #include <dnscpp/reverse.h>
+#include <dnscpp/tlsa.h>
