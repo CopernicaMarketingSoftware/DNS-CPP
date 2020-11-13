@@ -90,8 +90,15 @@ public:
         ev_break(EV_DEFAULT, EVBREAK_ONE);
     }
 
+    /**
+     *  Print a binary string as a sequence of hexadecimal numbers
+     *  @param os
+     *  @param hexstring
+     *  @param length
+     */
     static void printhex(std::ostream &os, const unsigned char *hexstring, const size_t length)
     {
+        // print each character
         for (size_t i = 0; i != length; ++i) os << std::hex << std::setfill('0') << std::setw(2) << (int)hexstring[i];
     }
 
@@ -136,10 +143,17 @@ private:
                 case ns_t_soa:      { DNS::SOA soa(response, record); std::cout << soa.nameserver() << " " << soa.email() << " " << soa.serial() << " " << soa.interval() << " " << soa.retry() << " " << soa.expire() << " " << soa.minimum(); } break;
                 case ns_t_tlsa:
                 {
-                        const DNS::TLSA tlsa(response, record);
-                        std::cout << (int)tlsa.certificateUsage() << " " << (int)tlsa.selector() << " " << (int)tlsa.matchingType() << " ";
-                        printhex(std::cout, tlsa.certificateAssociationData(), tlsa.certificateAssociationDataSize());
-                        break;
+                    // create a TLSA record
+                    const DNS::TLSA tlsa(response, record);
+
+                    // print out the enums
+                    std::cout << (int)tlsa.certificateUsage() << " " << (int)tlsa.selector() << " " << (int)tlsa.matchingType() << " ";
+
+                    // print the certificate association data as hex
+                    printhex(std::cout, tlsa.certificateAssociationData(), tlsa.certificateAssociationDataSize());
+
+                    // done
+                    break;
                 }
                 default:            std::cout << "unknown"; break;
                 }
