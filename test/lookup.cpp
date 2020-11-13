@@ -14,6 +14,7 @@
 #include <dnscpp.h>
 #include <dnscpp/libev.h>
 #include <iostream>
+#include <iomanip>
 
 /**
  *  Helper function to convert type
@@ -33,6 +34,7 @@ static ns_type convert(const char *type)
     if (strcasecmp(type, "caa")     == 0) return ns_t_caa;
     if (strcasecmp(type, "ns")      == 0) return ns_t_ns;
     if (strcasecmp(type, "ptr")     == 0) return ns_t_ptr;
+    if (strcasecmp(type, "tlsa")    == 0) return ns_t_tlsa;
     
     // invalid type
     throw std::runtime_error(std::string("unknown record type ") + type);
@@ -88,6 +90,18 @@ public:
         ev_break(EV_DEFAULT, EVBREAK_ONE);
     }
 
+    /**
+     *  Print a binary string as a sequence of hexadecimal numbers
+     *  @param os
+     *  @param hexstring
+     *  @param length
+     */
+    static void printhex(std::ostream &os, const unsigned char *hexstring, const size_t length)
+    {
+        // print each character
+        for (size_t i = 0; i != length; ++i) os << std::hex << std::setfill('0') << std::setw(2) << (int)hexstring[i];
+    }
+
 private:
     /**
      *  Helper method to print a section    
@@ -127,7 +141,20 @@ private:
                 case ns_t_ns:       std::cout << DNS::NS(response, record).nameserver(); break;
                 case ns_t_ptr:      std::cout << DNS::PTR(response, record).target(); break;
                 case ns_t_soa:      { DNS::SOA soa(response, record); std::cout << soa.nameserver() << " " << soa.email() << " " << soa.serial() << " " << soa.interval() << " " << soa.retry() << " " << soa.expire() << " " << soa.minimum(); } break;
-    //            case ns_t_caa:      std::cout << DNS::CAA(response, record); break;
+                case ns_t_tlsa:
+                {
+                    // create a TLSA record
+                    const DNS::TLSA tlsa(response, record);
+
+                    // print out the enums
+                    std::cout << (int)tlsa.certificateUsage() << " " << (int)tlsa.selector() << " " << (int)tlsa.matchingType() << " ";
+
+                    // print the certificate association data as hex
+                    printhex(std::cout, tlsa.certificateAssociationData(), tlsa.certificateAssociationDataSize());
+
+                    // done
+                    break;
+                }
                 default:            std::cout << "unknown"; break;
                 }
             
