@@ -58,6 +58,13 @@ protected:
     Hosts _hosts;
     
     /**
+     *  Size of the send and receive buffer. If set to zero, default
+     *  will be kept. This is limited by the system maximum (wmem_max and rmem_max)
+     *  @var size_t
+     */
+    int32_t _buffersize = 0;
+
+    /**
      *  Max time that a request may last in seconds
      *  @var double
      */
@@ -104,7 +111,7 @@ protected:
         for (size_t i = 0; i < settings.nameservers(); ++i)
         {
             // construct a nameserver
-            _nameservers.emplace_back(_loop, settings.nameserver(i));
+            _nameservers.emplace_back(this, settings.nameserver(i));
         }
     }
     
@@ -125,6 +132,12 @@ public:
      *  @return Loop
      */
     Loop *loop() { return _loop; }
+
+    /**
+     *  The send and receive buffer size 
+     *  @return int32_t
+     */
+    int32_t buffersize() const { return _buffersize; }
     
     /**
      *  The period between sending a new datagram to the same nameserver in seconds

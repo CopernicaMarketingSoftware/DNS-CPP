@@ -32,7 +32,7 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop)
     ResolvConf settings;
     
     // copy the nameservers
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(loop, settings.nameserver(i));
+    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i));
     
     // we also have to load /etc/hosts
     if (!_hosts.load()) throw std::runtime_error("failed to load /etc/hosts");

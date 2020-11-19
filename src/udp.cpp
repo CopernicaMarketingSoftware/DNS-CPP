@@ -14,6 +14,7 @@
 #include "../include/dnscpp/loop.h"
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/query.h"
+#include "../include/dnscpp/core.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdexcept>
@@ -26,12 +27,12 @@ namespace DNS {
 
 /**
  *  Constructor
- *  @param  loop        event loop
+ *  @param  core        core object
  *  @param  handler     object that is notified about incoming messages
  *  @throws std::runtime_error
  */
-Udp::Udp(Loop *loop, Handler *handler) : 
-    _loop(loop), 
+Udp::Udp(Core *core, Handler *handler) : 
+    _core(core), 
     _handler(handler)
 {
 }
@@ -43,6 +44,18 @@ Udp::~Udp()
 {
     // close the socket
     close();
+}
+
+/**
+ *  Helper method to set a socket option
+ *  @param  optname
+ *  @param  optval
+ *  @param  optlen
+ */
+int Udp::setintopt(int optname, int32_t optval)
+{
+    // set the socket option
+    return setsockopt(_fd, SOL_SOCKET, optname, &optval, 4);
 }
 
 /**
@@ -60,9 +73,17 @@ bool Udp::open(int version)
     
     // check for success
     if (_fd < 0) return false;
-    
+
+    // if there is a buffer size to set, do so
+    if (_core->buffersize() > 0)
+    {
+        // set the send and receive buffer to the requested buffer size
+        setintopt(SO_SNDBUF, _core->buffersize());
+        setintopt(SO_RCVBUF, _core->buffersize());
+    }
+
     // we want to be notified when the socket receives data
-    _identifier = _loop->add(_fd, 1, this);
+    _identifier = _core->loop()->add(_fd, 1, this);
     
     // done
     return true;
@@ -78,7 +99,7 @@ bool Udp::close()
     if (_fd < 0) return false;
 
     // tell the event loop that we no longer are interested in notifications
-    _loop->remove(_identifier, _fd, this);
+    _core->loop()->remove(_identifier, _fd, this);
     
     // close the socket
     ::close(_fd);

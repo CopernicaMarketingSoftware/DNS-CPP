@@ -84,7 +84,18 @@ public:
     void nameserver(const Ip &ip)
     {
         // add to the member in the base class
-        _nameservers.emplace_back(_loop, ip);
+        _nameservers.emplace_back(static_cast<Core*>(this), ip);
+    }
+
+    /**
+     *  The send and receive buffer size 
+     *  @param  size      the requested buffer size in bytes, or default with 0. 
+     *                    only gets applied to new sockets.
+     */
+    void buffersize(int32_t size) 
+    {
+        // store the property
+        _buffersize = size;
     }
     
     /**
