@@ -25,6 +25,7 @@
 #include "ip.h"
 #include "response.h"
 #include <set>
+#include <memory>
 
 /**
  *  Begin of the namespace
@@ -60,16 +61,22 @@ public:
     
 private:
     /**
+     *  The core
+     *  @var Core*
+     */
+    Core *_core;
+
+    /**
      *  IP address of the nameserver
      *  @var    Ip
      */
     Ip _ip;
     
     /**
-     *  UDP socket to send messages to the nameserver
-     *  @var    Udp
+     *  UDP sockets to use
+     *  @var    std::vector<std::unique_ptr<Udp>>
      */
-    Udp _udp;
+    std::vector<std::unique_ptr<Udp>> _udp;
 
     /**
      *  Set with the handlers
@@ -83,41 +90,7 @@ private:
      *  @param  buffer      the received response
      *  @param  size        size of the response
      */
-    virtual void onReceived(const Ip &ip, const unsigned char *buffer, size_t size) override
-    {
-        // avoid exceptions (parsing the response could fail)
-        try
-        {
-            // ignore responses from other ips
-            // @todo also ignore messages that do not come from port 53???
-            if (ip != _ip) return;
-            
-            // if nobody is interested there is no point in parsing the message
-            if (_handlers.empty()) return;
-            
-            // parse the response
-            Response response(buffer, size);
-        
-            // filter on the response, the beginning is simply the handler at nullptr
-            auto begin = _handlers.lower_bound(std::make_pair(response.id(), nullptr));
-
-            // iterate over those elements, notifying each handler
-            for (auto iter = begin; iter != _handlers.end(); ++iter) 
-            {
-                // if this element is not applicable any more, we're going to leap out (we're done)
-                if (iter->first != response.id()) return;
-
-                // call the onreceived for the element, if it returns true, it has acknowledged that it
-                // processed the response and so we can stop iterating. we have to, since it might have removed
-                // itself so iter may be broken at this point.
-                if (iter->second->onReceived(this, response)) return;
-            }
-        }
-        catch (...)
-        {
-            // parsing the response failed
-        }
-    }
+    virtual void onReceived(const Ip &ip, const unsigned char *buffer, size_t size) override;
 
 
 public:
@@ -127,7 +100,11 @@ public:
      *  @param  ip      nameserver IP
      *  @throws std::runtime_error
      */
-    Nameserver(Core *core, const Ip &ip) : _ip(ip), _udp(core, this) {}
+    Nameserver(Core *core, const Ip &ip) : _core(core), _ip(ip)
+    {
+        // we always want to have at least one udp socket ready
+        _udp.emplace_back(new Udp(core, this));
+    }
     
     /**
      *  No copying
@@ -151,42 +128,21 @@ public:
      *  @param  query
      *  @return bool
      */
-    bool datagram(const Query &query)
-    {
-        // send the package
-        return _udp.send(_ip, query);
-    }
+    bool datagram(const Query &query);
 
     /**
      *  Subscribe to the socket if you want to be notified about incoming responses
      *  @param  handler     the handler that wants to receive an answer
      *  @param  id          id of the response that the handler is interested in
      */
-    void subscribe(Handler *handler, uint16_t id)
-    {
-        // emplace the handler
-        _handlers.insert(std::make_pair(id, handler));
-    }
+    void subscribe(Handler *handler, uint16_t id);
     
     /**
      *  Unsubscribe from the socket, this is the counterpart of subscribe()
      *  @param  handler     the handler that unsubscribes
      *  @param  id          id of the response that the handler is interested in
      */
-    void unsubscribe(Handler *handler, uint16_t id)
-    {
-        // find the element
-        auto iter = _handlers.find(std::make_pair(id, handler));
-
-        // if it is not found, we leap out (this should not happen)
-        if (iter == _handlers.end()) return;
-
-        // simply erase the element
-        _handlers.erase(iter);
-
-        // if nobody is listening to the socket any more, we can just as well close it
-        if (_handlers.empty()) _udp.close();
-    }
+    void unsubscribe(Handler *handler, uint16_t id);
 };
 
 /**

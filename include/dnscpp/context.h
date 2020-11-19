@@ -97,6 +97,26 @@ public:
         // store the property
         _buffersize = size;
     }
+
+    /**
+     *  Set maximum number of open sockets per nameserver, minimum is 1.
+     *  @param num
+     */
+    void sockets(size_t num) 
+    {
+        // store property, minimum is 1 
+        _sockets = std::max(num, 1UL);
+    }
+
+    /**
+     *  Set maximum number of open requests per socket before opening a new socket, minimum is 1 request.
+     *  @return size_t
+     */
+    void socketrequests(size_t num) 
+    { 
+        // store property, minimum is 1
+        _socketrequests = std::max(num, 1UL); 
+    }    
     
     /**
      *  Set max time that a request may last in seconds.

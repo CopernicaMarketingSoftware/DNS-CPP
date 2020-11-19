@@ -65,6 +65,18 @@ protected:
     int32_t _buffersize = 0;
 
     /**
+     *  Maximum number of sockets that may be opened per nameserver. By default, this is set to 32.
+     *  @var size_t
+     */
+    size_t _sockets = 32;
+
+    /**
+     *  Maximum number of open requests per socket on average.
+     *  @var size_t
+     */
+    size_t _socketrequests = 64;
+
+    /**
      *  Max time that a request may last in seconds
      *  @var double
      */
@@ -138,6 +150,18 @@ public:
      *  @return int32_t
      */
     int32_t buffersize() const { return _buffersize; }
+
+    /**
+     *  Maximum number of open sockets per nameserver.
+     *  @return size_t
+     */
+    size_t sockets() const { return _sockets; }
+
+    /**
+     *  Maximum number of open requests per socket before opening a new socket.
+     *  @return size_t
+     */
+    size_t socketrequests() const { return _socketrequests; }    
     
     /**
      *  The period between sending a new datagram to the same nameserver in seconds
