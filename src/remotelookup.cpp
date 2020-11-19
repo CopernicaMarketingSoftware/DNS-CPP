@@ -242,12 +242,11 @@ bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
     // @todo should we check for more? like whether the response is indeed a response
     if (!_query.matches(response)) return false;
     
-    // if we're already busy with a tcp connection we ignore further dgram responses,
-    // we still return true because the loop in the caller does not have to proceed
-    if (_connection) return true;
+    // if we're already busy with a tcp connection we ignore further dgram responses
+    if (_connection) return false;
     
     // if the response was truncated, we ignore it and start a tcp connection
-    if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this)), true;
+    if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this)), false;
     
     // before we report to userspace we cleanup the object
     cleanup();
