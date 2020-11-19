@@ -32,6 +32,11 @@
 namespace DNS {
 
 /**
+ *  Forward declaration
+ */
+class Core;
+
+/**
  *  Class definition
  */
 class Nameserver : private Udp::Handler
@@ -132,11 +137,11 @@ private:
 public:
     /**
      *  Constructor
-     *  @param  loop    event loop
+     *  @param  core    the core object with the settings and event loop
      *  @param  ip      nameserver IP
      *  @throws std::runtime_error
      */
-    Nameserver(Loop *loop, const Ip &ip) : _ip(ip), _udp(loop, this) {}
+    Nameserver(Core *core, const Ip &ip) : _ip(ip), _udp(core, this) {}
     
     /**
      *  No copying

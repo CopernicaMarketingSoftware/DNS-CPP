@@ -31,6 +31,7 @@ namespace DNS {
 /**
  *  Forward declarations
  */
+class Core;
 class Query;
 class Loop;
 class Ip;
@@ -56,13 +57,20 @@ public:
          */
         virtual void onReceived(const Ip &ip, const unsigned char *response, size_t size) = 0;
     };
+
+    /**
+     *  Helper method to set an integer socket option
+     *  @param  optname
+     *  @param  optval
+     */
+    int setintopt(int optname, int32_t optval);
     
 private:
     /**
-     *  The event loop in user space
-     *  @var Loop
+     *  The core object
+     *  @var Core
      */
-    Loop *_loop;
+    Core *_core;
     
     /**
      *  The filedescriptor of the socket
@@ -107,11 +115,11 @@ private:
 public:
     /**
      *  Constructor
-     *  @param  loop        event loop in user space
+     *  @param  core        the core object
      *  @param  handler     object that will receive all incoming responses
      *  @throws std::runtime_error
      */
-    Udp(Loop *loop, Handler *handler);
+    Udp(Core *core, Handler *handler);
     
     /**
      *  No copying
