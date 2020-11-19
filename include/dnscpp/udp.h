@@ -22,6 +22,9 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include "monitor.h"
+#include "idle.h"
+#include <list>
+#include <string>
 
 /**
  *  Begin of namespace
@@ -40,7 +43,7 @@ class Response;
 /**
  *  Class definition
  */
-class Udp : private Monitor
+class Udp : private Monitor, private Idle
 {
 public:
     /**
@@ -83,18 +86,35 @@ private:
      *  @var void *
      */
     void *_identifier = nullptr;
-    
+
     /**
      *  The object that is interested in handling responses
      *  @var Handler
      */
     Handler *_handler;
+
+    /**
+     *  The idle watcher we have when we should process the responses as soon as possible.
+     *  @var void*
+     */
+    void *_idle = nullptr;
+
+    /**
+     *  All the buffered responses that came in 
+     *  @var std::list
+     */
+    std::list<std::pair<Ip,std::string>> _responses;
     
     /**
      *  Method that is called from user-space when the socket becomes
      *  readable.
      */
     virtual void notify() override;
+
+    /**
+     *  Method that is called from user-space when the app is idle.
+     */
+    virtual void idle() override;
     
     /**
      *  Send a query to a certain nameserver
@@ -111,6 +131,11 @@ private:
      *  @return bool
      */
     bool open(int version);
+
+    /**
+     *  Helper method to stop monitoring the idle state
+     */
+    void stop();
 
 public:
     /**
