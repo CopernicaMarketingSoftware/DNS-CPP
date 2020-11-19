@@ -234,18 +234,20 @@ void RemoteLookup::report(const Response &response)
  *  Method that is called when a response is received
  *  @param  nameserver  the reporting nameserver
  *  @param  response    the received response
+ *  @return bool        was the response processed?
  */
-void RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
+bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
 {
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
-    if (!_query.matches(response)) return;
+    if (!_query.matches(response)) return false;
     
-    // if we're already busy with a tcp connection we ignore further dgram responses
-    if (_connection) return;
+    // if we're already busy with a tcp connection we ignore further dgram responses,
+    // we still return true because the loop in the caller does not have to proceed
+    if (_connection) return true;
     
     // if the response was truncated, we ignore it and start a tcp connection
-    if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this));
+    if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this)), true;
     
     // before we report to userspace we cleanup the object
     cleanup();
@@ -255,6 +257,9 @@ void RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
     
     // we can self-destruct -- this job has been handled
     delete this;
+    
+    // job has been handled
+    return true;
 }
 
 /**

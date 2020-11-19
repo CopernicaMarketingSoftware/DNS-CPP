@@ -47,8 +47,9 @@ public:
          *  Method that is called when a response is received
          *  @param  nameserver  the reporting nameserver
          *  @param  response    the received response
+         *  @return bool        was the response processed?
          */
-        virtual void onReceived(Nameserver *nameserver, const Response &response) = 0;
+        virtual bool onReceived(Nameserver *nameserver, const Response &response) = 0;
     };
     
     
@@ -118,7 +119,7 @@ private:
                 _iter = std::next(iter);
 
                 // call the onreceived for the element
-                iter->second->onReceived(this, response);
+                if (iter->second->onReceived(this, response)) return;
             }
         }
         catch (...)

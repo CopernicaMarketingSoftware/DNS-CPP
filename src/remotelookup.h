@@ -77,7 +77,7 @@ private:
      *  @param  nameserver  the reporting nameserver
      *  @param  response    the received response
      */
-    virtual void onReceived(Nameserver *nameserver, const Response &response) override;
+    virtual bool onReceived(Nameserver *nameserver, const Response &response) override;
 
     /**
      *  Called when the response has been received over tcp
