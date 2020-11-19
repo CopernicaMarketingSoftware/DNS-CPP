@@ -78,12 +78,6 @@ private:
     std::set<std::pair<uint16_t,Handler*>> _handlers;
 
     /**
-     *  The next iterator we're going to use in onReceived.
-     *  @var _handlers::const_iterator
-     */
-    decltype(_handlers)::const_iterator _iter;
-
-    /**
      *  Method that is called when a response is received
      *  @param  ip          the ip of the nameserver from which it is received
      *  @param  buffer      the received response
@@ -107,23 +101,15 @@ private:
             // filter on the response, the beginning is simply the handler at nullptr
             auto begin = _handlers.lower_bound(std::make_pair(response.id(), nullptr));
 
-            // we store the next iterator we're going to use. normally, we wouldn't do this, but since this
-            // is the 'core' of the actual resolution, we do not want to make copies of the handlers and we 
-            // need to be aware of iterator invalidations. this way, we can simply take the next element once
-            // we invalidate it, not breaking the loop. if we do not do this and only invalidate the 'current'
-            // element (or store the next one), we will (potentially) crash once another job is cancelled. 
-            _iter = begin;
-
             // iterate over those elements, notifying each handler
-            for (auto iter = _iter; iter != _handlers.end(); iter = _iter) 
+            for (auto iter = begin; iter != _handlers.end(); ++iter) 
             {
                 // if this element is not applicable any more, we're going to leap out (we're done)
                 if (iter->first != response.id()) return;
 
-                // store the iterator we're going to work on
-                _iter = std::next(iter);
-
-                // call the onreceived for the element
+                // call the onreceived for the element, if it returns true, it has acknowledged that it
+                // processed the response and so we can stop iterating. we have to, since it might have removed
+                // itself so iter may be broken at this point.
                 if (iter->second->onReceived(this, response)) return;
             }
         }
@@ -195,12 +181,8 @@ public:
         // if it is not found, we leap out (this should not happen)
         if (iter == _handlers.end()) return;
 
-        // if we happen to erase the element we're working on, the iterator will be invalidated so 
-        // we need to move that iterator
-        if (iter == _iter) _iter = _handlers.erase(iter);
-
-        // otherwise we can simply erase it
-        else _handlers.erase(iter);
+        // simply erase the element
+        _handlers.erase(iter);
 
         // if nobody is listening to the socket any more, we can just as well close it
         if (_handlers.empty()) _udp.close();
