@@ -17,6 +17,7 @@
  *  Dependencies
  */
 #include <vector>
+#include <resolv.h>
 
 /**
  *  Begin of namespace
@@ -34,6 +35,25 @@ private:
      *  @var std::vector<Ip>
      */
     std::vector<Ip> _nameservers;
+
+    /**
+     *  Timeout as specified in the conf.
+     *  @var size_t
+     */
+    size_t _timeout = RES_TIMEOUT;
+
+    /**
+     *  How many attempts to make 
+     *  @var size_t
+     */
+    size_t _attempts = RES_DFLRETRY;
+
+    /**
+     *  Rotate, see man resolvconf. This indicates if the nameservers should be tried in-order
+     *  or if the load can be distributed among them.
+     *  @var bool
+     */
+    bool _rotate = false;
 
     /**
      *  Helper method to parse lines
@@ -68,12 +88,19 @@ private:
     void search(const char *line, size_t size);
 
     /**
-     *  Add an option
+     *  Add an options line
      *  @param  line        the value to parse
      *  @param  size        size of the line
      *  @throws std::runtime_error
      */
     void options(const char *line, size_t size);
+
+    /**
+     *  Add an option
+     *  @param  option  
+     *  @param  size
+     */
+    void option(const char *option, size_t size);
 
 public:
     /**
@@ -101,6 +128,24 @@ public:
      *  @return Ip
      */
     const Ip &nameserver(size_t index) const { return _nameservers[index]; }
+
+    /**
+     *  Whether or not the 'rotate' option is set in the resolve conf
+     *  @return bool
+     */
+    bool rotate() const { return _rotate; }
+
+    /**
+     *  Timeout to use before going to a different nameserver.
+     *  @return size_t
+     */
+    size_t timeout() const { return _timeout; }
+
+    /**
+     *  Number of attempts to make before giving up.
+     *  @return size_t
+     */
+    size_t attempts() const { return _attempts; }
 };
     
 /**

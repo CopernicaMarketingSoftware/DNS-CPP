@@ -139,9 +139,10 @@ void RemoteLookup::timeout()
  */
 void RemoteLookup::retry(double now)
 {
-    // we need some "random" identity because we do not want all jobs to start with 
-    // nameserver[0] -- for this we use the starttime as it is random-enough to distribute requests
-    size_t id = _started * 100000;
+    // we need some "random" identity if the rotate option is set because we do not want all jobs to start with 
+    // nameserver[0] -- for this we use the starttime as it is random-enough to distribute requests. otherwise 
+    // we will always start at nameserver 0
+    size_t id = _core->rotate() ? _started * 100000 : 0;
     
     // access to the nameservers + the number we have
     auto &nameservers = _core->nameservers();

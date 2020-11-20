@@ -14,6 +14,7 @@
 #include "../include/dnscpp/resolvconf.h"
 #include <ctype.h>
 #include <fstream>
+#include <iostream>
 
 /**
  *  Begin of namespace
@@ -175,8 +176,45 @@ void ResolvConf::search(const char *line, size_t size)
  */
 void ResolvConf::options(const char *line, size_t size)
 {
-    // report error
-    throw std::runtime_error(std::string("not implemented: options ") + line);
+    // define the start and the line
+    const char *start = line;
+    const char *space = strchr(start, ' ');
+
+    // iterate over the options, separate by spaces
+    while (start)
+    {
+        // process the option
+        option(start, space ? space - start : size - (start - line));
+
+        // if there was no space, we're reached the end of the line, and we're done
+        if (!space) return;
+
+        // find the next space
+        start = space + 1;
+        space = strchr(start, ' ');
+    }
+}
+
+/**
+ *  Add an option
+ *  @param  option  
+ *  @param  size
+ */
+void ResolvConf::option(const char *option, size_t size)
+{
+    // if the option is empty, there is nothing to check
+    if (size == 0) return;
+
+    // check if this is the rotate option
+    if (strcmp(option, "rotate") == 0) _rotate = true;
+    
+    // maybe this is the timeout option, needs to be capped to 30 (per the conf)
+    else if (strncmp(option, "timeout:", 8) == 0) _timeout = std::min(30, atoi(option + 8));
+
+    // maybe this is the attempts option? parse it and cap it to 5.
+    else if (strncmp(option, "attempts:", 9) == 0) _attempts = std::min(5, atoi(option + 9));
+
+    // unknown option...
 }
   
 /**

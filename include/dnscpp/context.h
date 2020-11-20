@@ -176,6 +176,15 @@ public:
      */
     Operation *query(const DNS::Ip &ip, const SuccessCallback &success, const FailureCallback &failure);
     
+    /**
+     *  Expose some getters from core
+     */
+    using Core::buffersize;
+    using Core::dnssec;
+    using Core::rotate;
+    using Core::spread;
+    using Core::expire;
+    using Core::interval;
 };
     
 /**
