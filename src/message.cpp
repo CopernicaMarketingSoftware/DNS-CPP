@@ -35,8 +35,11 @@ ns_rcode Message::rcode() const
         // prevent exceptions in case this is not an OPT record
         try
         {
-            // get the additional record, and treat that as an OPT record
-            OPT record(*this, Additional(*this, i));
+            // additional record
+            Additional additional(*this, i);
+    
+            // treat the additional record as an OPT record
+            OPT record(*this, additional);
         
             // if we're here we have indeed found the OPT record, and
             // should add the extra eight bits
