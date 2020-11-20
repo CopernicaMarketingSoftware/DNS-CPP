@@ -120,6 +120,12 @@ protected:
             _nameservers.emplace_back(this, settings.nameserver(i));
         }
 
+        // the timeout value is the time before moving on to the next server
+        _spread = settings.timeout();
+
+        // the attempts divided by the expire time will be the interval
+        _interval = _expire / settings.attempts();
+
         // set the rotate setting
         _rotate = settings.rotate();
     }

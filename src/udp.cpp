@@ -44,6 +44,9 @@ Udp::~Udp()
 {
     // close the socket
     close();
+
+    // stop monitoring the idle state
+    stop();
 }
 
 /**
@@ -90,6 +93,21 @@ bool Udp::open(int version)
 }
 
 /**
+ *  Helper method to stop monitoring the idle state
+ */
+void Udp::stop()
+{
+    // nothing to do if not checking for idle
+    if (_idle == nullptr) return;
+
+    // cancel the idle watcher
+    _core->loop()->cancel(_idle, this);
+
+    // forget the ptr
+    _idle = nullptr;
+}
+
+/**
  *  Close the socket
  *  @return bool
  */
@@ -117,31 +135,65 @@ bool Udp::close()
  */
 void Udp::notify()
 {
-    // prevent exceptions (parsing the ip could fail)
-    try
-    {
-        // do nothing if there is no socket (how is that possible!?)
-        if (_fd < 0) return;
-        
-        // the buffer to receive the response in
-        // @todo use a macro
-        unsigned char buffer[65536];
+    // do nothing if there is no socket (how is that possible!?)
+    if (_fd < 0) return;
+    
+    // the buffer to receive the response in
+    // @todo use a macro
+    char buffer[65536];
 
-        // structure will hold the source address (we use an ipv6 struct because that is also big enough for ipv4)
-        struct sockaddr_in6 from; socklen_t fromlen = sizeof(from);
-        
+    // structure will hold the source address (we use an ipv6 struct because that is also big enough for ipv4)
+    struct sockaddr_in6 from; socklen_t fromlen = sizeof(from);
+    
+    // number of mesages gotten from the fd
+    size_t messages = 0;
+
+    // we want to get as much messages at onces as possible
+    // @todo use scatter-gather io to optimize this further
+    do {
         // reveive the message
         auto bytes = recvfrom(_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&from, &fromlen);
         
-        // find the ip address from which the message was received
-        Ip ip((struct sockaddr *)&from);
-        
-        // notify the handler
-        _handler->onReceived(ip, buffer, bytes);
+        // if there were no bytes, leap out
+        if (bytes <= 0) break;
+
+        // add to the responses
+        _responses.emplace_back(Ip((struct sockaddr *)&from), std::string(buffer, bytes));
+
+    // we keep iterating as long as we've gotten under 1024 messages
+    // @todo reduce this if too much time is taken doing this, and other buffers overflow
+    } while (++messages < 1024);
+
+    // if we're already processing, we don't need to install idle watcher
+    if (_idle) return;
+
+    // create a new idle watcher now
+    _idle = _core->loop()->idle(this);
+}
+
+/**
+ *  Method that is called from user-space when the timer expires.
+ */
+void Udp::idle()
+{
+    // if there is nothing to do, we can stop the watcher (no more responses to feed back)
+    if (_responses.empty()) return stop();
+
+    // prevent exceptions (parsing the ip could fail)
+    try
+    {
+        // get the first element
+        auto front = _responses.front();
+
+        // get the first element
+        _handler->onReceived(front.first, (unsigned char*)front.second.c_str(), front.second.size());
+
+        // pop the front
+        _responses.pop_front();
     }
     catch (const std::runtime_error &error)
     {
-        // report the error
+        // @todo report the error
     }
 }
 
