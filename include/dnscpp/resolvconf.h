@@ -17,6 +17,7 @@
  *  Dependencies
  */
 #include <vector>
+#include <resolv.h>
 
 /**
  *  Begin of namespace
@@ -34,6 +35,18 @@ private:
      *  @var std::vector<Ip>
      */
     std::vector<Ip> _nameservers;
+
+    /**
+     *  Timeout as specified in the conf.
+     *  @var size_t
+     */
+    size_t _timeout = RES_TIMEOUT;
+
+    /**
+     *  How many attempts to make 
+     *  @var size_t
+     */
+    size_t _attempts = RES_DFLRETRY;
 
     /**
      *  Rotate, see man resolvconf. This indicates if the nameservers should be tried in-order
@@ -121,6 +134,18 @@ public:
      *  @return bool
      */
     bool rotate() const { return _rotate; }
+
+    /**
+     *  Timeout to use before going to a different nameserver.
+     *  @return size_t
+     */
+    size_t timeout() const { return _timeout; }
+
+    /**
+     *  Number of attempts to make before giving up.
+     *  @return size_t
+     */
+    size_t attempts() const { return _attempts; }
 };
     
 /**

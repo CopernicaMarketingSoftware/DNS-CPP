@@ -14,6 +14,7 @@
 #include "../include/dnscpp/resolvconf.h"
 #include <ctype.h>
 #include <fstream>
+#include <iostream>
 
 /**
  *  Begin of namespace
@@ -205,7 +206,15 @@ void ResolvConf::option(const char *option, size_t size)
     if (size == 0) return;
 
     // check if this is the rotate option
-    if (strcmp(option, "rotate")) _rotate = true;
+    if (strcmp(option, "rotate") == 0) _rotate = true;
+    
+    // maybe this is the timeout option, needs to be capped to 30 (per the conf)
+    else if (strncmp(option, "timeout:", 8) == 0) _timeout = std::min(30, atoi(option + 8));
+
+    // maybe this is the attempts option? parse it and cap it to 5.
+    else if (strncmp(option, "attempts:", 9) == 0) _attempts = std::min(5, atoi(option + 9));
+
+    // unknown option...
 }
   
 /**

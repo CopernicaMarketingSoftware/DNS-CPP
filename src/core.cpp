@@ -34,6 +34,15 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop)
     // copy the nameservers
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i));
     
+    // the timeout value is the time before moving on to the next server
+    _spread = settings.timeout();
+
+    // the attempts divided by the expire time will be the interval
+    _interval = _expire / settings.attempts();
+
+    // set the rotate setting
+    _rotate = settings.rotate();
+
     // we also have to load /etc/hosts
     if (!_hosts.load()) throw std::runtime_error("failed to load /etc/hosts");
 }
