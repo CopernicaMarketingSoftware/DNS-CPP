@@ -145,11 +145,24 @@ void Udp::notify()
     // structure will hold the source address (we use an ipv6 struct because that is also big enough for ipv4)
     struct sockaddr_in6 from; socklen_t fromlen = sizeof(from);
     
-    // reveive the message
-    auto bytes = recvfrom(_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&from, &fromlen);
-    
-    // add to the responses
-    _responses.emplace_back(Ip((struct sockaddr *)&from), std::string(buffer, bytes));
+    // number of mesages gotten from the fd
+    size_t messages = 0;
+
+    // we want to get as much messages at onces as possible
+    // @todo use scatter-gather io to optimize this further
+    do {
+        // reveive the message
+        auto bytes = recvfrom(_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&from, &fromlen);
+        
+        // if there were no bytes, leap out
+        if (bytes <= 0) break;
+
+        // add to the responses
+        _responses.emplace_back(Ip((struct sockaddr *)&from), std::string(buffer, bytes));
+
+    // we keep iterating as long as we've gotten under 1024 messages
+    // @todo reduce this if too much time is taken doing this, and other buffers overflow
+    } while (++messages < 1024);
 
     // if we're already processing, we don't need to install idle watcher
     if (_idle) return;
