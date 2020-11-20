@@ -206,7 +206,7 @@ void ResolvConf::option(const char *option, size_t size)
     if (size == 0) return;
 
     // check if this is the rotate option
-    if (strcmp(option, "rotate") == 0) _rotate = true;
+    if (strncmp(option, "rotate", 7) == 0) _rotate = true;
     
     // maybe this is the timeout option, needs to be capped to 30 (per the conf)
     else if (strncmp(option, "timeout:", 8) == 0) _timeout = std::min(30, atoi(option + 8));
