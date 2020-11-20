@@ -36,6 +36,13 @@ private:
     std::vector<Ip> _nameservers;
 
     /**
+     *  Rotate, see man resolvconf. This indicates if the nameservers should be tried in-order
+     *  or if the load can be distributed among them.
+     *  @var bool
+     */
+    bool _rotate = false;
+
+    /**
      *  Helper method to parse lines
      *  @param  line        the line to parse (must already be trimmed)
      *  @param  size        size of the line
@@ -68,12 +75,19 @@ private:
     void search(const char *line, size_t size);
 
     /**
-     *  Add an option
+     *  Add an options line
      *  @param  line        the value to parse
      *  @param  size        size of the line
      *  @throws std::runtime_error
      */
     void options(const char *line, size_t size);
+
+    /**
+     *  Add an option
+     *  @param  option  
+     *  @param  size
+     */
+    void option(const char *option, size_t size);
 
 public:
     /**
@@ -101,6 +115,12 @@ public:
      *  @return Ip
      */
     const Ip &nameserver(size_t index) const { return _nameservers[index]; }
+
+    /**
+     *  Whether or not the 'rotate' option is set in the resolve conf
+     *  @return bool
+     */
+    bool rotate() const { return _rotate; }
 };
     
 /**

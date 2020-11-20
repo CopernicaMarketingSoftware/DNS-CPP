@@ -89,6 +89,12 @@ protected:
      */
     bool _dnssec = false;
 
+    /**
+     *  Should all nameservers be rotated? otherwise they will be tried in-order
+     *  @var bool
+     */
+    bool _rotate = false;
+
 protected:
     /**
      *  Protected constructor, only the derived class may construct it
@@ -113,6 +119,9 @@ protected:
             // construct a nameserver
             _nameservers.emplace_back(this, settings.nameserver(i));
         }
+
+        // set the rotate setting
+        _rotate = settings.rotate();
     }
     
     /**
@@ -162,6 +171,12 @@ public:
      *  @return bool
      */
     bool dnssec() const { return _dnssec; }
+
+    /**
+     *  Should all nameservers be rotated? otherwise they will be tried in-order
+     *  @var bool
+     */
+    bool rotate() const { return _rotate; }
     
     /**
      *  Does a certain hostname exists in /etc/hosts? In that case a NXDOMAIN error should not be given
