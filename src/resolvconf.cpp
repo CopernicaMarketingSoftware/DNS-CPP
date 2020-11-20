@@ -205,7 +205,7 @@ void ResolvConf::option(const char *option, size_t size)
     if (size == 0) return;
 
     // check if this is the rotate option
-    if (strcmp(option, "rotate")) _rotate = true;
+    if (strncmp(option, "rotate", 7) == 0) _rotate = true;
 }
   
 /**
