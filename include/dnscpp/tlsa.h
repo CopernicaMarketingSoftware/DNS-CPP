@@ -1,8 +1,16 @@
 /**
  *  TLSA.h
  *
- *  Helper class to parse the content in a TLSA record
+ *  Helper class to parse the content in a TLSA record. A TLSA record holds
+ *  information about whether/how connections to a domain are secured. It
+ *  for example specifies whether the certificate that is used is self-signed,
+ *  or whether it should come from a (specific) certificate-authority.
  *
+ *  When you make a connection to mail.example.com, and you want to know 
+ *  whether Copernica normally secures its connections, you can retrieve the
+ *  TLS record from "_25._tcp.mail.example.com". This record holds the
+ *  answer to your question.
+ * 
  *  @author Raoul Wols <raoul.wols@copernica.com>
  *  @copyright 2020 Copernica BV
  */
@@ -30,65 +38,6 @@ namespace DNS {
 class TLSA : public Extractor
 {
 public:
-
-    /**
-     *  Specifies how to verify the certificate.
-     */
-    enum class CertificateUsage : uint8_t
-    {
-        // The certificate provided when establishing TLS must be issued by the
-        // listed root-CA or one of its intermediate CAs, with a valid
-        // certification path to a root-CA already trusted by the application
-        // doing the verification. The record may just point to an intermediate
-        // CA, in which case the certificate for this service must come via
-        // this CA, but the entire chain to a trusted root-CA must still be
-        // valid.
-        certificate_authority_constraint = 0,
-
-        // The certificate used must match the TLSA record exactly, and it must
-        // also pass PKIX certification path validation to a trusted root-CA.
-        service_certificate_constraint = 1,
-
-        // The certificate used has a valid certification path pointing back to
-        // the certificate mention in this record, but there is no need for it
-        // to pass the PKIX certification path validation to a trusted root-CA.
-        trust_anchor_assertion = 2,
-
-        // The services uses a self-signed certificate. It is not signed by
-        // anyone else, and is exactly this record.
-        domain_issued_certificate = 3
-    };
-
-    /**
-     *  When connecting to the service and a certificate is received, the
-     *  selector field specifies which parts of it should be checked.
-     */
-    enum class Selector : uint8_t
-    {
-        // Select the entire certificate for matching.
-        entire_certificate = 0,
-
-        // Select just the public key for certificate matching. Matching the
-        // public key is often sufficient, as this is likely to be unique.
-        only_public_key = 1
-    };
-
-    /**
-     *  Matching type
-     */
-    enum class MatchingType : uint8_t
-    {
-        // The entire information selected is present in the certificate
-        // association data.
-        info_is_in_certificate_association_data = 0,
-
-        // Do a SHA-256 hash of the selected data.
-        do_SHA256 = 1,
-
-        // Do a SHA-512 hash of the selected data.
-        do_SHA512 = 2
-    };
-
     /**
      *  The constructor
      *  @param  response        the response from which the record was extracted
@@ -103,34 +52,81 @@ public:
     virtual ~TLSA() = default;
 
     /**
-     *  How to verify the certificate?
-     *  @return the certificate usage
+     *  What sort of certificate is used? Note that certificates are chained, allowing
+     *  people to buy a certificate from a Certificate Authority, and use that to create 
+     *  sub-certificates for individual connections:
+     * 
+     *  A:   Root certificate > Certificate for example.com > Certificate for mail.example.com.
+     * 
+     *  Alternatively, people can create self-signed certificates, also with the
+     *  option to chain them:
+     * 
+     *  B:   Self-signed certificate > Certificate for mydomain.com > Certificate for mail.mydomain.com.
+     * 
+     *  This chain can have any length, for self-signed certificates it is also
+     *  possible that it is only one item long.
+     * 
+     *  In this 'usage' field it is stored what sort of certificate is in use ("A" or "B"),
+     *  with the following values:
+     * 
+     *  0:  Variant "A" is used (thus there must be a chain back to a root-authority).
+     *      And the "data" property must match with one of the certificates in the chain
+     *      (it must thus match with "root" or "example.com" or "mail.example.com". This
+     *      setting allows users to publish a DNS record, but use a derived certificate
+     *      for the actual connection.
+     * 
+     *  1:  Variant "A" is used (thus there must be a chain back to a root-authority).
+     *      And the "data" property must _exactly_ match with the "mail.example.com" certificate.
+     *  
+     *  2:  A self-signed certificate is used (so it is not necessary to check if the chain
+     *      goes back to a root authority), and the actual certificate must match or be derived
+     *      from that self-signed certificate.
+     * 
+     *  3:  A self-signed certigicate is used (so there is no need to check if the chain
+     *      goes back to a root authority), and the actual certificate must exactly match.
+     * 
+     *  @return uint8_t
      */
-    CertificateUsage certificateUsage() const { return static_cast<CertificateUsage>(_record.data()[0]); }
-
+    uint8_t usage() const { return _record.data()[0]; }
+    
     /**
-     *  When a certificate is received, which parts of it should be checked?
-     *  @return the selector
+     *  The selector, meaning: does the "data" property hold the full certificate that should
+     *  be matched, or just the public key of it? The public-key is normally also unique-enough and
+     *  shorter to distribute. But in case a party has different certificates that happen to
+     *  have the same public key (is this even possible / a one-in-billion-chance?) they can
+     *  also publish the full certificate.
+     * 
+     *  0:  the full certificate must match
+     *  1:  just the public key in DER format must match
+     * 
+     *  @return uint8_t
      */
-    Selector selector() const { return static_cast<Selector>(_record.data()[1]); }
-
+    uint8_t selector() const { return _record.data()[1]; }
+    
     /**
-     *  How do we declare it a match?
-     *  @return the matching type
+     *  Is the data in the record hashed or not? To reduce the size of the DNS record, it is
+     *  possible for the publisher of the record to hash it, using one of the following algorithms:
+     * 
+     *  0:  No hashing was used
+     *  1:  SHA256 hashing was used
+     *  2:  SHA512 hashing was used
+     * 
+     *  @return uint8_t
      */
-    MatchingType matchingType() const { return static_cast<MatchingType>(_record.data()[2]); }
-
+    uint8_t hashing() const { return _record.data()[2]; }
+     
     /**
-     *  The actual data to be matched given the settings of the other fields.
-     *  @return a text string of hexadecimal data
+     *  The actual association data, this holds the certificate that should be used (possible hashed,
+     *  possibly just the public key, see above)
+     *  @return const unsigned char *
      */
-    const unsigned char *certificateAssociationData() const { return _record.data() + 3; }
-
+    const unsigned char *data() const { return _record.data() + 3; }
+    
     /**
-     *  The length of the certificate assocation data.
-     *  @return length
+     *  Size of the data
+     *  @return size_t
      */
-    size_t certificateAssociationDataSize() const { return _record.size() - 3; }
+    size_t size() const { return _record.size() - 3; }
 };
 
 /**
