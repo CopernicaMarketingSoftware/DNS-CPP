@@ -47,6 +47,13 @@ public:
     TLSA(const Response &response, const Record &record) : Extractor(record, TYPE_TLSA, 3) {}
 
     /**
+     *  The constructor
+     *  @param  record          the record holding the CNAME
+     *  @throws std::runtime_error
+     */
+    TLSA(const Record &record) : Extractor(record, TYPE_TLSA, 3) {}
+
+    /**
      *  Destructor
      */
     virtual ~TLSA() = default;
