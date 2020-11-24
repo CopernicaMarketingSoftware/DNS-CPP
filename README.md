@@ -1,10 +1,6 @@
 # DNS-CPP
 
-This is a C++ library for asynchronous DNS lookups. This experimental
-library is still under development. We built it to learn the dirty 
-details and internals of DNS and DNSSEC. It's still work in progress and
-not in use in any real life applications, so expect the API to change --
-or this project to die early.
+This is a C++ library for asynchronous DNS lookups.
 
 
 ## Set up an event loop integration
