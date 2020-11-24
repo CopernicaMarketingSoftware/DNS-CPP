@@ -182,14 +182,21 @@ void Udp::idle()
     // prevent exceptions (parsing the ip could fail)
     try
     {
+        // note that the _handler->onReceived() method must be the LAST CALL in this function,
+        // because after this call to userspace, "this" could very well have been destructed,
+        // so we first have to remove the element from the list, before we call the handler,
+        // to do this without copying, we create a list with just one element
+        decltype(_responses) oneitem;
+        
+        // move the first item from the _responses to the one-item list
+        oneitem.splice(oneitem.begin(), _responses, _responses.begin(), std::next(_responses.begin()));
+        
         // get the first element
-        auto front = _responses.front();
+        const auto &front = oneitem.front();
 
-        // get the first element
+        // get the first and only element from the list and pass to the handler (this must be the last
+        // call in this function since the user-space handler cannot be trusted (it might destruct `this`))
         _handler->onReceived(front.first, (unsigned char*)front.second.c_str(), front.second.size());
-
-        // pop the front
-        _responses.pop_front();
     }
     catch (const std::runtime_error &error)
     {
