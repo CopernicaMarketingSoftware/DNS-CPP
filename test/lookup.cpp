@@ -147,10 +147,10 @@ private:
                     const DNS::TLSA tlsa(response, record);
 
                     // print out the enums
-                    std::cout << (int)tlsa.certificateUsage() << " " << (int)tlsa.selector() << " " << (int)tlsa.matchingType() << " ";
+                    std::cout << (int)tlsa.usage() << " " << (int)tlsa.selector() << " " << (int)tlsa.hashing() << " ";
 
                     // print the certificate association data as hex
-                    printhex(std::cout, tlsa.certificateAssociationData(), tlsa.certificateAssociationDataSize());
+                    printhex(std::cout, tlsa.data(), tlsa.size());
 
                     // done
                     break;
