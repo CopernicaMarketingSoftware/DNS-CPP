@@ -134,6 +134,14 @@ public:
      *  @return size_t
      */
     size_t size() const { return _record.size() - 3; }
+
+    /**
+     *  Write to a stream
+     *  @param  stream
+     *  @param  tlsa
+     *  @return std::ostream
+     */
+    friend std::ostream &operator<<(std::ostream &stream, const TLSA &tlsa);
 };
 
 /**

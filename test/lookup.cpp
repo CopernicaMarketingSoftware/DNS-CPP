@@ -76,6 +76,8 @@ public:
             << (response.truncated() ? "tc " : "")
             << (response.recursiondesired() ? "rd " : "")
             << (response.recursionavailable() ? "ra " : "")
+            << (response.authentic() ? "ad" : "")
+            << (response.checkingdisabled() ? "cd": "")
             << "; QUERY: " << response.records(ns_s_qd)
             << ", ANSWER: " << response.records(ns_s_an)
             << ", AUTHORITY: " << response.records(ns_s_ns)
@@ -88,18 +90,6 @@ public:
 
         // stop the event loop
         ev_break(EV_DEFAULT, EVBREAK_ONE);
-    }
-
-    /**
-     *  Print a binary string as a sequence of hexadecimal numbers
-     *  @param os
-     *  @param hexstring
-     *  @param length
-     */
-    static void printhex(std::ostream &os, const unsigned char *hexstring, const size_t length)
-    {
-        // print each character
-        for (size_t i = 0; i != length; ++i) os << std::hex << std::setfill('0') << std::setw(2) << (int)hexstring[i];
     }
 
 private:
@@ -141,20 +131,8 @@ private:
                 case ns_t_ns:       std::cout << DNS::NS(response, record).nameserver(); break;
                 case ns_t_ptr:      std::cout << DNS::PTR(response, record).target(); break;
                 case ns_t_soa:      { DNS::SOA soa(response, record); std::cout << soa.nameserver() << " " << soa.email() << " " << soa.serial() << " " << soa.interval() << " " << soa.retry() << " " << soa.expire() << " " << soa.minimum(); } break;
-                case ns_t_tlsa:
-                {
-                    // create a TLSA record
-                    const DNS::TLSA tlsa(response, record);
-
-                    // print out the enums
-                    std::cout << (int)tlsa.usage() << " " << (int)tlsa.selector() << " " << (int)tlsa.hashing() << " ";
-
-                    // print the certificate association data as hex
-                    printhex(std::cout, tlsa.data(), tlsa.size());
-
-                    // done
-                    break;
-                }
+                case ns_t_tlsa:     std::cout << DNS::TLSA(response, record); break;
+                case ns_t_rrsig:    std::cout << DNS::RRSIG(response, record); break;
                 default:            std::cout << "unknown"; break;
                 }
             
@@ -201,6 +179,9 @@ int main(int argc, const char *argv[])
         // the type
         ns_type type = convert(argv[1]);
         const char *value = argv[2];
+
+        // we are DNSSEC-aware
+        context.dnssec(true);
         
         // object that will handle the call
         MyHandler handler;

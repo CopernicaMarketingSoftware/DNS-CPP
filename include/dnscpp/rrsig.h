@@ -165,6 +165,14 @@ public:
      *  @return bool
      */
     bool covers(const Record &record) const;
+
+    /**
+     *  Write to a stream
+     *  @param  stream
+     *  @param  signature
+     *  @return std::ostream
+     */
+    friend std::ostream &operator<<(std::ostream &stream, const RRSIG &signature);
 };
     
 /**

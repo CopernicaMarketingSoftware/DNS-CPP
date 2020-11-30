@@ -208,7 +208,10 @@ bool Query::edns(bool dnssec)
 
     // increment the counter with number of additional sections
     header->arcount = htons(ntohs(header->arcount)+1);
-    
+
+    // always set the "authenticated data" bit
+    header->ad = 1;
+
     // this was a huge success
     return true;
 }
