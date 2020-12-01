@@ -14,8 +14,6 @@
 #include "../include/dnscpp/response.h"
 #include "../include/dnscpp/rrsig.h"
 #include "zonename.h"
-#include <ostream>
-#include <iomanip>
 
 /**
  *  Begin of namespace
