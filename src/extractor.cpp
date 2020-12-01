@@ -12,8 +12,6 @@
  */
 #include "../include/dnscpp/extractor.h"
 #include "canonicalizer.h"
-#include <ostream>
-#include <iomanip>
 
 /**
  *  Begin of namespace
