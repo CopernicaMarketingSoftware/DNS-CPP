@@ -44,8 +44,6 @@ std::ostream &Extractor::printhex(std::ostream &stream, const unsigned char *byt
     // set up the state
     stream << std::hex << std::setfill('0') << std::setw(2);
 
-    // std::copy(bytes, bytes + size, std::ostreambuf_iterator<std::ostream::char_type>{stream});
-
     // print each character
     for (size_t i = 0; i < size; ++i) stream << (int)bytes[i];
 
