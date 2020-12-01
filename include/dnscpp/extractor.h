@@ -20,7 +20,6 @@
  *  Dependencies
  */
 #include "record.h"
-#include <iosfwd>
 
 /**
  *  Begin of namespace
@@ -74,23 +73,6 @@ protected:
      */
     virtual ~Extractor() = default;
 
-    /**
-     *  Print bytes as a stream of hexadecimal numbers
-     *  @param stream
-     *  @param bytes
-     *  @param size
-     *  @return same ostream
-     */
-    static std::ostream &printhex(std::ostream &stream, const unsigned char *bytes, size_t size);
-
-    /**
-     *  Print formatted time a-la `dig`-style
-     *  @param stream
-     *  @param time
-     *  @return same ostream
-     */
-    static std::ostream &printformattedtime(std::ostream &stream, const time_t time);
-    
 public:
     /**
      *  The name of the record
