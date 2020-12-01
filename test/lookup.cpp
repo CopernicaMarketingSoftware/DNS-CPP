@@ -41,6 +41,87 @@ static ns_type convert(const char *type)
 }
 
 /**
+ *  Print bytes as a stream of hexadecimal numbers
+ *  @param stream
+ *  @param bytes
+ *  @param size
+ *  @return same ostream
+ */
+static std::ostream &printhex(std::ostream &stream, const unsigned char *bytes, size_t size)
+{
+    // set up the state
+    stream << std::hex << std::setfill('0') << std::setw(2);
+
+    // print each character
+    for (size_t i = 0; i < size; ++i) stream << (int)bytes[i];
+
+    // restore state -- this is a bit flakey because we don't actually store the
+    // previous state. @todo: revisit in the future
+    return stream << std::dec << std::setfill(' ') << std::setw(0);
+}
+
+/**
+ *  Print formatted time a-la `dig`-style
+ *  @param stream
+ *  @param time
+ *  @return same ostream
+ */
+static std::ostream &printformattedtime(std::ostream &stream, const time_t time)
+{
+    // prepare a buffer
+    char formatted[15];
+
+    // format the time dig-style
+    strftime(formatted, 15, "%Y%m%d%H%M%S", localtime(&time));
+
+    // write it to the stream and return that same stream
+    return stream << formatted;
+}
+
+/**
+ *  Write to a stream
+ *  @param  stream
+ *  @param  tlsa
+ *  @return std::ostream
+ */
+static std::ostream &operator<<(std::ostream &stream, const DNS::TLSA &tlsa)
+{
+    // print out the enums
+    stream << (int)tlsa.usage() << " " << (int)tlsa.selector() << " " << (int)tlsa.hashing() << " ";
+
+    // print the certificate association data as hex
+    return printhex(stream, tlsa.data(), tlsa.size());
+}
+
+/**
+ *  Write to a stream
+ *  @param  stream
+ *  @param  signature
+ *  @return std::ostream
+ */
+static std::ostream &operator<<(std::ostream &stream, const DNS::RRSIG &sig)
+{
+    // print the basic properties
+    stream
+        << (int)sig.typeCovered()  << " "
+        << (int)sig.algorithm()  << " "
+        << (int)sig.labels()  << " "
+        << (int)sig.originalTtl() << " ";
+
+    // print the timestamps dig-style
+    printformattedtime(stream, sig.validUntil()) << " ";
+    printformattedtime(stream, sig.validFrom()) << " ";
+
+    // print the rest of the properties
+    stream << (int)sig.keytag() << " " << sig.signer() << " ";
+
+    // print the signature
+    // it should be base64-encoded a-la `dig`-style, but we don't have such a
+    // function in the library
+    return stream << "<signature of length " << sig.size() << ">";
+}
+
+/**
  *  Class to handle responses
  */
 class MyHandler : public DNS::Handler
