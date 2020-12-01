@@ -50,12 +50,12 @@ protected:
      *  @param  op          the type of operation (normally a regular query)
      *  @param  dname       the domain to lookup
      *  @param  type        record type to look up
-     *  @param  dnssec      should we ask for dnssec data
+     *  @param  bits        extra bits to be included in the query
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Operation(Handler *handler, int op, const char *dname, int type, bool dnssec, const unsigned char *data = nullptr) : 
-        _handler(handler), _query(op, dname, type, dnssec, data) {}
+    Operation(Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) : 
+        _handler(handler), _query(op, dname, type, bits, data) {}
 
     /**
      *  Destructor

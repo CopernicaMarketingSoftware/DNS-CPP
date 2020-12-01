@@ -126,10 +126,14 @@ public:
         header->opcode = ns_o_query;
         
         // the default behavior is to ask for recursion (rd), we pretend that recursion 
-        // is available (ra), and we set the bit to mark this message an answer (qr)
+        // is available (ra), and we set the bit to mark this message an answer (qr),
+        // we also mark the data as verified (because this is was "dig" also does, and
+        // it makes sense to mark data in /etc/hosts as verified (if we cannot trust
+        // our own system, what then?))
         header->rd = request.recursiondesired();
         header->ra = 1;
         header->qr = 1;
+        header->ad = 1;
         
         // no error
         header->rcode = ns_r_noerror;

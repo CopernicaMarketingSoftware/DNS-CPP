@@ -21,6 +21,7 @@
 #include "nameserver.h"
 #include "resolvconf.h"
 #include "hosts.h"
+#include "bits.h"
 #include <list>
 
 /**
@@ -84,16 +85,18 @@ protected:
     double _interval = 2.0;
     
     /**
-     *  Is DNSSEC-querying enabled?
-     *  @var bool
+     *  Default bits to include in queries
+     *  @var Bits
      */
-    bool _dnssec = false;
-
+    Bits _bits;
+    
     /**
      *  Should all nameservers be rotated? otherwise they will be tried in-order
      *  @var bool
      */
     bool _rotate = false;
+
+
 
 protected:
     /**
@@ -173,10 +176,10 @@ public:
     double expire() const { return _expire; }
     
     /**
-     *  Should we also query for dnssec properties?
-     *  @return bool
+     *  Default bits that are sent with each query
+     *  @return Bits
      */
-    bool dnssec() const { return _dnssec; }
+    const Bits &bits() const { return _bits; }
 
     /**
      *  Should all nameservers be rotated? otherwise they will be tried in-order
