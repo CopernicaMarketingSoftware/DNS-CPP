@@ -127,16 +127,12 @@ public:
         // store property, make sure the numbers are reasonably clamped
         _interval = std::max(interval, 0.1);
     }
-
+    
     /**
-     *  Enable or disable dnssec
-     *  @param  bool
+     *  Enable or disable certain bits
+     *  @param  value
      */
-    void dnssec(bool dnssec)
-    {
-        // store property
-        _dnssec = dnssec;
-    }
+    void bits(const Bits &bits) { _bits = bits; }
     
     /**
      *  Do a dns lookup and pass the result to a user-space handler object
@@ -144,43 +140,51 @@ public:
      *  domain or an unsupported type) this method returns null.
      *  @param  name        the record name to look for
      *  @param  type        type of record (normally you ask for an 'a' record)
+     *  @param  bits        bits to include in the query
      *  @param  handler     object that will be notified when the query is ready
      *  @return operation   object to interact with the operation while it is in progress
      */
-    Operation *query(const char *domain, ns_type type, Handler *handler);
+    Operation *query(const char *domain, ns_type type, const Bits &bits, Handler *handler);
+    Operation *query(const char *domain, ns_type type, Handler *handler) { return query(domain, type, _bits, handler); }
     
     /**
      *  Do a reverse IP lookup, this is only meaningful for PTR lookups
      *  @param  ip          the ip address to lookup
+     *  @param  bits        bits to include in the query
      *  @param  handler     object that will be notified when the query is ready
      *  @return operation   object to interact with the operation while it is in progress
      */
-    Operation *query(const Ip &ip, Handler *handler);
+    Operation *query(const Ip &ip, const Bits &bits, Handler *handler);
+    Operation *query(const Ip &ip, Handler *handler) { return query(ip, _bits, handler); }
     
     /**
      *  Do a dns lookup and pass the result to callbacks
      *  @param  name        the record name to look for
      *  @param  type        type of record (normally you ask for an 'a' record)
+     *  @param  bits        bits to include in the query
      *  @param  success     function that will be called on success
      *  @param  failure     function that will be called on failure
      *  @return operation   object to interact with the operation while it is in progress
      */
-    Operation *query(const char *domain, ns_type type, const SuccessCallback &success, const FailureCallback &failure);
+    Operation *query(const char *domain, ns_type type, const Bits &bits, const SuccessCallback &success, const FailureCallback &failure);
+    Operation *query(const char *domain, ns_type type, const SuccessCallback &success, const FailureCallback &failure) { return query(domain, type, _bits, success, failure); }
 
     /**
      *  Do a reverse dns lookup and pass the result to callbacks
      *  @param  ip          the ip address to lookup
+     *  @param  bits        bits to include in the query
      *  @param  success     function that will be called on success
      *  @param  failure     function that will be called on failure
      *  @return operation   object to interact with the operation while it is in progress
      */
-    Operation *query(const DNS::Ip &ip, const SuccessCallback &success, const FailureCallback &failure);
+    Operation *query(const DNS::Ip &ip, const Bits &bits, const SuccessCallback &success, const FailureCallback &failure);
+    Operation *query(const DNS::Ip &ip, const SuccessCallback &success, const FailureCallback &failure) { return query(ip, _bits, success, failure); }
     
     /**
      *  Expose some getters from core
      */
     using Core::buffersize;
-    using Core::dnssec;
+    using Core::bits;
     using Core::rotate;
     using Core::spread;
     using Core::expire;

@@ -32,11 +32,11 @@ namespace DNS {
  *  @param  op          the type of operation (normally a regular query)
  *  @param  dname       the domain to lookup
  *  @param  type        record type to look up
- *  @param  dnssec      ask for dnssec data in response
+ *  @param  bits        bits to include in the query
  *  @param  data        optional data (only for type = ns_o_notify)
  *  @throws std::runtime_error
  */
-Query::Query(int op, const char *dname, int type, bool dnssec, const unsigned char *data) : _size(HFIXEDSZ)
+Query::Query(int op, const char *dname, int type, const Bits &bits, const unsigned char *data) : _size(HFIXEDSZ)
 {
     // check if parameters fit in the header
     if (type < 0 || type > 65535) throw std::runtime_error("invalid type passed to dns query");
@@ -55,6 +55,10 @@ Query::Query(int op, const char *dname, int type, bool dnssec, const unsigned ch
     
     // the default behavior is to ask for recursion
     header->rd = 1;
+    
+    // bits to ask for the server to include verify info, or to avoid verification by the server
+    header->ad = bits.AD();
+    header->cd = bits.CD();
     
     // no error
     header->rcode = ns_r_noerror;
@@ -109,7 +113,7 @@ Query::Query(int op, const char *dname, int type, bool dnssec, const unsigned ch
     while (false);
     
     // add the edns-pseudo-section
-    edns(dnssec);
+    edns(bits.dnssec());
 }
 
 /**

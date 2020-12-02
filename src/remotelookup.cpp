@@ -29,10 +29,11 @@ namespace DNS {
  *  @param  core        dns core object
  *  @param  domain      the domain of the lookup
  *  @param  type        the type of the request
+ *  @param  bits        bits to include
  *  @param  handler     user space object
  */
-RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, DNS::Handler *handler) : 
-    Operation(handler, ns_o_query, domain, type, core->dnssec()), _core(core)
+RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
+    Operation(handler, ns_o_query, domain, type, bits), _core(core)
 {
     // call "retry" to send the first datagram to the first nameserver
     if (!_core->nameservers().empty()) retry(_started);

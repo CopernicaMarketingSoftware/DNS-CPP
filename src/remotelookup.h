@@ -21,6 +21,7 @@
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/operation.h"
 #include "../include/dnscpp/request.h"
+#include "../include/dnscpp/bits.h"
 #include "connection.h"
 #include "now.h"
 
@@ -144,9 +145,10 @@ public:
      *  @param  core        dns core object
      *  @param  domain      the domain of the lookup
      *  @param  type        type of records to look for
+     *  @param  bits        the bits to include in the request
      *  @param  handler     user space object interested in the result
      */
-    RemoteLookup(Core *core, const char *domain, ns_type type, DNS::Handler *handler);
+    RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler);
     
     /**
      *  No copying
