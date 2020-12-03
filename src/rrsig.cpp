@@ -63,9 +63,8 @@ bool RRSIG::covers(const Record &record) const
         return false;
     }
 }
-    
+
 /**
  *  End of namespace
  */
 }
-

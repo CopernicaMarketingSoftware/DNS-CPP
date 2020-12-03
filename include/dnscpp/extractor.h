@@ -72,7 +72,7 @@ protected:
      *  Destructor
      */
     virtual ~Extractor() = default;
-    
+
 public:
     /**
      *  The name of the record
