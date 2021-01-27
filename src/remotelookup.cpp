@@ -278,7 +278,15 @@ void RemoteLookup::onIdle(Nameserver *nameserver)
     Now now;
     
     // all nameservers are idle, if this request expired in the meantime, we can get rid of it
-    if (now >= expires()) return timeout(false);
+    if (now < expires()) return;
+
+    // because this method is called from a place in our code that cannot copy with destruction,
+    // we do not want to call back to user spac right away (because userspace might destruct the dns-context),
+    // instead we schedule the callback
+    if (_timer != nullptr) return;
+    
+    // we set a new timer for when the entire job times out
+    _timer = _core->loop()->timer(0.0, this);
 }
 
 /**
