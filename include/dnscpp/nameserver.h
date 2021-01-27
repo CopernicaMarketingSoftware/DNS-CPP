@@ -58,6 +58,7 @@ public:
         
         /**
          *  Method that is called when a nameserver is idle (no more pending answers)
+         *  Due to an optimization in the Udp class this method is only called when _all_ nameservers are idle
          *  @param  nameserver  the reporting nameserver
          */
         virtual void onIdle(Nameserver *nameserver) = 0;
