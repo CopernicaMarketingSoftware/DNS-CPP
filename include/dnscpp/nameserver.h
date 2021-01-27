@@ -128,11 +128,11 @@ private:
     
     /**
      *  Method that is called when a udp socket is idle (no more pending calls)
+     *  Because of an optimization deeper inside Udp.cpp, this is only called when ALL nameservers are idle
      */
     virtual void onIdle() override
     {
-        // we are going to tell all jobs that this object is idle (waiting for further instructions
-        // or for further answers)
+        // we are going to tell all jobs that this object is idle
         for (const auto iter : _handlers)
         {
             // report that the object is idle
