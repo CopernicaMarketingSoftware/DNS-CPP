@@ -158,6 +158,13 @@ public:
     virtual ~Udp();
 
     /**
+     *  Are there any responses waiting (meaning: have we already received an
+     *  answer that has not yet been processed, or is the socket readable?)
+     *  @return bool
+     */
+    bool readable() const;
+
+    /**
      *  Close the socket (this is useful if you do not expect incoming data anymore)
      *  The socket will be automatically opened if you start sending to it
      *  @return bool

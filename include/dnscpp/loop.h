@@ -99,6 +99,7 @@ public:
      *  the DNS library no longer needs to be notified.
      * 
      *  @param  void*   identifier of the timer (returned by the timer() method)
+     *  @param  Timer   the timer to cancel
      */
     virtual void cancel(void *identifier, Timer *timer) = 0;
 
@@ -114,6 +115,7 @@ public:
      *  the DNS library no longer needs to be notified of the application being idle.
      * 
      *  @param  void*   identifier of the watcher
+     *  @param  Idle    the idle-monitor to cancel
      */
     virtual void cancel(void *identifier, Idle *idle) = 0;
 };
