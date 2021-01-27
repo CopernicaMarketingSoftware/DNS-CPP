@@ -59,6 +59,12 @@ public:
          *  @param  size        size of the response
          */
         virtual void onReceived(const Ip &ip, const unsigned char *response, size_t size) = 0;
+        
+        /**
+         *  Method that is called when the UDP socket has processed everything
+         *  Because of an optimization deeper inside Udp.cpp, this is only called when ALL nameservers are idle
+         */
+        virtual void onIdle() = 0;
     };
 
     /**
@@ -134,8 +140,9 @@ private:
 
     /**
      *  Helper method to stop monitoring the idle state
+     *  @param  report  report to the handler that object is idle
      */
-    void stop();
+    void stop(bool report);
 
 public:
     /**

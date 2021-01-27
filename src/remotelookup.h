@@ -81,6 +81,13 @@ private:
     virtual bool onReceived(Nameserver *nameserver, const Response &response) override;
 
     /**
+     *  Method that is called when the nameserver is no longer expecting any responses
+     *  Because of an optimization deeper inside Udp.cpp, this is only called when ALL nameservers are idle
+     *  @param  nameserver  the reporting nameserver
+     */
+    virtual void onIdle(Nameserver *nameserver) override;
+
+    /**
      *  Called when the response has been received over tcp
      *  @param  connection  the reporting connection
      *  @param  response    the received answer
@@ -107,8 +114,9 @@ private:
 
     /** 
      *  Time out the job because no appropriate response was received in time
+     *  @param  busy    is dns-cpp still busy processing buffers?
      */
-    void timeout();
+    void timeout(bool busy);
 
     /**
      *  How long should we wait until the next message?

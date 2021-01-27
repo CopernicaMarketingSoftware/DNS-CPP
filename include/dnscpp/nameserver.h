@@ -55,6 +55,12 @@ public:
          *  @return bool        was the response processed?
          */
         virtual bool onReceived(Nameserver *nameserver, const Response &response) = 0;
+        
+        /**
+         *  Method that is called when a nameserver is idle (no more pending answers)
+         *  @param  nameserver  the reporting nameserver
+         */
+        virtual void onIdle(Nameserver *nameserver) = 0;
     };
     
     
@@ -118,7 +124,20 @@ private:
             // parsing the response failed
         }
     }
-
+    
+    /**
+     *  Method that is called when a udp socket is idle (no more pending calls)
+     */
+    virtual void onIdle() override
+    {
+        // we are going to tell all jobs that this object is idle (waiting for further instructions
+        // or for further answers)
+        for (const auto iter : _handlers)
+        {
+            // report that the object is idle
+            iter.second->onIdle(this);
+        }
+    }
 
 public:
     /**
@@ -186,6 +205,16 @@ public:
 
         // if nobody is listening to the socket any more, we can just as well close it
         if (_handlers.empty()) _udp.close();
+    }
+    
+    /**
+     *  Is the nameserver readable / do we already have received some data?
+     *  @return bool
+     */
+    bool readable() const
+    {
+        // pass on
+        return _udp.readable();
     }
 };
 

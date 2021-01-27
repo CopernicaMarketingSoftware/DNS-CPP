@@ -47,7 +47,7 @@ Udp::~Udp()
     close();
 
     // stop monitoring the idle state
-    stop();
+    stop(false);
 }
 
 /**
@@ -95,8 +95,9 @@ bool Udp::open(int version)
 
 /**
  *  Helper method to stop monitoring the idle state
+ *  @param  report  report to the handler that object is idle
  */
-void Udp::stop()
+void Udp::stop(bool report)
 {
     // nothing to do if not checking for idle
     if (_idle == nullptr) return;
@@ -106,6 +107,17 @@ void Udp::stop()
 
     // forget the ptr
     _idle = nullptr;
+    
+    // done if we do not have to report anything
+    if (!report) return;
+
+    // if some other nameserver is still busy we do not report anything, because the
+    // jobs then will have to wait longer anyway (this is an optimization that does
+    // not really is the responsibility of the Udp class)
+    if (_core->readable()) return;
+    
+    // report to the handler
+    _handler->onIdle();
 }
 
 /**
@@ -203,7 +215,7 @@ bool Udp::readable() const
 void Udp::idle()
 {
     // if there is nothing to do, we can stop the watcher (no more responses to feed back)
-    if (_responses.empty()) return stop();
+    if (_responses.empty()) return stop(true);
 
     // prevent exceptions (parsing the ip could fail)
     try

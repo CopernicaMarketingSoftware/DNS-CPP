@@ -70,7 +70,7 @@ protected:
      *  @var double
      */
     double _expire = 60.0;
-    
+
     /**
      *  During each attempt all nameservers are contacted at the same time,
      *  with a small interval between them - this is that interval
@@ -186,6 +186,23 @@ public:
      *  @var bool
      */
     bool rotate() const { return _rotate; }
+    
+    /**
+     *  Is any of the nameservers readable?
+     *  @return bool
+     */
+    bool readable() const
+    {
+        // check all nameservers
+        for (const auto &nameserver : _nameservers)
+        {
+            // is it indeed readable
+            if (nameserver.readable()) return true;
+        }
+        
+        // none is readable
+        return false;
+    }
     
     /**
      *  Does a certain hostname exists in /etc/hosts? In that case a NXDOMAIN error should not be given
