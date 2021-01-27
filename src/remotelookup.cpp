@@ -121,13 +121,9 @@ double RemoteLookup::expires() const
 
 /** 
  *  Time out the job because no appropriate response was received in time
- *  @param  busy        is dns-cpp still busy processing buffers?
  */
-void RemoteLookup::timeout(bool busy)
+bool RemoteLookup::timeout()
 {
-    // if we have to wait until all buffers are processed
-    if (busy) return;
-    
     // before we report to userspace we cleanup the object
     cleanup();
     
@@ -136,6 +132,29 @@ void RemoteLookup::timeout(bool busy)
     
     // self-destruct
     delete this;
+
+    // done
+    return true;
+}
+
+/**
+ *  Wait for internal buffers to catch up (dns-cpp uses an internal buffer
+ *  that may hold the response, but that is not yet parsed)
+ *  @return bool
+ */
+bool RemoteLookup::wait()
+{
+    // get the oldest message that is still in the buffer
+    auto oldest = _core->oldest();
+    
+    // if there are no unprocessed messages, or when the buffer was entirely filled after this request timed out, we no longer have to wait
+    if (oldest == 0 || oldest > expires()) return false;
+    
+    // the buffer still holds some messages that might hold the response to this query, we wait a while for this
+    _timer = _core->loop()->timer(1.0, this);
+    
+    // we must wait
+    return true;
 }
 
 /**
@@ -197,8 +216,9 @@ void RemoteLookup::expire()
     // find the current time
     Now now;
     
-    // did the entire job expire?
-    if (now >= expires()) return timeout(_core->readable());
+    // did the entire job expire? then we report a timeout, but not before we have waited
+    // until the buffer with unprocessed messages has been fully processed
+    if (now >= expires()) return (void)(wait() || timeout());
     
     // if we do not yet have a tcp connection we send out more dgrams
     if (!_connection) return retry(now);
@@ -265,28 +285,6 @@ bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
     
     // job has been handled
     return true;
-}
-
-/**
- *  Method that is called when the nameserver is no longer expecting any responses
- *  Because of an optimization deeper inside Udp.cpp, this is only called when ALL nameservers are idle
- *  @param  nameserver  the reporting nameserver
- */
-void RemoteLookup::onIdle(Nameserver *nameserver)
-{
-    // find the current time
-    Now now;
-    
-    // all nameservers are idle, if this request expired in the meantime, we can get rid of it
-    if (now < expires()) return;
-
-    // because this method is called from a place in our code that cannot copy with destruction,
-    // we do not want to call back to user spac right away (because userspace might destruct the dns-context),
-    // instead we schedule the callback
-    if (_timer != nullptr) return;
-    
-    // we set a new timer for when the entire job times out
-    _timer = _core->loop()->timer(0.0, this);
 }
 
 /**

@@ -7,7 +7,7 @@
  *  be called from user space, but they are used internally.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -95,8 +95,7 @@ protected:
      *  @var bool
      */
     bool _rotate = false;
-
-
+    
 
 protected:
     /**
@@ -188,21 +187,12 @@ public:
     bool rotate() const { return _rotate; }
     
     /**
-     *  Is any of the nameservers readable?
-     *  @return bool
+     *  DNS-CPP keeps internal buffers with received, but not-yet processed messages
+     *  This method returns the time when the oldest message in this buffer was received
+     *  @return time_t
      */
-    bool readable() const
-    {
-        // check all nameservers
-        for (const auto &nameserver : _nameservers)
-        {
-            // is it indeed readable
-            if (nameserver.readable()) return true;
-        }
-        
-        // none is readable
-        return false;
-    }
+    time_t oldest() const;
+    time_t newest() const;
     
     /**
      *  Does a certain hostname exists in /etc/hosts? In that case a NXDOMAIN error should not be given

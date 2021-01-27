@@ -6,7 +6,7 @@
  *  this class in user space, it is used internally by the Context class.
  *
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -23,6 +23,7 @@
 #include <sys/socket.h>
 #include "monitor.h"
 #include "idle.h"
+#include "received.h"
 #include <list>
 #include <string>
 
@@ -59,12 +60,6 @@ public:
          *  @param  size        size of the response
          */
         virtual void onReceived(const Ip &ip, const unsigned char *response, size_t size) = 0;
-        
-        /**
-         *  Method that is called when the UDP socket has processed everything
-         *  Because of an optimization deeper inside Udp.cpp, this is only called when ALL nameservers are idle
-         */
-        virtual void onIdle() = 0;
     };
 
     /**
@@ -109,11 +104,11 @@ private:
      *  All the buffered responses that came in 
      *  @var std::list
      */
-    std::list<std::pair<Ip,std::string>> _responses;
+    std::list<Received> _responses;
+    
     
     /**
-     *  Method that is called from user-space when the socket becomes
-     *  readable.
+     *  Method that is called from user-space when the socket becomes readable.
      */
     virtual void notify() override;
 
@@ -140,9 +135,8 @@ private:
 
     /**
      *  Helper method to stop monitoring the idle state
-     *  @param  report  report to the handler that object is idle
      */
-    void stop(bool report);
+    void stop();
 
 public:
     /**
@@ -170,6 +164,13 @@ public:
      *  @return bool
      */
     bool readable() const;
+
+    /**
+     *  The oldest and newest buffered (and unprocessed) message, when was it received?
+     *  @return time_t
+     */
+    time_t oldest() const { return _responses.empty() ? 0 : _responses.front().time(); }
+    time_t newest() const { return _responses.empty() ? 0 : _responses.back().time(); }
 
     /**
      *  Close the socket (this is useful if you do not expect incoming data anymore)

@@ -10,7 +10,7 @@
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @author Michael van der Werve <michael.vanderwerve@mailerq.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -55,13 +55,6 @@ public:
          *  @return bool        was the response processed?
          */
         virtual bool onReceived(Nameserver *nameserver, const Response &response) = 0;
-        
-        /**
-         *  Method that is called when a nameserver is idle (no more pending answers)
-         *  Due to an optimization in the Udp class this method is only called when _all_ nameservers are idle
-         *  @param  nameserver  the reporting nameserver
-         */
-        virtual void onIdle(Nameserver *nameserver) = 0;
     };
     
     
@@ -123,20 +116,6 @@ private:
         catch (...)
         {
             // parsing the response failed
-        }
-    }
-    
-    /**
-     *  Method that is called when a udp socket is idle (no more pending calls)
-     *  Because of an optimization deeper inside Udp.cpp, this is only called when ALL nameservers are idle
-     */
-    virtual void onIdle() override
-    {
-        // we are going to tell all jobs that this object is idle
-        for (const auto iter : _handlers)
-        {
-            // report that the object is idle
-            iter.second->onIdle(this);
         }
     }
 
@@ -217,6 +196,13 @@ public:
         // pass on
         return _udp.readable();
     }
+    
+    /**
+     *  The oldest and newest buffered, unprocssed, message, when was it received?
+     *  @return time_t
+     */
+    time_t oldest() const { return _udp.oldest(); }
+    time_t newest() const { return _udp.newest(); }
 };
 
 /**

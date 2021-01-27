@@ -4,7 +4,7 @@
  *  Class that encapsulates all data that is needed for a single request
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -81,13 +81,6 @@ private:
     virtual bool onReceived(Nameserver *nameserver, const Response &response) override;
 
     /**
-     *  Method that is called when the nameserver is no longer expecting any responses
-     *  Because of an optimization deeper inside Udp.cpp, this is only called when ALL nameservers are idle
-     *  @param  nameserver  the reporting nameserver
-     */
-    virtual void onIdle(Nameserver *nameserver) override;
-
-    /**
      *  Called when the response has been received over tcp
      *  @param  connection  the reporting connection
      *  @param  response    the received answer
@@ -114,9 +107,16 @@ private:
 
     /** 
      *  Time out the job because no appropriate response was received in time
-     *  @param  busy    is dns-cpp still busy processing buffers?
+     *  @return bool
      */
-    void timeout(bool busy);
+    bool timeout();
+
+    /**
+     *  Wait for internal buffers to catch up (dns-cpp uses an internal buffer
+     *  that may hold the response, but that is not yet parsed)
+     *  @return bool
+     */
+    bool wait();
 
     /**
      *  How long should we wait until the next message?

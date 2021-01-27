@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <unistd.h>
 #include <poll.h>
+#include "now.h"
 
 /**
  *  Begin of namespace
@@ -47,7 +48,7 @@ Udp::~Udp()
     close();
 
     // stop monitoring the idle state
-    stop(false);
+    stop();
 }
 
 /**
@@ -95,9 +96,8 @@ bool Udp::open(int version)
 
 /**
  *  Helper method to stop monitoring the idle state
- *  @param  report  report to the handler that object is idle
  */
-void Udp::stop(bool report)
+void Udp::stop()
 {
     // nothing to do if not checking for idle
     if (_idle == nullptr) return;
@@ -107,17 +107,6 @@ void Udp::stop(bool report)
 
     // forget the ptr
     _idle = nullptr;
-    
-    // done if we do not have to report anything
-    if (!report) return;
-
-    // if some other nameserver is still busy we do not report anything, because the
-    // jobs then will have to wait longer anyway (this is an optimization that does
-    // not really is the responsibility of the Udp class)
-    if (_core->readable()) return;
-    
-    // report to the handler
-    _handler->onIdle();
 }
 
 /**
@@ -143,8 +132,8 @@ bool Udp::close()
 }
 
 /**
- *  Method that is called from user-space when the socket becomes
- *  readable.
+ *  Method that is called from user-space when the socket becomes readable.
+ *  @param  now
  */
 void Udp::notify()
 {
@@ -161,9 +150,13 @@ void Udp::notify()
     // number of mesages gotten from the fd
     size_t messages = 0;
 
+    // current time
+    Now now;
+
     // we want to get as much messages at onces as possible
     // @todo use scatter-gather io to optimize this further
-    do {
+    do 
+    {
         // reveive the message
         auto bytes = recvfrom(_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&from, &fromlen);
         
@@ -171,11 +164,12 @@ void Udp::notify()
         if (bytes <= 0) break;
 
         // add to the responses
-        _responses.emplace_back(Ip((struct sockaddr *)&from), std::string(buffer, bytes));
+        _responses.emplace_back(now, (struct sockaddr *)&from, buffer, bytes);
 
     // we keep iterating as long as we've gotten under 1024 messages
     // @todo reduce this if too much time is taken doing this, and other buffers overflow
-    } while (++messages < 1024);
+    } 
+    while (++messages < 1024);
 
     // if we're already processing, we don't need to install idle watcher
     if (_idle) return;
@@ -215,7 +209,7 @@ bool Udp::readable() const
 void Udp::idle()
 {
     // if there is nothing to do, we can stop the watcher (no more responses to feed back)
-    if (_responses.empty()) return stop(true);
+    if (_responses.empty()) return stop();
 
     // prevent exceptions (parsing the ip could fail)
     try
@@ -234,7 +228,7 @@ void Udp::idle()
 
         // get the first and only element from the list and pass to the handler (this must be the last
         // call in this function since the user-space handler cannot be trusted (it might destruct `this`))
-        _handler->onReceived(front.first, (unsigned char*)front.second.c_str(), front.second.size());
+        _handler->onReceived(front.ip(), front.data(), front.size());
     }
     catch (const std::runtime_error &error)
     {
