@@ -188,16 +188,6 @@ public:
     }
     
     /**
-     *  Is the nameserver readable / do we already have received some data?
-     *  @return bool
-     */
-    bool readable() const
-    {
-        // pass on
-        return _udp.readable();
-    }
-    
-    /**
      *  The oldest and newest buffered, unprocssed, message, when was it received?
      *  @return time_t
      */

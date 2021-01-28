@@ -19,7 +19,6 @@
 #include <sys/socket.h>
 #include <stdexcept>
 #include <unistd.h>
-#include <poll.h>
 #include "now.h"
 
 /**
@@ -176,31 +175,6 @@ void Udp::notify()
 
     // create a new idle watcher now
     _idle = _core->loop()->idle(this);
-}
-
-/**
- *  Are there any responses waiting (meaning: have we already received an
- *  answer that has not yet been processed, or is the socket readable?)
- *  @return bool
- */
-bool Udp::readable() const
-{
-    // if there is a buffer that we have already read
-    if (!_responses.empty()) return true;
-    
-    // if the filedescriptor is closed it cannot be readable
-    if (_fd < 0) return false;
-    
-    // we are going to check if the udp socket is readable
-    pollfd info;
-    
-    // check for readable
-    info.fd = _fd;
-    info.events = POLLIN;
-    info.revents = 0;     
-
-    // poll the fd with no timeout
-    return poll(&info, 1, 0) > 0;
 }
 
 /**

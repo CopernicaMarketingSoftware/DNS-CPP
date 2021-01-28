@@ -159,13 +159,6 @@ public:
     virtual ~Udp();
 
     /**
-     *  Are there any responses waiting (meaning: have we already received an
-     *  answer that has not yet been processed, or is the socket readable?)
-     *  @return bool
-     */
-    bool readable() const;
-
-    /**
      *  The oldest and newest buffered (and unprocessed) message, when was it received?
      *  @return time_t
      */
