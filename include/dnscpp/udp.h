@@ -106,7 +106,6 @@ private:
      */
     std::list<Received> _responses;
     
-    
     /**
      *  Method that is called from user-space when the socket becomes readable.
      */
@@ -132,6 +131,12 @@ private:
      *  @return bool
      */
     bool open(int version);
+
+    /**
+     *  Is the socket now readable?
+     *  @return bool
+     */
+    bool readable() const;
 
     /**
      *  Helper method to stop monitoring the idle state

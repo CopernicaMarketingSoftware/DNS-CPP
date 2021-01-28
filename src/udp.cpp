@@ -19,6 +19,7 @@
 #include <sys/socket.h>
 #include <stdexcept>
 #include <unistd.h>
+#include <poll.h>
 #include "now.h"
 
 /**
@@ -72,8 +73,9 @@ bool Udp::open(int version)
     // if already open
     if (_fd >= 0) return true;
     
-    // try to open it
-    _fd = socket(version == 6 ? AF_INET6 : AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    // try to open it (note that we do not set the NONBLOCK option, because we have not implemented 
+    // buffering for the sendto() call (this could be a future optimization)
+    _fd = socket(version == 6 ? AF_INET6 : AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
     
     // check for success
     if (_fd < 0) return false;
@@ -131,6 +133,27 @@ bool Udp::close()
 }
 
 /**
+ *  Is the socket now readable?
+ *  @return bool
+ */
+bool Udp::readable() const
+{
+    // if not active
+    if (_fd < 0) return false;
+    
+    // structure required by the poll() call
+    pollfd info;
+    
+    // fill the structure
+    info.fd = _fd;
+    info.events = POLLIN;
+    info.revents = 0;
+    
+    // do the call
+    return poll(&info, 1, 0) > 0;
+}
+
+/**
  *  Method that is called from user-space when the socket becomes readable.
  *  @param  now
  */
@@ -156,8 +179,8 @@ void Udp::notify()
     // @todo use scatter-gather io to optimize this further
     do 
     {
-        // reveive the message
-        auto bytes = recvfrom(_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&from, &fromlen);
+        // reveive the message (the DONTWAIT option is needed because this is a blocking socket, but we dont want to block now)
+        auto bytes = recvfrom(_fd, buffer, sizeof(buffer), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
         
         // if there were no bytes, leap out
         if (bytes <= 0) break;
@@ -265,6 +288,11 @@ bool Udp::send(const Ip &ip, const Query &query)
  */
 bool Udp::send(const struct sockaddr *address, size_t size, const Query &query)
 {
+    // before we send we empty the buffer (this is an obscure optimization to deal
+    // with use-cases where many domains are resolved, without any calls to the event
+    // loop in between, the socket could then already hold some responses)
+    if (readable()) notify();
+
     // send over the socket
     // @todo include MSG_DONTWAIT + implement non-blocking????
     return sendto(_fd, query.data(), query.size(), MSG_NOSIGNAL, address, size) >= 0;
