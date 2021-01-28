@@ -185,14 +185,15 @@ public:
      *  @var bool
      */
     bool rotate() const { return _rotate; }
-    
+
     /**
      *  DNS-CPP keeps internal buffers with received, but not-yet processed messages
-     *  This method returns the time when the oldest message in this buffer was received
-     *  @return time_t
+     *  This method checks if the buffer is up to date until a certain time (if there are
+     *  no older message in the buffer)
+     *  @param  time_t
+     *  @return bool
      */
-    time_t oldest() const;
-    time_t newest() const;
+    bool uptodate(time_t time) const;
     
     /**
      *  Does a certain hostname exists in /etc/hosts? In that case a NXDOMAIN error should not be given

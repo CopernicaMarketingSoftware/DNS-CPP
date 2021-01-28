@@ -49,55 +49,25 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop)
 
 /**
  *  DNS-CPP keeps internal buffers with received, but not-yet processed messages
- *  This method returns the time when the oldest message in this buffer was received
- *  @return time_t
+ *  This method checks if the buffer is up to date until a certain time (if there are
+ *  no older message in the buffer)
+ *  @param  time_t
+ *  @return bool
  */
-time_t Core::oldest() const
+bool Core::uptodate(time_t time) const
 {
-    // result variable
-    time_t result = 0;
-    
     // check all nameservers
     for (const auto &nameserver : _nameservers)
     {
         // get the oldest buffered message from this ns
         auto oldest = nameserver.oldest();
-
-        // do nothing if there is no buffer
-        if (oldest == 0) continue;
         
-        // do we have a better time?
-        result = result == 0 ? oldest : std::min(result, oldest);
+        // check if the message was received before the check-time
+        if (oldest != 0 && oldest <= time) return false;
     }
     
-    // done
-    return result;
-}
-
-/**
- *  Time when the newest messag in the buffer was received
- *  @return time_t
- */
-time_t Core::newest() const
-{
-    // result variable
-    time_t result = 0;
-    
-    // check all nameservers
-    for (const auto &nameserver : _nameservers)
-    {
-        // get the newest buffered message from this ns
-        auto newest = nameserver.newest();
-
-        // do nothing if there is no buffer
-        if (newest == 0) continue;
-        
-        // do we have a better time?
-        result = result == 0 ? newest : std::max(result, newest);
-    }
-    
-    // done
-    return result;
+    // all buffers are up-to-date
+    return true;
 }
     
 /**

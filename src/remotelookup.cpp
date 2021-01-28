@@ -140,17 +140,15 @@ bool RemoteLookup::timeout()
 /**
  *  Wait for internal buffers to catch up (dns-cpp uses an internal buffer
  *  that may hold the response, but that is not yet parsed)
+ *  @param  expires
  *  @return bool
  */
-bool RemoteLookup::wait()
+bool RemoteLookup::wait(double expires)
 {
-    // get the oldest message that is still in the buffer
-    auto oldest = _core->oldest();
-    
     // if there are no unprocessed messages, or when the buffer was entirely filled after this request timed out, we no longer have to wait
-    if (oldest == 0 || oldest > expires()) return false;
+    if (_core->uptodate(expires)) return false;
     
-    // the buffer still holds some messages that might hold the response to this query, we wait a while for this
+    // the buffer still contains some messages that might hold the response to this query, we wait a while for this
     _timer = _core->loop()->timer(1.0, this);
     
     // we must wait
@@ -216,9 +214,12 @@ void RemoteLookup::expire()
     // find the current time
     Now now;
     
+    // find the expire-time
+    auto expire = expires();
+    
     // did the entire job expire? then we report a timeout, but not before we have waited
     // until the buffer with unprocessed messages has been fully processed
-    if (now >= expires()) return (void)(wait() || timeout());
+    if (now >= expire) return (void)(wait(expire) || timeout());
     
     // if we do not yet have a tcp connection we send out more dgrams
     if (!_connection) return retry(now);

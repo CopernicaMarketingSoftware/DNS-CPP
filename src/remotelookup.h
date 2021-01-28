@@ -114,9 +114,10 @@ private:
     /**
      *  Wait for internal buffers to catch up (dns-cpp uses an internal buffer
      *  that may hold the response, but that is not yet parsed)
+     *  @param  expire      expire time
      *  @return bool
      */
-    bool wait();
+    bool wait(double expires);
 
     /**
      *  How long should we wait until the next message?
