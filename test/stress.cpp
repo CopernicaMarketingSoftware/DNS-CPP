@@ -217,6 +217,8 @@ int main()
     DNS::Context context(&myloop);
 
     context.buffersize(4 * 1024 * 1024);
+    //context.interval(10.0);
+    
 
     // start with a domain
     TestDomain domain(3);

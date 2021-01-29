@@ -46,9 +46,6 @@ Udp::~Udp()
 {
     // close the socket
     close();
-
-    // stop monitoring the idle state
-    stop();
 }
 
 /**
@@ -93,21 +90,6 @@ bool Udp::open(int version)
     
     // done
     return true;
-}
-
-/**
- *  Helper method to stop monitoring the idle state
- */
-void Udp::stop()
-{
-    // nothing to do if not checking for idle
-    if (_idle == nullptr) return;
-
-    // cancel the idle watcher
-    _core->loop()->cancel(_idle, this);
-
-    // forget the ptr
-    _idle = nullptr;
 }
 
 /**
@@ -164,20 +146,17 @@ void Udp::notify()
     
     // the buffer to receive the response in
     // @todo use a macro
-    char buffer[65536];
+    unsigned char buffer[65536];
 
     // structure will hold the source address (we use an ipv6 struct because that is also big enough for ipv4)
     struct sockaddr_in6 from; socklen_t fromlen = sizeof(from);
-    
-    // number of mesages gotten from the fd
-    size_t messages = 0;
 
-    // current time
+    // get current time
     Now now;
 
-    // we want to get as much messages at onces as possible
+    // we want to get as much messages at onces as possible, but not run forever
     // @todo use scatter-gather io to optimize this further
-    do 
+    for (size_t messages = 0; messages < 1024; ++messages)
     {
         // reveive the message (the DONTWAIT option is needed because this is a blocking socket, but we dont want to block now)
         auto bytes = recvfrom(_fd, buffer, sizeof(buffer), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
@@ -185,52 +164,9 @@ void Udp::notify()
         // if there were no bytes, leap out
         if (bytes <= 0) break;
 
-        // add to the responses
-        _responses.emplace_back(now, (struct sockaddr *)&from, buffer, bytes);
-
-    // we keep iterating as long as we've gotten under 1024 messages
-    // @todo reduce this if too much time is taken doing this, and other buffers overflow
+        // pass to the handler
+        _handler->onReceived(now, (struct sockaddr *)&from, buffer, bytes);
     } 
-    while (++messages < 1024);
-
-    // if we're already processing, we don't need to install idle watcher
-    if (_idle) return;
-
-    // create a new idle watcher now
-    _idle = _core->loop()->idle(this);
-}
-
-/**
- *  Method that is called from user-space when the timer expires.
- */
-void Udp::idle()
-{
-    // if there is nothing to do, we can stop the watcher (no more responses to feed back)
-    if (_responses.empty()) return stop();
-
-    // prevent exceptions (parsing the ip could fail)
-    try
-    {
-        // note that the _handler->onReceived() method must be the LAST CALL in this function,
-        // because after this call to userspace, "this" could very well have been destructed,
-        // so we first have to remove the element from the list, before we call the handler,
-        // to do this without copying, we create a list with just one element
-        decltype(_responses) oneitem;
-        
-        // move the first item from the _responses to the one-item list
-        oneitem.splice(oneitem.begin(), _responses, _responses.begin(), std::next(_responses.begin()));
-        
-        // get the first element
-        const auto &front = oneitem.front();
-
-        // get the first and only element from the list and pass to the handler (this must be the last
-        // call in this function since the user-space handler cannot be trusted (it might destruct `this`))
-        _handler->onReceived(front.ip(), front.data(), front.size());
-    }
-    catch (const std::runtime_error &error)
-    {
-        // @todo report the error
-    }
 }
 
 /**
@@ -291,7 +227,7 @@ bool Udp::send(const struct sockaddr *address, size_t size, const Query &query)
     // before we send we empty the buffer (this is an obscure optimization to deal
     // with use-cases where many domains are resolved, without any calls to the event
     // loop in between, the socket could then already hold some responses)
-    if (readable()) notify();
+//    if (readable()) notify();
 
     // send over the socket
     // @todo include MSG_DONTWAIT + implement non-blocking????

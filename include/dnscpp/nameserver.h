@@ -24,6 +24,7 @@
 #include "udp.h"
 #include "ip.h"
 #include "response.h"
+#include "timer.h"
 #include <set>
 
 /**
@@ -39,7 +40,7 @@ class Core;
 /**
  *  Class definition
  */
-class Nameserver : private Udp::Handler
+class Nameserver : private Udp::Handler, private Idle
 {
 public:
     /**
@@ -57,8 +58,13 @@ public:
         virtual bool onReceived(Nameserver *nameserver, const Response &response) = 0;
     };
     
-    
 private:
+    /**
+     *  Pointer to the event loop
+     *  @var    Loop
+     */
+    Loop *_loop;
+
     /**
      *  IP address of the nameserver
      *  @var    Ip
@@ -72,6 +78,18 @@ private:
     Udp _udp;
 
     /**
+     *  The idle watcher we have when we should process the responses as soon as possible.
+     *  @var void*
+     */
+    void *_idle = nullptr;
+
+    /**
+     *  All the buffered responses that came in 
+     *  @var std::list
+     */
+    std::list<Received> _responses;
+
+    /**
      *  Set with the handlers
      *  @var set
      */
@@ -79,45 +97,23 @@ private:
 
     /**
      *  Method that is called when a response is received
-     *  @param  ip          the ip of the nameserver from which it is received
+     *  @param  now         the receive-time
+     *  @param  address     the address of the nameserver from which it is received
      *  @param  buffer      the received response
      *  @param  size        size of the response
      */
-    virtual void onReceived(const Ip &ip, const unsigned char *buffer, size_t size) override
-    {
-        // avoid exceptions (parsing the response could fail)
-        try
-        {
-            // ignore responses from other ips
-            // @todo also ignore messages that do not come from port 53???
-            if (ip != _ip) return;
-            
-            // if nobody is interested there is no point in parsing the message
-            if (_handlers.empty()) return;
-            
-            // parse the response
-            Response response(buffer, size);
-        
-            // filter on the response, the beginning is simply the handler at nullptr
-            auto begin = _handlers.lower_bound(std::make_pair(response.id(), nullptr));
+    virtual void onReceived(time_t now, const struct sockaddr *address, const unsigned char *buffer, size_t size) override;
 
-            // iterate over those elements, notifying each handler
-            for (auto iter = begin; iter != _handlers.end(); ++iter) 
-            {
-                // if this element is not applicable any more, we're going to leap out (we're done)
-                if (iter->first != response.id()) return;
+    /**
+     *  Notify the idle that we're idle
+     */
+    virtual void idle() override;
 
-                // call the onreceived for the element, if it returns true, it has acknowledged that it
-                // processed the response and so we can stop iterating. we have to, since it might have removed
-                // itself so iter may be broken at this point.
-                if (iter->second->onReceived(this, response)) return;
-            }
-        }
-        catch (...)
-        {
-            // parsing the response failed
-        }
-    }
+    /**
+     *  Helper method to stop monitoring the idle state
+     */
+    void stop();
+
 
 public:
     /**
@@ -126,7 +122,7 @@ public:
      *  @param  ip      nameserver IP
      *  @throws std::runtime_error
      */
-    Nameserver(Core *core, const Ip &ip) : _ip(ip), _udp(core, this) {}
+    Nameserver(Core *core, const Ip &ip);
     
     /**
      *  No copying
@@ -137,7 +133,7 @@ public:
     /**
      *  Destructor
      */
-    virtual ~Nameserver() = default;
+    virtual ~Nameserver();
     
     /**
      *  Expose the nameserver IP
@@ -150,11 +146,7 @@ public:
      *  @param  query
      *  @return bool
      */
-    bool datagram(const Query &query)
-    {
-        // send the package
-        return _udp.send(_ip, query);
-    }
+    bool datagram(const Query &query);
 
     /**
      *  Subscribe to the socket if you want to be notified about incoming responses
@@ -188,11 +180,11 @@ public:
     }
     
     /**
-     *  The oldest and newest buffered, unprocssed, message, when was it received?
+     *  The oldest and newest buffered (and unprocessed) message, when was it received?
      *  @return time_t
      */
-    time_t oldest() const { return _udp.oldest(); }
-    time_t newest() const { return _udp.newest(); }
+    time_t oldest() const { return _responses.empty() ? 0 : _responses.front().time(); }
+    time_t newest() const { return _responses.empty() ? 0 : _responses.back().time(); }
 };
 
 /**

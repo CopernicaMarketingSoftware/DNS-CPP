@@ -64,8 +64,8 @@ public:
      *  @param  buffer
      *  @param  size
      */
-    Received(time_t time, const struct sockaddr *ip, const char *buffer, size_t size) :
-        _ip(ip), _buffer(buffer, size), _time(time) {}
+    Received(time_t time, const struct sockaddr *ip, const unsigned char *buffer, size_t size) :
+        _ip(ip), _buffer((const char *)buffer, size), _time(time) {}
     
     /**
      *  No copying because copying buffers is too expensive
