@@ -107,6 +107,8 @@ public:
      *  Set an idle watcher
      *  @param  Idle the object that should be notified when there is time
      *  @return void*   identifier for the timer
+     * 
+     *  @todo do we need that idle stuff?
      */
     virtual void *idle(Idle *idle) = 0;
 
