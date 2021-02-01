@@ -4,7 +4,7 @@
  *  Implementation file for the Context class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -30,14 +30,14 @@ namespace DNS {
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, Handler *handler)
 {
     // for A and AAAA lookups we also check the /etc/hosts file
-    if (type == ns_t_a    && _hosts.lookup(domain, 4)) return new LocalLookup(_loop, _hosts, domain, type, handler);
-    if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return new LocalLookup(_loop, _hosts, domain, type, handler);
+    if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(_hosts, domain, type, handler));
+    if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return add(new LocalLookup(_hosts, domain, type, handler));
     
     // the request can throw (for example when the domain is invalid
     try
     {
         // we are going to create a self-destructing request
-        return new RemoteLookup(this, domain, type, bits, handler);
+        return add(new RemoteLookup(this, domain, type, bits, handler));
     }
     catch (...)
     {
@@ -56,7 +56,7 @@ Operation *Context::query(const char *domain, ns_type type, const Bits &bits, Ha
 Operation *Context::query(const Ip &ip, const Bits &bits, Handler *handler) 
 {
     // if the /etc/hosts file already holds a record
-    if (_hosts.lookup(ip)) return new LocalLookup(_loop, _hosts, ip, handler);
+    if (_hosts.lookup(ip)) return add(new LocalLookup(_hosts, ip, handler));
 
     // pass on to the regular query method
     return query(Reverse(ip), TYPE_PTR, bits, handler);

@@ -8,13 +8,18 @@
  *  in the operation.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
  *  Include guard
  */
 #pragma once
+
+/**
+ *  Dependencies
+ */
+#include "query.h"
 
 /**
  *  Begin of namespace
@@ -33,7 +38,7 @@ class Operation
 {
 protected:
     /**
-     *  The user-space handler
+     *  The user-space handler (this is set to nullptr when the result has been reported to userspace)
      *  @var Handler
      */
     Handler *_handler;
@@ -43,7 +48,7 @@ protected:
      *  @var Query
      */
     const Query _query;
-    
+        
     /**
      *  Constructor
      *  @param  handler     user space handler
@@ -58,7 +63,7 @@ protected:
         _handler(handler), _query(op, dname, type, bits, data) {}
 
     /**
-     *  Destructor
+     *  Private destructor because userspace is not supposed to destruct this
      */
     virtual ~Operation() = default;
 
@@ -81,6 +86,9 @@ public:
      */
     void install(Handler *handler)
     {
+        // new handlers cannot be installed when the operation is ready
+        if (_handler == nullptr) return;
+        
         // update the handler
         _handler = handler;
     }
@@ -88,11 +96,7 @@ public:
     /**
      *  Cancel the operation
      */
-    void cancel()
-    {
-        // the object can just be destructed
-        delete this;
-    }
+    void cancel();
 };
 
 /**

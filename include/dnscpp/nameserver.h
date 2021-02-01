@@ -25,6 +25,7 @@
 #include "ip.h"
 #include "response.h"
 #include "timer.h"
+#include "watchable.h"
 #include <set>
 
 /**
@@ -40,7 +41,7 @@ class Core;
 /**
  *  Class definition
  */
-class Nameserver : private Udp::Handler, private Idle
+class Nameserver : private Udp::Handler, private Watchable
 {
 public:
     /**
@@ -60,10 +61,10 @@ public:
     
 private:
     /**
-     *  Pointer to the event loop
-     *  @var    Loop
+     *  Pointer to the core object
+     *  @var    Core
      */
-    Loop *_loop;
+    Core *_core;
 
     /**
      *  IP address of the nameserver
@@ -76,12 +77,6 @@ private:
      *  @var    Udp
      */
     Udp _udp;
-
-    /**
-     *  The idle watcher we have when we should process the responses as soon as possible.
-     *  @var void*
-     */
-    void *_idle = nullptr;
 
     /**
      *  All the buffered responses that came in 
@@ -103,16 +98,6 @@ private:
      *  @param  size        size of the response
      */
     virtual void onReceived(time_t now, const struct sockaddr *address, const unsigned char *buffer, size_t size) override;
-
-    /**
-     *  Notify the idle that we're idle
-     */
-    virtual void idle() override;
-
-    /**
-     *  Helper method to stop monitoring the idle state
-     */
-    void stop();
 
 
 public:
@@ -185,6 +170,21 @@ public:
      */
     time_t oldest() const { return _responses.empty() ? 0 : _responses.front().time(); }
     time_t newest() const { return _responses.empty() ? 0 : _responses.back().time(); }
+
+    /**
+     *  Is the nameserver busy (meaning: is there a backlog of unprocessed messages?)
+     *  @return bool
+     */
+    bool busy() const { return !_responses.empty(); }
+
+    /**
+     *  Process responses (this is an internal method)
+     *  @return size_t      number of processed answers
+     *  @todo put this in a private class
+     *  @internal
+     */
+    size_t process();
+
 };
 
 /**

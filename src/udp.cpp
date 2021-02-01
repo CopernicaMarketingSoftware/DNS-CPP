@@ -15,12 +15,12 @@
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/core.h"
+#include "../include/dnscpp/now.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdexcept>
 #include <unistd.h>
 #include <poll.h>
-#include "now.h"
 
 /**
  *  Begin of namespace

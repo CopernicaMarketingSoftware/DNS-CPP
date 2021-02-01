@@ -141,10 +141,16 @@ private:
 
     /**
      *  Show the status
+     *  @param  operation       the operation that finished
      */
-    void show()
+    void show(const DNS::Operation *operation)
     {
-        std::cout << _total << " " << _success << " " << _failures << " " << _timeouts << " " << (_success + _failures + _timeouts) << std::endl;
+        // parse the original request
+        DNS::Request request(operation);
+        DNS::Question question(request);
+        
+        // show result
+        std::cout << _total << " " << _success << " " << _failures << " " << _timeouts << " " << (_success + _failures + _timeouts) << " (" << question.name() << ")" << std::endl;
     }
 
     /**
@@ -158,7 +164,7 @@ private:
         _success += 1;
         
         // show what is going on
-        show();
+        show(operation);
     }
 
     /**
@@ -168,11 +174,17 @@ private:
      */
     virtual void onFailure(const DNS::Operation *operation, int rcode) override
     {
+//        DNS::Request request(operation);
+//        DNS::Question question(request);
+//        
+//        std::cout << question.name() << std::endl;
+
+
         // update counter
         _failures += 1;
 
         // show what is going on
-        show();
+        show(operation);
     }
 
     /**
@@ -185,7 +197,7 @@ private:
         _timeouts += 1;
 
         // show what is going on
-        show();
+        show(operation);
     }
 
 public:
@@ -216,19 +228,28 @@ int main()
     // create a dns context
     DNS::Context context(&myloop);
 
-    context.buffersize(4 * 1024 * 1024);
-    //context.interval(10.0);
-    
+    context.buffersize(4 * 1024 * 1024);        // size of the input buffer (bigger lowers chance of dropped messages)
+    context.interval(1.0);                      // number of seconds until the next message is sent
+    context.attempts(30);                       // number of attempts
+    context.capacity(3000);                       // max number of simultaneous lookups
+
+
+
+    context.timeout(60.0);                       // time to wait for a response
 
     // start with a domain
-    TestDomain domain(3);
+    TestDomain domain(4);
     
     // handler for the lookups
     MyHandler handler(domain.combinations());
     
+    size_t i = 0;
+    
     // show all the domains
     do
     {
+        if (++i > 20000) break;
+        
         // do a lookup
         context.query(domain, ns_t_mx, &handler);
         
