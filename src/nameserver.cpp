@@ -63,7 +63,7 @@ void Nameserver::onReceived(time_t now, const sockaddr *address, const unsigned 
     if (_handlers.empty()) return;
 
     // add to the responses
-    _responses.emplace_back(now, address, buffer, size);
+    _responses.emplace_back(address, buffer, size);
     
     // let the core that we need to process this queue
     _core->reschedule(now);
@@ -90,12 +90,9 @@ size_t Nameserver::process()
         // avoid exceptions (parsing the response could fail)
         try
         {
-            
-            
-            // note that the _handler->onReceived() method must be the LAST CALL in this function,
-            // because after this call to userspace, "this" could very well have been destructed,
-            // so we first have to remove the element from the list, before we call the handler,
-            // to do this without copying, we create a list with just one element
+            // note that the _handler->onReceived() triggers a call to user-space that might destruct 'this',
+            // which also causes _responses to be destructed. To avoid silly crashes we copy the oldest message
+            // to the local stack in a one-item-big list
             decltype(_responses) oneitem;
             
             // move the first item from the _responses to the one-item list
@@ -133,8 +130,6 @@ size_t Nameserver::process()
     // something was processed
     return result;
 }
-    
-    
     
 /**
  *  End of namespace

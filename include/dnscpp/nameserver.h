@@ -165,13 +165,6 @@ public:
     }
     
     /**
-     *  The oldest and newest buffered (and unprocessed) message, when was it received?
-     *  @return time_t
-     */
-    time_t oldest() const { return _responses.empty() ? 0 : _responses.front().time(); }
-    time_t newest() const { return _responses.empty() ? 0 : _responses.back().time(); }
-
-    /**
      *  Is the nameserver busy (meaning: is there a backlog of unprocessed messages?)
      *  @return bool
      */

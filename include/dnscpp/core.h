@@ -239,15 +239,6 @@ public:
     bool rotate() const { return _rotate; }
 
     /**
-     *  DNS-CPP keeps internal buffers with received, but not-yet processed messages
-     *  This method checks if the buffer is up to date until a certain time (if there are
-     *  no older message in the buffer)
-     *  @param  time_t
-     *  @return bool
-     */
-    bool uptodate(time_t time) const;
-    
-    /**
      *  Does a certain hostname exists in /etc/hosts? In that case a NXDOMAIN error should not be given
      *  @param  hostname        hostname to check
      *  @return bool            does it exists in /etc/hosts?

@@ -49,23 +49,16 @@ private:
      *  @var std::string
      */
     std::string _buffer;
-    
-    /**
-     *  Time when this message was received
-     *  @var time_t
-     */
-    time_t _time;
 
 public:
     /**
      *  Constructor
-     *  @param  time
      *  @param  ip
      *  @param  buffer
      *  @param  size
      */
-    Received(time_t time, const struct sockaddr *ip, const unsigned char *buffer, size_t size) :
-        _ip(ip), _buffer((const char *)buffer, size), _time(time) {}
+    Received(const struct sockaddr *ip, const unsigned char *buffer, size_t size) :
+        _ip(ip), _buffer((const char *)buffer, size) {}
     
     /**
      *  No copying because copying buffers is too expensive
@@ -77,12 +70,6 @@ public:
      *  Destructor
      */
     virtual ~Received() = default;
-    
-    /**
-     *  When was the message received?
-     *  @return time_t
-     */
-    time_t time() const { return _time; }
     
     /**
      *  The IP from which this message was received

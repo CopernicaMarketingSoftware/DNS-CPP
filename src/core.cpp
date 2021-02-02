@@ -108,31 +108,6 @@ Operation *Core::add(Lookup *lookup)
 }
 
 /**
- *  DNS-CPP keeps internal buffers with received, but not-yet processed messages
- *  This method checks if the buffer is up to date until a certain time (if there are
- *  no older message in the buffer)
- *  @param  time_t
- *  @return bool
- *
- *  @todo can we remove this?
- */
-bool Core::uptodate(time_t time) const
-{
-    // check all nameservers
-    for (const auto &nameserver : _nameservers)
-    {
-        // get the oldest buffered message from this ns
-        auto oldest = nameserver.oldest();
-        
-        // check if the message was received before the check-time
-        if (oldest != 0 && oldest <= time) return false;
-    }
-    
-    // all buffers are up-to-date
-    return true;
-}
-
-/**
  *  Calculate the delay until the next job
  *  @return double      the delay in seconds (or < 0 if there is no need to run a timer)
  */
