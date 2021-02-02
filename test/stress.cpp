@@ -230,12 +230,12 @@ int main()
 
     context.buffersize(4 * 1024 * 1024);        // size of the input buffer (bigger lowers chance of dropped messages)
     context.interval(1.0);                      // number of seconds until the next message is sent
-    context.attempts(30);                       // number of attempts
+    context.attempts(4);                        // number of attempts
     context.capacity(3000);                       // max number of simultaneous lookups
 
 
 
-    context.timeout(60.0);                       // time to wait for a response
+    context.timeout(10.0);                       // time to wait for a response
 
     // start with a domain
     TestDomain domain(4);

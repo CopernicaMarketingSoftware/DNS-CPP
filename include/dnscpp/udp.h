@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include "monitor.h"
-#include "idle.h"
 #include "received.h"
 #include <list>
 #include <string>
