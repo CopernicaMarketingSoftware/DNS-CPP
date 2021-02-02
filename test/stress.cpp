@@ -228,14 +228,11 @@ int main()
     // create a dns context
     DNS::Context context(&myloop);
 
-    context.buffersize(4 * 1024 * 1024);        // size of the input buffer (bigger lowers chance of dropped messages)
-    context.interval(1.0);                      // number of seconds until the next message is sent
-    context.attempts(4);                        // number of attempts
-    context.capacity(3000);                       // max number of simultaneous lookups
-
-
-
-    context.timeout(10.0);                       // time to wait for a response
+    context.buffersize(4 * 1024 * 1024);        // size of the input buffer (high lowers risk of package loss)
+    context.interval(2.0);                      // number of seconds until the datagram is retried (possibly to next server) (this does not cancel previous requests)
+    context.attempts(50);                       // number of attempts until failure / number of datagrams to send at most
+    context.capacity(1000);                     // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss)
+    context.timeout(10.0);                      // time to wait for a response after the _last_ attempt
 
     // start with a domain
     TestDomain domain(4);
