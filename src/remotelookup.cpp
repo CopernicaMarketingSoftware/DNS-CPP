@@ -73,7 +73,6 @@ double RemoteLookup::delay(double now) const
     if (_count == 0 || _handler == nullptr) return 0.0;
     
     // if already doing a tcp lookup, or when all attemps have passed, we wait until the expire-time
-    // @todo when connection is created, also update _last?
     if (_connection || _count >= _core->attempts()) return std::max(0.0, _last + _core->timeout() - now);
     
     // wait until we can send a next datagram
@@ -131,7 +130,6 @@ bool RemoteLookup::execute(double now)
     if ((_connection || _count >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
 
     // if we reached the max attempts we stop sending out more datagrams, but we keep active
-    // @todo this results in the job not to timeout on time
     if (_count >= _core->attempts()) return true;
     
     // if the operation is already using tcp we simply wait for that
@@ -220,13 +218,16 @@ bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
     // if we're already busy with a tcp connection we ignore further dgram responses
     if (_connection) return false;
     
-    // if the response was truncated, we ignore it and start a tcp connection
-    if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this)), false;
+    // if the response was not truncated, we can report it to userspace
+    if (!response.truncated()) { report(response); return true; }
+
+    // switch to tcp mode to retry the query to get a non-truncated response
+    _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this));
     
-    // we have a response, so we can pass that to user space
-    report(response);
+    // remember the start-time of the connection to reset the timeout-period
+    _last = Now();
     
-    // job has been handled
+    // done
     return true;
 }
 
