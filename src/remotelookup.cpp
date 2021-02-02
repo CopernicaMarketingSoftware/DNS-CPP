@@ -19,10 +19,6 @@
 #include "../include/dnscpp/question.h"
 #include "fakeresponse.h"
 
-
-#include <iostream>
-
-
 /**
  *  Begin of namespace
  */
@@ -53,6 +49,19 @@ RemoteLookup::~RemoteLookup()
 }
 
 /**
+ *  How many credits are left (meaning: how many datagrams do we still have to send?)
+ *  @return size_t      number of attempts
+ */
+size_t RemoteLookup::credits() const
+{
+    // if we're tcp connected, we're not going to send more datagrams
+    if (_connection) return 0;
+    
+    // number of attempts left
+    return _core->attempts() > _count ? _core->attempts() - _count : 0;
+}
+
+/**
  *  How long should we wait until the next message?
  *  @param  now         Current time
  *  @return double
@@ -60,18 +69,12 @@ RemoteLookup::~RemoteLookup()
 double RemoteLookup::delay(double now) const
 {
     // if the operation is ready, we should run asap (so that it is removed)
-    // if the operation never ran it should run immediately
+    // if the operation never ran it should also run immediately
     if (_count == 0 || _handler == nullptr) return 0.0;
     
-    // the number of servers that we have
-//    size_t servers = _core->nameservers().size();
-    
-    // if already doing a tcp lookup, we wait until the expire-time
+    // if already doing a tcp lookup, or when all attemps have passed, we wait until the expire-time
     // @todo when connection is created, also update _last?
-    if (_connection) return std::max(0.0, _last + _core->timeout() - now);
-    
-    // if all attempts have passed we wait until the timeout
-    if (_count >= _core->attempts()) return std::max(_last + _core->timeout() - now, 0.0);
+    if (_connection || _count >= _core->attempts()) return std::max(0.0, _last + _core->timeout() - now);
     
     // wait until we can send a next datagram
     return std::max(_last + _core->interval() - now, 0.0);
@@ -125,25 +128,14 @@ bool RemoteLookup::execute(double now)
     if (_handler == nullptr) return false;
     
     // when job times out
-    if (_count >= _core->attempts() && now > _last + _core->timeout()) 
-    {
-        std::cout << "Timeout " << _count << " " << time_t(_last) << " " << time_t(now) << " " << time_t(_core->timeout()) << std::endl;
-        
-        return timeout();
-    }
-    
-    // if the operation is already using tcp we simply wait for that
-    // @todo close connection when job is cancelled
-    if (_connection) return true;
+    if ((_connection || _count >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
 
     // if we reached the max attempts we stop sending out more datagrams, but we keep active
     // @todo this results in the job not to timeout on time
-    if (_count >= _core->attempts()) 
-    {
-        std::cout << "Almost " << _count << " " << time_t(_last) << " " << time_t(now) << " " << time_t(_core->timeout()) << std::endl;
-        
-        return true;
-    }
+    if (_count >= _core->attempts()) return true;
+    
+    // if the operation is already using tcp we simply wait for that
+    if (_connection) return true;
 
     // access to the nameservers + the number we have
     auto &nameservers = _core->nameservers();
@@ -264,11 +256,22 @@ void RemoteLookup::onReceived(Connection *connection, const Response &response)
 void RemoteLookup::onFailure(Connection *connection, const Response &truncated)
 {
     // if the operation was already cancelled
-    // @todo also close the connection when operation is cancelled
     if (_handler == nullptr) return;
     
     // we failed to get the regular response, so we send back the truncated response
     cleanup()->onReceived(this, truncated);
+}
+
+/**
+ *  Cancel the operation
+ */
+void RemoteLookup::cancel()
+{
+    // do nothing if already cancelled
+    if (_handler == nullptr) return;
+    
+    // cleanup, and remove to userspace
+    cleanup()->onCancelled(this);
 }
 
 /**

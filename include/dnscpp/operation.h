@@ -96,7 +96,7 @@ public:
     /**
      *  Cancel the operation
      */
-    void cancel();
+    virtual void cancel();
 };
 
 /**

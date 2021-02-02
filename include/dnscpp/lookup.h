@@ -54,10 +54,10 @@ public:
     virtual ~Lookup() = default;
     
     /**
-     *  How many (not yet successful) attempts have already been made / requests sent?
+     *  How many credits are left (meaning: how many datagrams do we still have to send?)
      *  @return size_t      number of attempts
      */
-    virtual size_t attempts() const = 0;
+    virtual size_t credits() const = 0;
     
     /**
      *  How long should we wait until the next runtime?

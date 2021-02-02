@@ -23,8 +23,6 @@ namespace DNS {
  */
 void Operation::cancel()
 {
-    // @todo what if connection already exists, should it be closed?
-    
     // if already reported back to user-space
     if (_handler == nullptr) return;
     

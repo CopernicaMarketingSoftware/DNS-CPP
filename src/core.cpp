@@ -225,7 +225,7 @@ void Core::expire()
         if (!lookup->execute(now)) continue;
         
         // if no more attempts are expected, we put it in a special list
-        if (lookup->attempts() >= _attempts) _ready.push_back(lookup);
+        if (lookup->credits() == 0) _ready.push_back(lookup);
         
         // remember the lookup for the next attempt
         else _lookups.push_back(lookup);

@@ -74,14 +74,33 @@ private:
     }
 
     /**
-     *  How many (not yet successful) attempts have already been made / requests sent?
+     *  How many credits are left (meaning: how many datagrams do we still have to send?)
      *  @return size_t      number of attempts
      */
-    virtual size_t attempts() const override
+    virtual size_t credits() const override
     {
-        // local lookups success at the first attempt
+        // local lookups do not send anything at all
         return 0;
     }
+    
+    /**
+     *  Cancel the lookup
+     */
+    virtual void cancel() override
+    {
+        // if already reported back to user-space
+        if (_handler == nullptr) return;
+        
+        // remember the handler
+        auto *handler = _handler;
+        
+        // get rid of the handler to avoid that the result is reported
+        _handler = nullptr;
+        
+        // the last instruction is to report it back to user-space
+        handler->onCancelled(this);
+    }
+
     
 public:
     /**

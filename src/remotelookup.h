@@ -147,10 +147,15 @@ private:
     DNS::Handler *cleanup();
 
     /**
-     *  How many (not yet successful) attempts have already been made / requests sent?
+     *  How many credits are left (meaning: how many datagrams do we still have to send?)
      *  @return size_t      number of attempts
      */
-    virtual size_t attempts() const override { return _count; }
+    virtual size_t credits() const override;
+
+    /**
+     *  Cancel the operation
+     */
+    virtual void cancel() override;
 
 public:
     /**
