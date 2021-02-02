@@ -93,6 +93,12 @@ protected:
     void *_timer = nullptr;
     
     /**
+     *  Is the timer expected to expire right away
+     *  @var bool
+     */
+    double _immediate = false;
+    
+    /**
      *  Size of the send and receive buffer. If set to zero, default
      *  will be kept. This is limited by the system maximum (wmem_max and rmem_max)
      *  @var size_t
@@ -149,6 +155,14 @@ protected:
      */
     void proceed(double now, size_t count);
     
+    /**
+     *  Process a lookup
+     *  @param  lookup      the lookup to process
+     *  @param  now         current time
+     *  @return bool        was this lookup indeed processable (false if processed too early)
+     */
+    bool process(const std::shared_ptr<Lookup> &lookup, double now);
+
     /**
      *  Notify the timer that it expired
      */

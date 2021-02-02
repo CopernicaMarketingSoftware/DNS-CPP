@@ -171,9 +171,8 @@ public:
     bool busy() const { return !_responses.empty(); }
 
     /**
-     *  Process responses (this is an internal method)
+     *  Process cached responses (this is an internal method)
      *  @return size_t      number of processed answers
-     *  @todo put this in a private class
      *  @internal
      */
     size_t process();

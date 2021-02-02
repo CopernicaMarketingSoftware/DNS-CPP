@@ -89,13 +89,18 @@ Operation *Core::add(Lookup *lookup)
     {
         // put at the beginning of the list (because we want to run it immediately)
         _lookups.emplace_front(lookup);
+        
+        // if we already have a timer the expires immediately
+        if (_timer && _immediate) return lookup;
     
         // stop existing timer
-        // @todo what if timer is already correct?
         if (_timer) _loop->cancel(_timer, this);
         
         // reschedule the timer
         _timer = _loop->timer(0.0, this);
+        
+        // this is an immediate-timer
+        _immediate = true;
     }
     else
     {
@@ -137,14 +142,45 @@ double Core::delay(double now)
  */
 void Core::reschedule(double now)
 {
-    // if the timer is already running we have to reset it
-    if (_timer != nullptr) _loop->cancel(_timer, this);
-    
     // calculate the delay
     auto seconds = delay(now);
     
+    // if timer was not set and will not be set
+    if (seconds < 0.0 && _timer == nullptr) return;
+    
+    // if timer was immediate and stays immediate, not changes are needed
+    if (seconds == 0.0 && _timer != nullptr && _immediate) return;
+
+    // if the timer is already running we have to reset it
+    if (_timer != nullptr) _loop->cancel(_timer, this);
+    
     // check when the next operation should run
     _timer = seconds < 0 ? nullptr : _loop->timer(seconds, this);
+    _immediate = seconds == 0.0;
+}
+
+/**
+ *  Process a lookup
+ *  @param  lookup      the lookup to process
+ *  @param  now         current time
+ *  @return bool        was this lookup indeed processable (false if processed too early)
+ */
+bool Core::process(const std::shared_ptr<Lookup> &lookup, double now)
+{
+    // if it is not yet time to run this lookup, we do nothing more
+    if (lookup->delay(now) > 0.0) return false;
+
+    // run the lookup (if this fails the lookup was already finished and we do not have to reschedule it)
+    if (!lookup->execute(now)) return true;
+    
+    // if no more attempts are expected, we put it in a special list
+    if (lookup->credits() == 0) _ready.push_back(lookup);
+    
+    // remember the lookup for the next attempt
+    else _lookups.push_back(lookup);
+    
+    // done
+    return true;
 }
 
 /**
@@ -160,18 +196,11 @@ void Core::proceed(double now, size_t count)
         // not possible if nothing is scheduled
         if (_scheduled.empty()) return;
         
-        // get the oldest scheduled operation
-        auto lookup = _scheduled.front();
+        // get the oldest scheduled operation (the process() always returns true)
+        if (!process(_scheduled.front(), now)) return;
         
         // this lookup is no longer scheduled
         _scheduled.pop_front();
-        
-        // execute it
-        if (!lookup->execute(now)) continue;
-
-        // the lookup indicated that it wants to run once more, so that
-        // @todo check which queue to add it to
-        _lookups.push_back(lookup);
         
         // one extra operation is scheduled
         count -= 1;
@@ -180,11 +209,12 @@ void Core::proceed(double now, size_t count)
 
 /**
  *  Method that is called when the timer expires
- * 
- *  @todo rename because we already had an 'expire' method?
  */
 void Core::expire()
 {
+    // forget the timer
+    _loop->cancel(_timer, this); _timer = nullptr;
+    
     // a call to userspace might destruct `this`
     Watcher watcher(this);
     
@@ -210,42 +240,24 @@ void Core::expire()
     
     // there was no data to process, so we are going to run jobs
     // @todo fix hardcoded numbers
-    for (size_t i = 0; i < 1000 && !_lookups.empty(); ++i)
+    for (size_t i = 0; i < 100 && !_lookups.empty(); ++i)
     {
         // get the oldest operation
-        auto lookup = _lookups.front();
+        if (!process(_lookups.front(), now)) break;
         
-        // if it is not yet time to run this lookup, we do nothing more
-        if (lookup->delay(now) > 0.0) break;
-        
-        // forget this lookup because we are going to run it
+        // forget this lookup because we ran it
         _lookups.pop_front();
-        
-        // run the lookup (if this fails the lookup was already finished and we do not have to reschedule it)
-        if (!lookup->execute(now)) continue;
-        
-        // if no more attempts are expected, we put it in a special list
-        if (lookup->credits() == 0) _ready.push_back(lookup);
-        
-        // remember the lookup for the next attempt
-        else _lookups.push_back(lookup);
     }
     
     // look at lookups that can no longer be repeated, but for which we're waiting for answer
     // @todo fix hardcoded numbers
-    for (size_t i = 0; i < 1000 && !_ready.empty(); ++i)
+    for (size_t i = 0; i < 100 && !_ready.empty(); ++i)
     {
         // get the oldest operation
-        auto lookup = _ready.front();
+        if (!process(_ready.front(), now)) break;
         
-        // if it is not yet time to run this lookup, we do nothing more
-        if (lookup->delay(now) > 0.0) break;
-    
         // forget this lookup because we are going to run it
         _ready.pop_front();
-        
-        // run the lookup for the last time
-        lookup->execute(now);
     }
 
     // if there are more slots for scheduled operations, we start them now

@@ -44,7 +44,6 @@ class RemoteLookup : public Lookup, private Nameserver::Handler, private Connect
 private:
     /**
      *  Pointer to the core of the DNS library
-     *  @todo do we need this?
      *  @var Core
      */
     Core *_core;
