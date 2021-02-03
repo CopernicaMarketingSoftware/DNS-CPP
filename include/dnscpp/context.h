@@ -159,6 +159,12 @@ public:
      *  @param  value
      */
     void bits(const Bits &bits) { _bits = bits; }
+
+    /**
+     *  Set the rotate setting: If true, nameservers will be rotated, if false, nameservers are tried in-order
+     *  @param rotate   the new setting
+     */
+    void rotate(bool rotate) { _rotate = rotate; }
     
     /**
      *  Do a dns lookup and pass the result to a user-space handler object
