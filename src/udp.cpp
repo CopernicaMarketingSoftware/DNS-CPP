@@ -224,11 +224,6 @@ bool Udp::send(const Ip &ip, const Query &query)
  */
 bool Udp::send(const struct sockaddr *address, size_t size, const Query &query)
 {
-    // before we send we empty the buffer (this is an obscure optimization to deal
-    // with use-cases where many domains are resolved, without any calls to the event
-    // loop in between, the socket could then already hold some responses)
-//    if (readable()) notify();
-
     // send over the socket
     // @todo include MSG_DONTWAIT + implement non-blocking????
     return sendto(_fd, query.data(), query.size(), MSG_NOSIGNAL, address, size) >= 0;
