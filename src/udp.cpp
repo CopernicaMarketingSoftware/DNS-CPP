@@ -4,7 +4,7 @@
  *  Implementation file for the Udp class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -15,10 +15,12 @@
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/core.h"
+#include "../include/dnscpp/now.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdexcept>
 #include <unistd.h>
+#include <poll.h>
 
 /**
  *  Begin of namespace
@@ -44,9 +46,6 @@ Udp::~Udp()
 {
     // close the socket
     close();
-
-    // stop monitoring the idle state
-    stop();
 }
 
 /**
@@ -71,8 +70,9 @@ bool Udp::open(int version)
     // if already open
     if (_fd >= 0) return true;
     
-    // try to open it
-    _fd = socket(version == 6 ? AF_INET6 : AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    // try to open it (note that we do not set the NONBLOCK option, because we have not implemented 
+    // buffering for the sendto() call (this could be a future optimization)
+    _fd = socket(version == 6 ? AF_INET6 : AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
     
     // check for success
     if (_fd < 0) return false;
@@ -90,21 +90,6 @@ bool Udp::open(int version)
     
     // done
     return true;
-}
-
-/**
- *  Helper method to stop monitoring the idle state
- */
-void Udp::stop()
-{
-    // nothing to do if not checking for idle
-    if (_idle == nullptr) return;
-
-    // cancel the idle watcher
-    _core->loop()->cancel(_idle, this);
-
-    // forget the ptr
-    _idle = nullptr;
 }
 
 /**
@@ -130,8 +115,29 @@ bool Udp::close()
 }
 
 /**
- *  Method that is called from user-space when the socket becomes
- *  readable.
+ *  Is the socket now readable?
+ *  @return bool
+ */
+bool Udp::readable() const
+{
+    // if not active
+    if (_fd < 0) return false;
+    
+    // structure required by the poll() call
+    pollfd info;
+    
+    // fill the structure
+    info.fd = _fd;
+    info.events = POLLIN;
+    info.revents = 0;
+    
+    // do the call
+    return poll(&info, 1, 0) > 0;
+}
+
+/**
+ *  Method that is called from user-space when the socket becomes readable.
+ *  @param  now
  */
 void Udp::notify()
 {
@@ -140,68 +146,27 @@ void Udp::notify()
     
     // the buffer to receive the response in
     // @todo use a macro
-    char buffer[65536];
+    unsigned char buffer[65536];
 
     // structure will hold the source address (we use an ipv6 struct because that is also big enough for ipv4)
     struct sockaddr_in6 from; socklen_t fromlen = sizeof(from);
-    
-    // number of mesages gotten from the fd
-    size_t messages = 0;
 
-    // we want to get as much messages at onces as possible
+    // get current time
+    Now now;
+
+    // we want to get as much messages at onces as possible, but not run forever
     // @todo use scatter-gather io to optimize this further
-    do {
-        // reveive the message
-        auto bytes = recvfrom(_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&from, &fromlen);
+    for (size_t messages = 0; messages < 1024; ++messages)
+    {
+        // reveive the message (the DONTWAIT option is needed because this is a blocking socket, but we dont want to block now)
+        auto bytes = recvfrom(_fd, buffer, sizeof(buffer), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
         
         // if there were no bytes, leap out
         if (bytes <= 0) break;
 
-        // add to the responses
-        _responses.emplace_back(Ip((struct sockaddr *)&from), std::string(buffer, bytes));
-
-    // we keep iterating as long as we've gotten under 1024 messages
-    // @todo reduce this if too much time is taken doing this, and other buffers overflow
-    } while (++messages < 1024);
-
-    // if we're already processing, we don't need to install idle watcher
-    if (_idle) return;
-
-    // create a new idle watcher now
-    _idle = _core->loop()->idle(this);
-}
-
-/**
- *  Method that is called from user-space when the timer expires.
- */
-void Udp::idle()
-{
-    // if there is nothing to do, we can stop the watcher (no more responses to feed back)
-    if (_responses.empty()) return stop();
-
-    // prevent exceptions (parsing the ip could fail)
-    try
-    {
-        // note that the _handler->onReceived() method must be the LAST CALL in this function,
-        // because after this call to userspace, "this" could very well have been destructed,
-        // so we first have to remove the element from the list, before we call the handler,
-        // to do this without copying, we create a list with just one element
-        decltype(_responses) oneitem;
-        
-        // move the first item from the _responses to the one-item list
-        oneitem.splice(oneitem.begin(), _responses, _responses.begin(), std::next(_responses.begin()));
-        
-        // get the first element
-        const auto &front = oneitem.front();
-
-        // get the first and only element from the list and pass to the handler (this must be the last
-        // call in this function since the user-space handler cannot be trusted (it might destruct `this`))
-        _handler->onReceived(front.first, (unsigned char*)front.second.c_str(), front.second.size());
-    }
-    catch (const std::runtime_error &error)
-    {
-        // @todo report the error
-    }
+        // pass to the handler
+        _handler->onReceived(now, (struct sockaddr *)&from, buffer, bytes);
+    } 
 }
 
 /**

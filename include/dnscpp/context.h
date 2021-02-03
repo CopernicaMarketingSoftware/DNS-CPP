@@ -99,33 +99,59 @@ public:
     }
     
     /**
-     *  Set max time that a request may last in seconds.
-     *  @param expire       time in seconds. default is 60.0, minimum is 0.1
+     *  Set max time to wait for a response
+     *  @param timeout      time in seconds
      */
-    void expire(double expire)
+    void timeout(double timeout)
     {
         // store property, make sure the numbers are reasonably clamped
-        _expire = std::max(expire, 0.1);
+        _timeout = std::max(timeout, 0.1);
     }
     
     /**
-     *  Set interval in seconds to wait before contacting the next server.
-     *  @param  spread      time in seconds. default is 0.1, minimum is 0.0.
-     */
-    void spread(double spread)
-    {
-        // store property, make sure the numbers are reasonably clamped
-        _spread = std::max(spread, 0.0);
-    }
-    
-    /**
-     *  Set interval before a datagram is repeated to the same server, in seconds.
-     *  @param  interval    time in seconds. default is 2.0, minimum is 0.1.
+     *  Set interval before a datagram is sent again
+     *  @param  interval    time in seconds
      */
     void interval(double interval)
     {
         // store property, make sure the numbers are reasonably clamped
         _interval = std::max(interval, 0.1);
+    }
+    
+    /**
+     *  Set the spread (how long to wait until we context the next server)
+     *  This setting is deprecated and now unused
+     *  @param  interval    time in seconds
+     *  @deprecated
+     */
+    void spread(double interval) {}
+    
+    /**
+     *  Set the expire-time of the request
+     *  This setting is deprecated and now unused
+     *  @param  timeout     time in seconds
+     *  @deprecated
+     */
+    void expire(double timeout) {}
+    
+    /**
+     *  Set the max number of attempts
+     *  @param  attempt     max number of attemps
+     */
+    void attempts(size_t attempts)
+    {
+        // update member
+        _attempts = attempts;
+    }
+
+    /**
+     *  Set the capacity: number of operations to run at the same time
+     *  @param  value       the new value
+     */
+    void capacity(size_t value)
+    {
+        // store property
+        _capacity = std::max(size_t(1), value);
     }
     
     /**
@@ -186,9 +212,9 @@ public:
     using Core::buffersize;
     using Core::bits;
     using Core::rotate;
-    using Core::spread;
     using Core::expire;
     using Core::interval;
+    using Core::capacity;
 };
     
 /**

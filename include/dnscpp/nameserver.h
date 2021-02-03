@@ -10,7 +10,7 @@
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @author Michael van der Werve <michael.vanderwerve@mailerq.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -24,6 +24,8 @@
 #include "udp.h"
 #include "ip.h"
 #include "response.h"
+#include "timer.h"
+#include "watchable.h"
 #include <set>
 
 /**
@@ -39,7 +41,7 @@ class Core;
 /**
  *  Class definition
  */
-class Nameserver : private Udp::Handler
+class Nameserver : private Udp::Handler, private Watchable
 {
 public:
     /**
@@ -57,8 +59,13 @@ public:
         virtual bool onReceived(Nameserver *nameserver, const Response &response) = 0;
     };
     
-    
 private:
+    /**
+     *  Pointer to the core object
+     *  @var    Core
+     */
+    Core *_core;
+
     /**
      *  IP address of the nameserver
      *  @var    Ip
@@ -72,6 +79,12 @@ private:
     Udp _udp;
 
     /**
+     *  All the buffered responses that came in 
+     *  @var std::list
+     */
+    std::list<Received> _responses;
+
+    /**
      *  Set with the handlers
      *  @var set
      */
@@ -79,45 +92,12 @@ private:
 
     /**
      *  Method that is called when a response is received
-     *  @param  ip          the ip of the nameserver from which it is received
+     *  @param  now         the receive-time
+     *  @param  address     the address of the nameserver from which it is received
      *  @param  buffer      the received response
      *  @param  size        size of the response
      */
-    virtual void onReceived(const Ip &ip, const unsigned char *buffer, size_t size) override
-    {
-        // avoid exceptions (parsing the response could fail)
-        try
-        {
-            // ignore responses from other ips
-            // @todo also ignore messages that do not come from port 53???
-            if (ip != _ip) return;
-            
-            // if nobody is interested there is no point in parsing the message
-            if (_handlers.empty()) return;
-            
-            // parse the response
-            Response response(buffer, size);
-        
-            // filter on the response, the beginning is simply the handler at nullptr
-            auto begin = _handlers.lower_bound(std::make_pair(response.id(), nullptr));
-
-            // iterate over those elements, notifying each handler
-            for (auto iter = begin; iter != _handlers.end(); ++iter) 
-            {
-                // if this element is not applicable any more, we're going to leap out (we're done)
-                if (iter->first != response.id()) return;
-
-                // call the onreceived for the element, if it returns true, it has acknowledged that it
-                // processed the response and so we can stop iterating. we have to, since it might have removed
-                // itself so iter may be broken at this point.
-                if (iter->second->onReceived(this, response)) return;
-            }
-        }
-        catch (...)
-        {
-            // parsing the response failed
-        }
-    }
+    virtual void onReceived(time_t now, const struct sockaddr *address, const unsigned char *buffer, size_t size) override;
 
 
 public:
@@ -127,7 +107,7 @@ public:
      *  @param  ip      nameserver IP
      *  @throws std::runtime_error
      */
-    Nameserver(Core *core, const Ip &ip) : _ip(ip), _udp(core, this) {}
+    Nameserver(Core *core, const Ip &ip);
     
     /**
      *  No copying
@@ -138,7 +118,7 @@ public:
     /**
      *  Destructor
      */
-    virtual ~Nameserver() = default;
+    virtual ~Nameserver();
     
     /**
      *  Expose the nameserver IP
@@ -151,11 +131,7 @@ public:
      *  @param  query
      *  @return bool
      */
-    bool datagram(const Query &query)
-    {
-        // send the package
-        return _udp.send(_ip, query);
-    }
+    bool datagram(const Query &query);
 
     /**
      *  Subscribe to the socket if you want to be notified about incoming responses
@@ -187,6 +163,20 @@ public:
         // if nobody is listening to the socket any more, we can just as well close it
         if (_handlers.empty()) _udp.close();
     }
+    
+    /**
+     *  Is the nameserver busy (meaning: is there a backlog of unprocessed messages?)
+     *  @return bool
+     */
+    bool busy() const { return !_responses.empty(); }
+
+    /**
+     *  Process cached responses (this is an internal method)
+     *  @return size_t      number of processed answers
+     *  @internal
+     */
+    size_t process();
+
 };
 
 /**

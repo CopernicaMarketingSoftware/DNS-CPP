@@ -4,7 +4,7 @@
  *  Class that encapsulates all data that is needed for a single request
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -19,11 +19,11 @@
 #include "../include/dnscpp/nameserver.h"
 #include "../include/dnscpp/timer.h"
 #include "../include/dnscpp/query.h"
-#include "../include/dnscpp/operation.h"
+#include "../include/dnscpp/lookup.h"
 #include "../include/dnscpp/request.h"
 #include "../include/dnscpp/bits.h"
+#include "../include/dnscpp/now.h"
 #include "connection.h"
-#include "now.h"
 
 /**
  *  Begin of namespace
@@ -39,7 +39,7 @@ class Handler;
 /**
  *  Class definition
  */
-class RemoteLookup : public Operation, private Nameserver::Handler, private Connection::Handler, private Timer
+class RemoteLookup : public Lookup, private Nameserver::Handler, private Connection::Handler
 {
 private:
     /**
@@ -49,10 +49,10 @@ private:
     Core *_core;
 
     /**
-     *  When was the job started?
-     *  @var Now
+     *  When was the last time that the job ran?
+     *  @var double
      */
-    Now _started;
+    double _last = 0.0;
     
     /**
      *  Number of messages that have already been sent
@@ -61,17 +61,16 @@ private:
     size_t _count = 0;
     
     /**
-     *  Identifier of the timer
-     *  @var void*
+     *  Random ID (mainly used to decide which nameserver to use first)
+     *  @var size_t
      */
-    void *_timer;
-
+    size_t _id;
+    
     /**
      *  If we got a truncated response, we start a tcp connection to get the full response
      *  @var Connection
      */
     std::unique_ptr<Connection> _connection;
-    
 
     /**
      *  Method that is called when a dgram response is received
@@ -95,9 +94,11 @@ private:
     virtual void onFailure(Connection *connection, const Response &truncated) override;
 
     /**
-     *  Method that is called by user space when the timer expires
+     *  Execute the lookup
+     *  @param  now         current time
+     *  @return bool        should the lookup be rescheduled?
      */
-    virtual void expire() override;
+    virtual bool execute(double now) override;
 
     /**
      *  When does the job expire?
@@ -107,15 +108,24 @@ private:
 
     /** 
      *  Time out the job because no appropriate response was received in time
+     *  @return bool
      */
-    void timeout();
+    bool timeout();
+
+    /**
+     *  Wait for internal buffers to catch up (dns-cpp uses an internal buffer
+     *  that may hold the response, but that is not yet parsed)
+     *  @param  expire      expire time
+     *  @return bool
+     */
+    bool wait(double expires);
 
     /**
      *  How long should we wait until the next message?
      *  @param  now     current time
      *  @return double
      */
-    double delay(double now) const;
+    virtual double delay(double now) const override;
 
     /**
      *  Retry / send a new message to the nameservers
@@ -131,13 +141,20 @@ private:
 
     /**
      *  Cleanup the object
+     *  @return Handler
      */
-    void cleanup();
+    DNS::Handler *cleanup();
 
     /**
-     *  Private destructor, the class is self-destructing
+     *  How many credits are left (meaning: how many datagrams do we still have to send?)
+     *  @return size_t      number of attempts
      */
-    virtual ~RemoteLookup();
+    virtual size_t credits() const override;
+
+    /**
+     *  Cancel the operation
+     */
+    virtual void cancel() override;
 
 public:
     /**
@@ -155,6 +172,12 @@ public:
      *  @param  that
      */
     RemoteLookup(const RemoteLookup &that) = delete;
+
+    /**
+     *  Destructor
+     */
+    virtual ~RemoteLookup();
+
 };
 
 /**

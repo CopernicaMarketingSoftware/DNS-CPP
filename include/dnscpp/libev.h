@@ -4,7 +4,7 @@
  *  Example eventloop implementation for a libev based event loop
  *
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -69,21 +69,6 @@ private:
 
         // notify the timer
         timer->expire();
-    }
-
-    /**
-     *  Callback method that is called when the event loop is idle
-     *  @param  loop        The loop in which the event was triggered
-     *  @param  w           Internal watcher object
-     *  @param  revents     Events triggered
-     */
-    static void idle(struct ev_loop *loop, ev_idle *watcher, int revents)
-    {
-        // retrieve the timer
-        Idle *idle = (Idle *)watcher->data;
-
-        // notify the timer
-        idle->idle();
     }
 
 public:
@@ -226,53 +211,6 @@ public:
         
         // remove the watcher from the event loop
         ev_timer_stop(_loop, watcher);
-        
-        // we no longer need the watcher
-        free(watcher);
-    }
-
-    /**
-     *  Set an idle watcher
-     *  @param  handler  the object that should be notified when there is time
-     *  @return void*   identifier for the timer
-     */
-    virtual void *idle(Idle *handler) override
-    {
-        // construct the watcher object
-        ev_idle *watcher = (ev_idle*)malloc(sizeof(ev_idle));
-        
-        // associate the timer with the watcher
-        watcher->data = handler;
-        
-        // initialize the watcher
-        ev_idle_init(watcher, idle);
-        
-        // start monitoring for activity
-        ev_idle_start(_loop, watcher);
-
-        // dont affect refcount
-        if (!_persist) ev_unref(_loop);
-        
-        // expose the watcher as identifier
-        return watcher;
-    }
-
-    /**
-     *  Method that is called when a idle watcher is cancelled. This is called when
-     *  the DNS library no longer needs to be notified of the application being idle.
-     * 
-     *  @param  void*   identifier of the watcher
-     */
-    virtual void cancel(void *identifier, Idle *idle) override
-    {
-        // restore refcount
-        if (!_persist) ev_ref(_loop);
-
-        // the identifier is a watcher
-        ev_idle *watcher = (ev_idle *)identifier;
-        
-        // remove the watcher from the event loop
-        ev_idle_stop(_loop, watcher);
         
         // we no longer need the watcher
         free(watcher);

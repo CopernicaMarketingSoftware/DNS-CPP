@@ -27,7 +27,6 @@ namespace DNS {
  */
 class Monitor;
 class Timer;
-class Idle;
 
 /**
  *  Class definition
@@ -99,23 +98,9 @@ public:
      *  the DNS library no longer needs to be notified.
      * 
      *  @param  void*   identifier of the timer (returned by the timer() method)
+     *  @param  Timer   the timer to cancel
      */
     virtual void cancel(void *identifier, Timer *timer) = 0;
-
-    /**
-     *  Set an idle watcher
-     *  @param  Idle the object that should be notified when there is time
-     *  @return void*   identifier for the timer
-     */
-    virtual void *idle(Idle *idle) = 0;
-
-    /**
-     *  Method that is called when a idle watcher is cancelled. This is called when
-     *  the DNS library no longer needs to be notified of the application being idle.
-     * 
-     *  @param  void*   identifier of the watcher
-     */
-    virtual void cancel(void *identifier, Idle *idle) = 0;
 };
     
 /**

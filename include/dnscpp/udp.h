@@ -6,7 +6,7 @@
  *  this class in user space, it is used internally by the Context class.
  *
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include "monitor.h"
-#include "idle.h"
+#include "received.h"
 #include <list>
 #include <string>
 
@@ -43,7 +43,7 @@ class Response;
 /**
  *  Class definition
  */
-class Udp : private Monitor, private Idle
+class Udp : private Monitor
 {
 public:
     /**
@@ -54,11 +54,12 @@ public:
     public:
         /**
          *  Method that is called when a response is received
-         *  @param  ip          the ip of the nameserver from which it is received
+         *  @param  time        receive-time
+         *  @param  address     the address of the nameserver from which it is received
          *  @param  response    the received response
          *  @param  size        size of the response
          */
-        virtual void onReceived(const Ip &ip, const unsigned char *response, size_t size) = 0;
+        virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) = 0;
     };
 
     /**
@@ -92,29 +93,11 @@ private:
      *  @var Handler
      */
     Handler *_handler;
-
-    /**
-     *  The idle watcher we have when we should process the responses as soon as possible.
-     *  @var void*
-     */
-    void *_idle = nullptr;
-
-    /**
-     *  All the buffered responses that came in 
-     *  @var std::list
-     */
-    std::list<std::pair<Ip,std::string>> _responses;
     
     /**
-     *  Method that is called from user-space when the socket becomes
-     *  readable.
+     *  Method that is called from user-space when the socket becomes readable.
      */
     virtual void notify() override;
-
-    /**
-     *  Method that is called from user-space when the app is idle.
-     */
-    virtual void idle() override;
     
     /**
      *  Send a query to a certain nameserver
@@ -132,10 +115,6 @@ private:
      */
     bool open(int version);
 
-    /**
-     *  Helper method to stop monitoring the idle state
-     */
-    void stop();
 
 public:
     /**
@@ -158,13 +137,6 @@ public:
     virtual ~Udp();
 
     /**
-     *  Close the socket (this is useful if you do not expect incoming data anymore)
-     *  The socket will be automatically opened if you start sending to it
-     *  @return bool
-     */
-    bool close();
-
-    /**
      *  Send a query to the socket
      *  Watch out: you need to be consistent in calling this with either ipv4 or ipv6 addresses
      *  @param  ip      IP address of the target nameserver
@@ -172,6 +144,19 @@ public:
      *  @return bool
      */
     bool send(const Ip &ip, const Query &query);
+
+    /**
+     *  Close the socket (this is useful if you do not expect incoming data anymore)
+     *  The socket will be automatically opened if you start sending to it
+     *  @return bool
+     */
+    bool close();
+
+    /**
+     *  Is the socket now readable?
+     *  @return bool
+     */
+    bool readable() const;
 };
     
 /**

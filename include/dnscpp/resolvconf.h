@@ -37,7 +37,7 @@ private:
     std::vector<Ip> _nameservers;
 
     /**
-     *  Timeout as specified in the conf.
+     *  Timeout as specified in the conf (this is the interval between attempts)
      *  @var size_t
      */
     size_t _timeout = RES_TIMEOUT;
@@ -134,9 +134,10 @@ public:
      *  @return bool
      */
     bool rotate() const { return _rotate; }
-
+    
     /**
-     *  Timeout to use before going to a different nameserver.
+     *  Timeout of a request (this is the time until the next dgram is sent, but also
+     *  the time until we consider a request failed)
      *  @return size_t
      */
     size_t timeout() const { return _timeout; }

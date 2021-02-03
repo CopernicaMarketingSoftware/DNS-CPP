@@ -4,7 +4,7 @@
  *  Class that implements the lookup in the local /etc/hosts file
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
  
 /**
@@ -27,15 +27,9 @@ namespace DNS {
 /**
  *  Class definition
  */
-class LocalLookup : public Operation, private Timer
+class LocalLookup : public Lookup
 {
 private:
-    /**
-     *  Reference the event loop
-     *  @var Loop
-     */
-    Loop *_loop;
-    
     /**
      *  Reference to the /etc/hosts file
      *  @var Hosts
@@ -43,70 +37,104 @@ private:
     const Hosts &_hosts;
     
     /**
-     *  The running timer
-     *  @var void*
+     *  Is the operation ready?
+     *  @var bool
      */
-    void *_timer = nullptr;
-    
+    bool _ready = false;
 
     /**
-     *  Method that is called when the timer expires
+     *  Method that is called when it is time to process this lookup
+     *  @param  now     current time
+     *  @return bool    should it be rescheduled?
      */
-    virtual void expire() override
+    virtual bool execute(double now) override
     {
-        // forget about the timer
-        _loop->cancel(_timer, this); _timer = nullptr;
+        // do nothing if ready
+        if (_ready) return false;
         
         // pass to the hosts
         _hosts.notify(Request(this), _handler, this);
         
-        // we can now self-destruct, userspace has been informed
-        delete this;
+        // remember that the operation is ready
+        _ready = true;
+        
+        // no need to reschedule
+        return false;
+    }
+
+    /**
+     *  How long should we wait until the next runtime?
+     *  @param  now         current time
+     *  @return double      delay in seconds
+     */
+    virtual double delay(double now) const override
+    {
+        // should run right away
+        return 0.0;
+    }
+
+    /**
+     *  How many credits are left (meaning: how many datagrams do we still have to send?)
+     *  @return size_t      number of attempts
+     */
+    virtual size_t credits() const override
+    {
+        // local lookups do not send anything at all
+        return 0;
     }
     
     /**
-     *  Private destructor
-     *  This is a self-destructing class
+     *  Cancel the lookup
      */
-    virtual ~LocalLookup()
+    virtual void cancel() override
     {
-        // do nothing if timer is already dead
-        if (_timer == nullptr) return;
+        // if already reported back to user-space
+        if (_handler == nullptr) return;
         
-        // stop the timer
-        _loop->cancel(_timer, this);
+        // remember the handler
+        auto *handler = _handler;
         
-        // if the operation is destructed while the timer was still running, it means that the
-        // operation was prematurely cancelled from user-space, let the handler know
-        _handler->onCancelled(this);
+        // get rid of the handler to avoid that the result is reported
+        _handler = nullptr;
+        
+        // the last instruction is to report it back to user-space
+        handler->onCancelled(this);
     }
 
+    
 public:
     /**
      *  Constructor
      *  To keep the behavior of lookups consistent with the behavior of remote lookups, we set
      *  a timer so that userspace will be informed in a later tick of the event loop
-     *  @param  loop
      *  @param  hosts
      *  @param  domain
      *  @param  type
      *  @param  handler
      */
-    LocalLookup(Loop *loop, const Hosts &hosts, const char *domain, int type, Handler *handler) : 
-        Operation(handler, ns_o_query, domain, type, false), 
-        _loop(loop), 
-        _hosts(hosts),
-        _timer(_loop->timer(0.0, this)) {}
+    LocalLookup(const Hosts &hosts, const char *domain, int type, Handler *handler) : 
+        Lookup(handler, ns_o_query, domain, type, false), _hosts(hosts) {}
 
     /**
      *  Constructor
      *  This is a utility constructor for reverse lookups
-     *  @param  loop
      *  @param  hosts
      *  @param  ip
      *  @param  handler
      */
-    LocalLookup(Loop *loop, const Hosts &hosts, const Ip &ip, Handler *handler) : LocalLookup(loop, hosts, Reverse(ip), TYPE_PTR, handler) {}
+    LocalLookup(const Hosts &hosts, const Ip &ip, Handler *handler) : LocalLookup(hosts, Reverse(ip), TYPE_PTR, handler) {}
+
+    /**
+     *  Destructor
+     *  This is a self-destructing class
+     */
+    virtual ~LocalLookup()
+    {
+        // if the operation is destructed while it was still running, it means that the
+        // operation was prematurely cancelled from user-space, let the handler know
+        // @todo check if this is correct  / also implement the cancel() method
+        if (!_ready) _handler->onCancelled(this);
+    }
 };
     
 /**

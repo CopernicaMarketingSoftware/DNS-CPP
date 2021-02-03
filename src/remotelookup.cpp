@@ -33,33 +33,32 @@ namespace DNS {
  *  @param  handler     user space object
  */
 RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
-    Operation(handler, ns_o_query, domain, type, bits), _core(core)
-{
-    // call "retry" to send the first datagram to the first nameserver
-    if (!_core->nameservers().empty()) retry(_started);
-    
-    // if there are no nameservers, we set a timer to expire immediately
-    else _timer = _core->loop()->timer(0.0, this);
-}
+    Lookup(handler, ns_o_query, domain, type, bits), _core(core), _id(rand()) {}
 
 /**
  *  Destructor
  */
 RemoteLookup::~RemoteLookup()
 {
-    // no need to cleanup if the job was already over
-    if (_timer == nullptr) return;
-    
     // cleanup the job (note that we have this cleanup-function because we
     // normally want to cleanup _before_ we report back to userspace, because
     // you never know what userspace will do (maybe even destruct the _core pointer),
     // but if userspace decided to kill the job (by calling job->cancel()) we still
     // have to do some cleaning ourselves
     cleanup();
+}
 
-    // if the operation is destructed while the timer was still running, it means that the
-    // operation was prematurely cancelled from user-space, let the handler know
-    _handler->onCancelled(this);
+/**
+ *  How many credits are left (meaning: how many datagrams do we still have to send?)
+ *  @return size_t      number of attempts
+ */
+size_t RemoteLookup::credits() const
+{
+    // if we're tcp connected, we're not going to send more datagrams
+    if (_connection) return 0;
+    
+    // number of attempts left
+    return _core->attempts() > _count ? _core->attempts() - _count : 0;
 }
 
 /**
@@ -69,88 +68,82 @@ RemoteLookup::~RemoteLookup()
  */
 double RemoteLookup::delay(double now) const
 {
-    // the number of servers that we have
-    size_t servers = _core->nameservers().size();
+    // if the operation is ready, we should run asap (so that it is removed)
+    // if the operation never ran it should also run immediately
+    if (_count == 0 || _handler == nullptr) return 0.0;
     
-    // have we already completed a full round of all nameservers? if that is not yet
-    // the case we send the next message soon, with a small delay to spread out the messages
-    if (_count % servers != 0) return _core->spread();
+    // if already doing a tcp lookup, or when all attemps have passed, we wait until the expire-time
+    if (_connection || _count >= _core->attempts()) return std::max(0.0, _last + _core->timeout() - now);
     
-    // a full round has been completed, how many rounds have we had?
-    size_t rounds = _count / servers;
-    
-    // calculate the time when to start round + 1
-    double nexttime = _started + rounds * _core->interval();
-    
-    // calculate delay based on this time
-    return std::max(std::min(nexttime, expires()) - now, 0.0);
+    // wait until we can send a next datagram
+    return std::max(_last + _core->interval() - now, 0.0);
 }
 
 /**
  *  Cleanup the object
  *  We want to cleanup the job _before_ it is destructed, to handle the situation
  *  where user-space already destructs _core while the job is reporting its result
+ *  @return Handler     the handler that may still be called
  */
-void RemoteLookup::cleanup()
+Handler *RemoteLookup::cleanup()
 {
+    // remember the old handler
+    auto handler = _handler;
+    
+    // forget the handler
+    _handler = nullptr;
+    
     // forget the tcp connection
     _connection.reset();
     
     // unsubscribe from the nameservers
     for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this, _query.id());
     
-    // stop the timer
-    if (_timer) _core->loop()->cancel(_timer, this);
-    
-    // forget the timer
-    _timer = nullptr;
-}
-
-/**
- *  When does the job expire?
- *  @return double
- */
-double RemoteLookup::expires() const
-{
-    // if there are no nameservers, the call expires immediately (waiting is pointless)
-    if (_core->nameservers().empty()) return _started;
-    
-    // get the max time
-    return _started + _core->expire();
+    // expose the handler
+    return handler;
 }
 
 /** 
  *  Time out the job because no appropriate response was received in time
+ *  @return bool        should the lookup be resheduled?
  */
-void RemoteLookup::timeout()
+bool RemoteLookup::timeout()
 {
     // before we report to userspace we cleanup the object
-    cleanup();
+    cleanup()->onTimeout(this);
     
-    // report an error
-    _handler->onTimeout(this);
-    
-    // self-destruct
-    delete this;
+    // done (we do not have to run again)
+    return false;
 }
 
 /**
- *  Retry / send a new message to one of the nameservers
- *  @param  now     current timestamp
+ *  Execute the lookup
+ *  @param  now         current time
+ *  @return bool        should the lookup be rescheduled?
  */
-void RemoteLookup::retry(double now)
+bool RemoteLookup::execute(double now)
 {
-    // we need some "random" identity if the rotate option is set because we do not want all jobs to start with 
-    // nameserver[0] -- for this we use the starttime as it is random-enough to distribute requests. otherwise 
-    // we will always start at nameserver 0
-    size_t id = _core->rotate() ? _started * 100000 : 0;
+    // if the result has already been reported to user-space, we do not have to do anything
+    if (_handler == nullptr) return false;
     
+    // when job times out
+    if ((_connection || _count >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
+
+    // if we reached the max attempts we stop sending out more datagrams, but we keep active
+    if (_count >= _core->attempts()) return true;
+    
+    // if the operation is already using tcp we simply wait for that
+    if (_connection) return true;
+
     // access to the nameservers + the number we have
     auto &nameservers = _core->nameservers();
     size_t nscount = nameservers.size();
     
+    // what if there are no nameservers?
+    if (nscount == 0) return timeout();
+
     // which nameserver should we sent now?
-    size_t target = (_count + id) % nscount;
+    size_t target = _core->rotate() ? (_count + _id) % nscount : _count % nscount;
     
     // iterator for the next loop
     size_t i = 0;
@@ -168,39 +161,14 @@ void RemoteLookup::retry(double now)
         if (_count < nscount) nameserver.subscribe(this, _query.id());
 
         // one more message has been sent
-        _count += 1;
+        _count += 1; _last = now;
         
         // for now we do not yet send the next message
         break;
     }
     
-    // we set a new timer for when the entire job times out
-    _timer = _core->loop()->timer(delay(now), this);
-}
-
-/**
- *  When the timer expires
- *  This method is called from the event loop in user space
- */
-void RemoteLookup::expire()
-{
-    // cancel (deallocate) the timer
-    _core->loop()->cancel(_timer, this);
-    
-    // the timer has expired
-    _timer = nullptr;
-
-    // find the current time
-    Now now;
-    
-    // did the entire job expire?
-    if (now >= expires()) return timeout();
-    
-    // if we do not yet have a tcp connection we send out more dgrams
-    if (!_connection) return retry(now);
-    
-    // we set a new timer for when the entire job times out
-    _timer = _core->loop()->timer(expires() - now, this);
+    // we want to be rescheduled
+    return true;
 }
 
 /**
@@ -211,16 +179,19 @@ void RemoteLookup::expire()
  */
 void RemoteLookup::report(const Response &response)
 {
+    // if the result has already been reported, we do nothing here
+    if (_handler == nullptr) return;
+    
     // for NXDOMAIN errors we need special treatment (maybe the hostname _does_ exists in 
     // /etc/hosts?) For all other type of results the message can be passed to userspace
-    if (response.rcode() != ns_r_nxdomain) return _handler->onReceived(this, response);
+    if (response.rcode() != ns_r_nxdomain) return cleanup()->onReceived(this, response);
 
     // extract the original question, to find out the host for which we were looking
     Question question(response);
     
     // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
     // file does have a record for this hostname, check this
-    if (!_core->exists(question.name())) return _handler->onReceived(this, response);
+    if (!_core->exists(question.name())) return cleanup()->onReceived(this, response);
     
     // get the original request (so that the response can match the request)
     Request request(this);
@@ -229,7 +200,7 @@ void RemoteLookup::report(const Response &response)
     FakeResponse fake(request, question);
 
     // send the fake-response to user-space
-    _handler->onReceived(this, Response(fake.data(), fake.size()));
+    cleanup()->onReceived(this, Response(fake.data(), fake.size()));
 }
 
 /**
@@ -247,19 +218,16 @@ bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
     // if we're already busy with a tcp connection we ignore further dgram responses
     if (_connection) return false;
     
-    // if the response was truncated, we ignore it and start a tcp connection
-    if (response.truncated()) return _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this)), false;
-    
-    // before we report to userspace we cleanup the object
-    cleanup();
+    // if the response was not truncated, we can report it to userspace
+    if (!response.truncated()) { report(response); return true; }
 
-    // we have a response, so we can pass that to user space
-    report(response);
+    // switch to tcp mode to retry the query to get a non-truncated response
+    _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this));
     
-    // we can self-destruct -- this job has been handled
-    delete this;
+    // remember the start-time of the connection to reset the timeout-period
+    _last = Now();
     
-    // job has been handled
+    // done
     return true;
 }
 
@@ -270,18 +238,15 @@ bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
  */
 void RemoteLookup::onReceived(Connection *connection, const Response &response)
 {
+    // if the operation was already cancelled
+    if (_handler == nullptr) return;
+
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
     if (!_query.matches(response)) return;
 
-    // before we report to userspace we cleanup the object
-    cleanup();
-    
     // we have a response, hand it over to user space
     report(response);
-    
-    // self-destruct now that the job has been completed
-    delete this;
 }
 
 /**
@@ -291,14 +256,23 @@ void RemoteLookup::onReceived(Connection *connection, const Response &response)
  */
 void RemoteLookup::onFailure(Connection *connection, const Response &truncated)
 {
-    // before we report to userspace we cleanup the object
-    cleanup();
-
+    // if the operation was already cancelled
+    if (_handler == nullptr) return;
+    
     // we failed to get the regular response, so we send back the truncated response
-    _handler->onReceived(this, truncated);
+    cleanup()->onReceived(this, truncated);
+}
 
-    // self-destruct now that the job has been completed
-    delete this;
+/**
+ *  Cancel the operation
+ */
+void RemoteLookup::cancel()
+{
+    // do nothing if already cancelled
+    if (_handler == nullptr) return;
+    
+    // cleanup, and remove to userspace
+    cleanup()->onCancelled(this);
 }
 
 /**
