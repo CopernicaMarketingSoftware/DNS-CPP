@@ -253,6 +253,9 @@ void Core::expire()
         // get the oldest operation
         if (!process(_lookups.front(), now)) break;
         
+        // maybe the userspace call ended up in `this` being destructed
+        if (!watcher.valid()) return;
+        
         // log one extra call (this is not entirely correct, maybe there was no call to userspace)
         calls += 1;
         
@@ -265,6 +268,9 @@ void Core::expire()
     {
         // get the oldest operation
         if (!process(_ready.front(), now)) break;
+
+        // maybe the userspace call ended up in `this` being destructed
+        if (!watcher.valid()) return;
 
         // log one extra call
         calls += 1;
