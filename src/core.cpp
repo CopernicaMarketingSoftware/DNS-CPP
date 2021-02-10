@@ -221,40 +221,53 @@ void Core::expire()
     // get the current time
     Now now;
     
+    // number of calls made
+    size_t calls = 0;
+    
     // first we are going to check the nameservers if they have some data to process
     for (auto &nameserver : _nameservers)
     {
         // because processing a response may lead to user-space destructing everything,
         // we leap out if there was indeed something processed
-        size_t count = nameserver.process();
+        size_t count = nameserver.process(_maxcalls - calls);
         
         // if nothing was processed we move one
         if (count == 0) continue;
         
         // something was processed, is the side-effect that userspace destucted `this`?
         if (!watcher.valid()) return;
-        
+
+        // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
+        calls += count;
+
         // start other operations now that some earlier operations are completed
         proceed(now, count);
+        
+        // is it meaningful to proceed
+        if (calls > _maxcalls) break;        
     }
     
     // there was no data to process, so we are going to run jobs
-    // @todo fix hardcoded numbers
-    for (size_t i = 0; i < 100 && !_lookups.empty(); ++i)
+    while (calls < _maxcalls && !_lookups.empty())
     {
         // get the oldest operation
         if (!process(_lookups.front(), now)) break;
+        
+        // log one extra call (this is not entirely correct, maybe there was no call to userspace)
+        calls += 1;
         
         // forget this lookup because we ran it
         _lookups.pop_front();
     }
     
     // look at lookups that can no longer be repeated, but for which we're waiting for answer
-    // @todo fix hardcoded numbers
-    for (size_t i = 0; i < 100 && !_ready.empty(); ++i)
+    while (calls < _maxcalls && !_ready.empty())
     {
         // get the oldest operation
         if (!process(_ready.front(), now)) break;
+
+        // log one extra call
+        calls += 1;
         
         // forget this lookup because we are going to run it
         _ready.pop_front();

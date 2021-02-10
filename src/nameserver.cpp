@@ -71,9 +71,10 @@ void Nameserver::onReceived(time_t now, const sockaddr *address, const unsigned 
 
 /**
  *  Process queued messages
+ *  @param  size_t          max number of calls to userspace
  *  @return size_t          number of processed answers
  */
-size_t Nameserver::process()
+size_t Nameserver::process(size_t maxcalls)
 {
     // if there is nothing to process
     if (_responses.empty()) return 0;
@@ -85,7 +86,7 @@ size_t Nameserver::process()
     Watcher watcher(this);
     
     // look for a response
-    do
+    while (result < maxcalls && watcher.valid() && !_responses.empty())
     {
         // avoid exceptions (parsing the response could fail)
         try
@@ -125,7 +126,6 @@ size_t Nameserver::process()
             // parsing the response failed
         }
     }
-    while (watcher.valid() && !_responses.empty());
 
     // something was processed
     return result;

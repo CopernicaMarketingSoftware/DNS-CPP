@@ -141,6 +141,12 @@ protected:
      */
     size_t _capacity = 100;
     
+    /**
+     *  The max number of calls to be made to userspace in one iteration
+     *  @var size_t
+     */
+    size_t _maxcalls = 5;
+    
 
     /**
      *  Calculate the delay until the next job

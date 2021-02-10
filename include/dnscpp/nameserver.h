@@ -172,10 +172,11 @@ public:
 
     /**
      *  Process cached responses (this is an internal method)
+     *  @param  maxcalls    max number of calls to userspace
      *  @return size_t      number of processed answers
      *  @internal
      */
-    size_t process();
+    size_t process(size_t maxcalls);
 
 };
 
