@@ -119,22 +119,6 @@ public:
     }
     
     /**
-     *  Set the spread (how long to wait until we context the next server)
-     *  This setting is deprecated and now unused
-     *  @param  interval    time in seconds
-     *  @deprecated
-     */
-    void spread(double interval) {}
-    
-    /**
-     *  Set the expire-time of the request
-     *  This setting is deprecated and now unused
-     *  @param  timeout     time in seconds
-     *  @deprecated
-     */
-    void expire(double timeout) {}
-    
-    /**
      *  Set the max number of attempts
      *  @param  attempt     max number of attemps
      */
