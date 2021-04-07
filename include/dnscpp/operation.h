@@ -47,7 +47,7 @@ protected:
      *  The query that we're going to send
      *  @var Query
      */
-    const Query _query;
+    Query _query;
         
     /**
      *  Constructor

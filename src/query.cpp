@@ -15,7 +15,6 @@
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
 #include <stdexcept>
-#include "randombits.h"
 #include "compressor.h"
 #include "../include/dnscpp/type.h"
 #include "../include/dnscpp/question.h"
@@ -41,14 +40,11 @@ Query::Query(int op, const char *dname, int type, const Bits &bits, const unsign
     // check if parameters fit in the header
     if (type < 0 || type > 65535) throw std::runtime_error("invalid type passed to dns query");
     
-    // make sure buffer is completely filled with zero's
+    // make sure buffer is completely filled with zero's (this also ensures the query ID is zero by default)
     memset(_buffer, 0, sizeof(_buffer));
     
     // for simpler access to the header-properties, we use a local variable
     HEADER *header = (HEADER *)_buffer;
-
-    // we need a random id so that it cannot be guessed
-    header->id = RandomBits();
 
     // store the opcode
     header->opcode = op;
@@ -229,7 +225,17 @@ uint16_t Query::id() const
     // expose the properties
     return ntohs(header->id);
 }
-    
+
+/**
+ *  Set the query ID
+ *  @param id  the id
+ */
+void Query::id(uint16_t value)
+{
+    // set the value
+    ((HEADER *)_buffer)->id = htons(value);
+}
+
 /**
  *  The opcode
  *  @return uint8_t

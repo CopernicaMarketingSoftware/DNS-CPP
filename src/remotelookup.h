@@ -61,12 +61,6 @@ private:
     size_t _count = 0;
     
     /**
-     *  Random ID (mainly used to decide which nameserver to use first)
-     *  @var size_t
-     */
-    size_t _id;
-    
-    /**
      *  If we got a truncated response, we start a tcp connection to get the full response
      *  @var Connection
      */

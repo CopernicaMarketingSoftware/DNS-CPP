@@ -1,7 +1,9 @@
 /**
  *  Query.h
  * 
- *  Class to create the query that is to be sent to the DNS server
+ *  Class to create the query that is to be sent to the DNS server.
+ *  The "async operation" object decides what the query ID will be.
+ *  At construction this query ID remains zero.
  *  
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2020 Copernica BV
@@ -165,11 +167,18 @@ public:
     }
     
     /**
-     *  The ID inside this object
+     *  The ID inside this object. Note that this may be zero, unless
+     *  the query has been sent out over the wire.
      *  @return uint16_t
      */
     uint16_t id() const;
-    
+
+    /**
+     *  Set the query ID
+     *  @param id  the id
+     */
+    void id(uint16_t value);
+
     /**
      *  The opcode
      *  @return uint8_t

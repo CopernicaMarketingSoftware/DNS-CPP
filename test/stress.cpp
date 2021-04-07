@@ -16,98 +16,8 @@
 #include <ev.h>
 #include <dnscpp/libev.h>
 #include <math.h>
-
-/**
- *  Class creates a test-domain
- */
-class TestDomain
-{
-private:
-    /**
-     *  The actual domain
-     *  @var std::string
-     */
-    std::string _domain;
-    
-    /**
-     *  Size of the domain (without the postfix)
-     *  @return size_t
-     */
-    size_t size() const
-    {
-        // find the dot
-        return _domain.find('.');
-    }
-    
-    /**
-     *  Increment the domain on a certain position
-     *  @param  pos
-     */
-    void increment(int pos)
-    {
-        // check if we can increment this position
-        if (_domain[pos] != 'z') { _domain[pos] += 1; return; }
-        
-        // we go back to the begin
-        _domain[pos] = 'a';
-        
-        // increment the next
-        if (pos > 0) increment(pos-1);
-        
-        // cycle / start over
-        else _domain = "aa.com";
-    }
-
-
-public:
-    /**
-     *  Constructor
-     *  @param  size
-     */
-    TestDomain(size_t size = 3) : _domain(size, 'a') 
-    {
-        // add postfix
-        _domain.append(".com");
-    }
-    
-    /**
-     *  Expose the domain
-     *  @return const char *
-     */
-    operator const char * () const { return _domain.data(); }
-    
-    /**
-     *  Increment the domain (go to the next)
-     */
-    void increment() { increment(size() - 1); }
-    
-    /**
-     *  Number of combinations
-     *  @return size_t
-     */
-    size_t combinations() const { return pow(26, size()); }
-    
-    /**
-     *  Is it at the beginning?
-     *  @return bool
-     */
-    bool first() const
-    {
-        // check all chars
-        for (size_t i = 0; true; ++i)
-        {
-            // check the char
-            switch (_domain[i]) {
-            case '.':   return true;
-            case 'a':   break;
-            default:    return false;
-            }
-        }
-        
-        // unreachable
-        return false;
-    }
-};
+#include <fstream>
+#include <iomanip>
 
 /**
  *  The handler class
@@ -139,6 +49,11 @@ private:
      */
     size_t _timeouts = 0;
 
+    double percent(size_t count)
+    {
+        return 100.0 * ((double)count / _total);
+    }
+
     /**
      *  Show the status
      *  @param  operation       the operation that finished
@@ -148,9 +63,18 @@ private:
         // parse the original request
         DNS::Request request(operation);
         DNS::Question question(request);
+
+        if ((_success + _failures + _timeouts) % 100 == 0)
+        {
+            std::cerr << "success: "
+                << std::setw(7) << std::setprecision(4) << percent(_success)
+                << "%, failures: " << std::setw(7) << std::setprecision(4) << percent(_failures)
+                << "%, timeouts: " << std::setw(7) << std::setprecision(4) << percent(_timeouts)
+                << "%\n";
+        }
         
         // show result
-        std::cout << _total << " " << _success << " " << _failures << " " << _timeouts << " " << (_success + _failures + _timeouts) << " (" << question.name() << ")" << std::endl;
+        // std::cout << _total << " " << _success << " " << _failures << " " << _timeouts << " " << (_success + _failures + _timeouts) << " (" << question.name() << ")" << std::endl;
     }
 
     /**
@@ -162,8 +86,11 @@ private:
     {
         // update counter
         _success += 1;
-        
-        // show what is going on
+        // parse the original request
+        DNS::Request request(operation);
+        DNS::Question question(request);
+        std::cout << question.name() << '\n';
+
         show(operation);
     }
 
@@ -174,12 +101,6 @@ private:
      */
     virtual void onFailure(const DNS::Operation *operation, int rcode) override
     {
-//        DNS::Request request(operation);
-//        DNS::Question question(request);
-//        
-//        std::cout << question.name() << std::endl;
-
-
         // update counter
         _failures += 1;
 
@@ -210,15 +131,32 @@ public:
     
 };
 
+std::vector<std::string> readDomainList(const char *filename)
+{
+    std::vector<std::string> result;
+    std::ifstream domainlist(filename);
+    if (!domainlist) throw std::runtime_error("cannot open file");
+    std::string line;
+    while (std::getline(domainlist, line))
+    {
+        if (line.empty()) continue;
+        result.push_back(line);
+    }
+    return result;
+}
 
 /**
  *  Main procedure
  *  @return int
  */
-int main()
+int main(int argc, char **argv)
 {
-//    srand(time(nullptr));
-    
+    if (argc < 2)
+    {
+        std::cerr << "give me a big list of domains, one per line, in a file\n";
+        return EXIT_FAILURE;
+    }
+
     // the event loop
     struct ev_loop *loop = EV_DEFAULT;
 
@@ -228,33 +166,24 @@ int main()
     // create a dns context
     DNS::Context context(&myloop);
 
-    context.buffersize(4 * 1024 * 1024);        // size of the input buffer (high lowers risk of package loss)
-    context.interval(2.0);                      // number of seconds until the datagram is retried (possibly to next server) (this does not cancel previous requests)
-    context.attempts(50);                       // number of attempts until failure / number of datagrams to send at most
-    context.capacity(1000);                     // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss)
-    context.timeout(10.0);                      // time to wait for a response after the _last_ attempt
+    context.buffersize(24 * 1024 * 1024);      // size of the input buffer (high lowers risk of package loss)
+    context.interval(2.0);                     // number of seconds until the datagram is retried (possibly to next server) (this does not cancel previous requests)
+    context.attempts(4);                       // number of attempts until failure / number of datagrams to send at most
+    context.capacity(10000);                   // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss)
+    context.timeout(2.0);                      // time to wait for a response after the _last_ attempt
 
-    // start with a domain
-    TestDomain domain(4);
-    
+    std::cout << "reading domains from " << argv[1] << std::endl;
+
+    // get domain list
+    const auto domainlist = readDomainList(argv[1]);
+
     // handler for the lookups
-    MyHandler handler(domain.combinations());
-    
-    size_t i = 0;
-    
-    // show all the domains
-    do
-    {
-        if (++i > 20000) break;
-        
-        // do a lookup
-        context.query(domain, ns_t_mx, &handler);
-        
-        // go to next
-        domain.increment();
+    MyHandler handler(domainlist.size());
+
+    for (const auto &domain : domainlist) {
+        context.query(domain.c_str(), ns_t_mx, &handler);
     }
-    while (!domain.first());
-    
+
     // run the event loop
     ev_run(loop);
     

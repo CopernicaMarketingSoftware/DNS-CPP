@@ -27,6 +27,9 @@
 #include <list>
 #include <deque>
 #include <memory>
+#include <queue>
+#include <random>
+#include <set>
 
 /**
  *  Begin of namespace
@@ -49,6 +52,18 @@ protected:
      *  @var Loop
      */
     Loop *_loop;
+
+    /**
+     *  Source of randomness
+     *  @var std::random_device
+     */
+    std::random_device _randomSource;
+
+    /**
+     *  Discrete uniform distribution for the range {1, 2, ..., 2^16 - 1}
+     *  @var std::uniform_int_distribution<uint16_t>
+     */
+    std::uniform_int_distribution<uint16_t> _distribution;
 
     /**
      *  The IP addresses of the servers that can be accessed
@@ -75,16 +90,22 @@ protected:
      *  with data, there is a limit on the number of operations that can run. If
      *  there are more operations than we can handle, this buffer is used for 
      *  overflow (is not supposed to happen often!)
-     *  @var std::deque<std::shared_ptr<Lookup>>
+     *  @var std::queue<std::shared_ptr<Lookup>>
      */
-    std::deque<std::shared_ptr<Lookup>> _scheduled;
+    std::queue<std::shared_ptr<Lookup>> _scheduled;
     
     /**
      *  Lookups for which the max number of attempts have been reached (no further
      *  messages will be sent) and that are waiting for response or expiration
-     *  @var std::deque<std::shared_ptr<Lookup>>
+     *  @var std::queue<std::shared_ptr<Lookup>>
      */
-    std::deque<std::shared_ptr<Lookup>> _ready;
+    std::queue<std::shared_ptr<Lookup>> _ready;
+
+    /**
+     *  The query IDs currently in flight.
+     *  @var std::set<uint16_t>
+     */
+    std::set<uint16_t> _idsInUse;
     
     /**
      *  The next timer to run
@@ -215,6 +236,18 @@ public:
      *  @return Loop
      */
     Loop *loop() { return _loop; }
+
+    /**
+     *  Create a fresh free query ID.
+     *  @return a number guaranteed to be non-zero, uniformly random, and not already in use.
+     */
+    uint16_t generateUniqueQueryId();
+
+    /**
+     *  Free up this query ID.
+     *  @param  id the query ID
+     */
+    void clearQueryId(uint16_t id) { _idsInUse.erase(id); }
 
     /**
      *  The send and receive buffer size 

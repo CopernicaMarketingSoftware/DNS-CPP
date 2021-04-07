@@ -134,8 +134,14 @@ public:
      */
     void capacity(size_t value)
     {
+        // The maximum capacity is 2^15. This is so that the probability of
+        // selecting a random free query ID is at least 50%. Although it's
+        // likely that you'll need a massive receive buffer for this.
+        constexpr const size_t bit15 = sizeof(uint16_t) * CHAR_BIT - 1;
+        constexpr const size_t maximum = 1u << bit15;
+
         // store property
-        _capacity = std::max(size_t(1), value);
+        _capacity = std::min(maximum, std::max(size_t(1), value));
     }
     
     /**
