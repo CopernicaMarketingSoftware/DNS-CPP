@@ -40,6 +40,7 @@ namespace DNS {
  *  Forward declarations
  */
 class Loop;
+class AbstractIdFactory;
 
 /**
  *  Class definition
@@ -54,16 +55,10 @@ protected:
     Loop *_loop;
 
     /**
-     *  Source of randomness
-     *  @var std::random_device
+     *  Pointer to the ID factory
+     *  @var AbstractIdFactory
      */
-    std::random_device _randomSource;
-
-    /**
-     *  Discrete uniform distribution for the range {1, 2, ..., 2^16 - 1}
-     *  @var std::uniform_int_distribution<uint16_t>
-     */
-    std::uniform_int_distribution<uint16_t> _distribution;
+    AbstractIdFactory *_ids = nullptr;
 
     /**
      *  The IP addresses of the servers that can be accessed
@@ -100,12 +95,6 @@ protected:
      *  @var std::queue<std::shared_ptr<Lookup>>
      */
     std::queue<std::shared_ptr<Lookup>> _ready;
-
-    /**
-     *  The query IDs currently in flight.
-     *  @var std::set<uint16_t>
-     */
-    std::set<uint16_t> _idsInUse;
     
     /**
      *  The next timer to run
@@ -238,16 +227,16 @@ public:
     Loop *loop() { return _loop; }
 
     /**
-     *  Create a fresh free query ID.
-     *  @return a number guaranteed to be non-zero, uniformly random, and not already in use.
+     *  Expose the ID factory
+     *  @return AbstractIdFactory*
      */
-    uint16_t generateUniqueQueryId();
+    AbstractIdFactory *idFactory() { return _ids; }
 
     /**
-     *  Free up this query ID.
-     *  @param  id the query ID
+     *  Set the ID factory
+     *  @param idFactory
      */
-    void clearQueryId(uint16_t id) { _idsInUse.erase(id); }
+    void idFactory(AbstractIdFactory *idFactory) { _ids = idFactory; }
 
     /**
      *  The send and receive buffer size 

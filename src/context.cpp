@@ -11,6 +11,7 @@
  *  Dependencies
  */
 #include "../include/dnscpp/context.h"
+#include "../include/dnscpp/idfactory.h"
 #include "remotelookup.h"
 #include "locallookup.h"
 
@@ -18,6 +19,16 @@
  *  Begin of namespace
  */
 namespace DNS {
+
+/**
+ *  Set the capacity: number of operations to run at the same time
+ *  @param  value       the new value
+ */
+void Context::capacity(size_t value)
+{
+    // store property
+    _capacity = std::min((size_t)_ids->maxCapacity(), std::max(size_t(1), value));
+}
 
 /**
  *  Do a dns lookup
@@ -30,8 +41,8 @@ namespace DNS {
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, Handler *handler)
 {
     // for A and AAAA lookups we also check the /etc/hosts file
-    if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(_hosts, domain, type, handler));
-    if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return add(new LocalLookup(_hosts, domain, type, handler));
+    if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(_ids, _hosts, domain, type, handler));
+    if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return add(new LocalLookup(_ids, _hosts, domain, type, handler));
     
     // the request can throw (for example when the domain is invalid
     try
@@ -56,7 +67,7 @@ Operation *Context::query(const char *domain, ns_type type, const Bits &bits, Ha
 Operation *Context::query(const Ip &ip, const Bits &bits, Handler *handler) 
 {
     // if the /etc/hosts file already holds a record
-    if (_hosts.lookup(ip)) return add(new LocalLookup(_hosts, ip, handler));
+    if (_hosts.lookup(ip)) return add(new LocalLookup(_ids, _hosts, ip, handler));
 
     // pass on to the regular query method
     return query(Reverse(ip), TYPE_PTR, bits, handler);

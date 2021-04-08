@@ -20,6 +20,7 @@
 #include "../include/dnscpp/question.h"
 #include "../include/dnscpp/response.h"
 #include "../include/dnscpp/decompressed.h"
+#include "../include/dnscpp/idfactory.h"
 
 /**
  *  Begin of namespace
@@ -28,6 +29,7 @@ namespace DNS {
 
 /**
  *  Constructor
+ *  @param  idFactory   your source for generating query IDs
  *  @param  op          the type of operation (normally a regular query)
  *  @param  dname       the domain to lookup
  *  @param  type        record type to look up
@@ -35,7 +37,9 @@ namespace DNS {
  *  @param  data        optional data (only for type = ns_o_notify)
  *  @throws std::runtime_error
  */
-Query::Query(int op, const char *dname, int type, const Bits &bits, const unsigned char *data) : _size(HFIXEDSZ)
+Query::Query(AbstractIdFactory *idFactory, int op, const char *dname, int type, const Bits &bits, const unsigned char *data) :
+    _size(HFIXEDSZ),
+    _ids(idFactory)
 {
     // check if parameters fit in the header
     if (type < 0 || type > 65535) throw std::runtime_error("invalid type passed to dns query");
@@ -110,6 +114,18 @@ Query::Query(int op, const char *dname, int type, const Bits &bits, const unsign
     
     // add the edns-pseudo-section
     edns(bits.dnssec());
+}
+
+/**
+ *  Destructor
+ */
+Query::~Query()
+{
+    // get the query ID
+    const uint16_t queryId = id();
+
+    // if this query has been used, free it now
+    if (queryId != 0) _ids->free(queryId);
 }
 
 /**
@@ -227,13 +243,20 @@ uint16_t Query::id() const
 }
 
 /**
- *  Set the query ID
- *  @param id  the id
+ *  The internal raw binary data
+ *  @return const unsigned char *
  */
-void Query::id(uint16_t value)
+const unsigned char *Query::data() const
 {
-    // set the value
-    ((HEADER *)_buffer)->id = htons(value);
+    // use a local variable to access properties
+    HEADER *header = (HEADER *)_buffer;
+
+    // note that this mutates some bytes in a const method. Don't use this class from multiple threads
+    // it's okay to compare to zero -- endianness doesn't matter for zero
+    if (header->id == uint16_t(0)) header->id = htons(_ids->generate());
+
+    // return the buffer
+    return _buffer;
 }
 
 /**

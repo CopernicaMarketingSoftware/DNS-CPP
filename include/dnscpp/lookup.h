@@ -36,6 +36,7 @@ class Lookup : public Operation
 protected:
     /**
      *  Constructor
+     *  @param  idFactory   your source for generating IDs
      *  @param  handler     user space handler
      *  @param  op          the type of operation (normally a regular query)
      *  @param  dname       the domain to lookup
@@ -44,8 +45,8 @@ protected:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Lookup(Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) : 
-        Operation(handler, op, dname, type, bits, data) {}
+    Lookup(AbstractIdFactory *idFactory, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
+        Operation(idFactory, handler, op, dname, type, bits, data) {}
 
 public:
     /**

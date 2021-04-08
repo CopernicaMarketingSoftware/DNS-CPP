@@ -39,3 +39,4 @@
 #include <dnscpp/question.h>
 #include <dnscpp/reverse.h>
 #include <dnscpp/tlsa.h>
+#include <dnscpp/idfactory.h>

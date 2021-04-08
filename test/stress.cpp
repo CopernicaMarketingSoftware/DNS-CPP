@@ -162,17 +162,20 @@ int main(int argc, char **argv)
 
     // wrap the loop to make it accessible by dns-cpp
     DNS::LibEv myloop(loop);
-    
+
+    // create id factory
+    std::random_device seed;
+    DNS::RandomizedIdFactory<std::mt19937> idFactory(seed());
+
     // create a dns context
     DNS::Context context(&myloop);
+    context.idFactory(&idFactory);
 
     context.buffersize(24 * 1024 * 1024);      // size of the input buffer (high lowers risk of package loss)
     context.interval(2.0);                     // number of seconds until the datagram is retried (possibly to next server) (this does not cancel previous requests)
     context.attempts(4);                       // number of attempts until failure / number of datagrams to send at most
     context.capacity(10000);                   // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss)
     context.timeout(2.0);                      // time to wait for a response after the _last_ attempt
-
-    std::cout << "reading domains from " << argv[1] << std::endl;
 
     // get domain list
     const auto domainlist = readDomainList(argv[1]);

@@ -26,7 +26,7 @@ namespace DNS {
  *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults) : _loop(loop), _distribution(1, std::numeric_limits<uint16_t>::max())
+Core::Core(Loop *loop, bool defaults) : _loop(loop)
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -52,7 +52,7 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop), _distribution(1, std::numer
  *  @param  loop        your event loop
  *  @param  settings    settings from the resolv.conf file
  */
-Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _distribution(1, std::numeric_limits<uint16_t>::max())
+Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop)
 {
     // construct the nameservers
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i));
@@ -286,36 +286,6 @@ void Core::expire()
     reschedule(now);
 }
 
-/**
- *  Create a fresh free query ID.
- *  @return a number guaranteed to be non-zero, uniformly random, and not already in use.
- */
-uint16_t Core::generateUniqueQueryId()
-{
-    // what we'll return
-    uint16_t result;
-
-    // loop forever
-    while (true)
-    {
-        // get a random number
-        result = _distribution(_randomSource);
-
-        // If it's in use, try again.
-        // Due to the fact that the capacity is clamped between 1 and 2^15,
-        // we must eventually find a free ID. However, it's important that
-        // clearQueryId is eventually called for a query that is done.
-        // Otherwise this set will never shrink.
-        if (_idsInUse.count(result)) continue;
-
-        // ok, we found a free ID. remember that
-        _idsInUse.insert(result);
-
-        // and return it
-        return result;
-    }
-}
-    
 /**
  *  End of namespace
  */

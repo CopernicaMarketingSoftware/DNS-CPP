@@ -29,6 +29,7 @@ namespace DNS {
 /**
  *  Forward declarations
  */
+class AbstractIdFactory;
 class Question;
 class Response;
 
@@ -49,6 +50,12 @@ private:
      *  @var size_t
      */
     size_t _size = 0;
+
+    /**
+     *  ID generator
+     *  @var AbstractIdFactory
+     */
+    AbstractIdFactory *_ids;
     
     /**
      *  End of the buffer
@@ -125,6 +132,7 @@ private:
 public:
     /**
      *  Constructor
+     *  @param  idFactory   your source for generating query IDs
      *  @param  op          the type of operation (normally a regular query)
      *  @param  dname       the domain to lookup
      *  @param  type        record type to look up
@@ -132,7 +140,7 @@ public:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Query(int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr);
+    Query(AbstractIdFactory *idFactory, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr);
 
     /**
      *  No copying (disabled because copying is expensive and we want the compiler
@@ -144,17 +152,13 @@ public:
     /**
      *  Destructor
      */
-    virtual ~Query() = default;
+    virtual ~Query();
     
     /**
      *  The internal raw binary data
      *  @return const unsigned char *
      */
-    const unsigned char *data() const
-    {
-        // expose the buffer
-        return _buffer;
-    }
+    const unsigned char *data() const;
     
     /**
      *  Size of the request
@@ -172,12 +176,6 @@ public:
      *  @return uint16_t
      */
     uint16_t id() const;
-
-    /**
-     *  Set the query ID
-     *  @param id  the id
-     */
-    void id(uint16_t value);
 
     /**
      *  The opcode

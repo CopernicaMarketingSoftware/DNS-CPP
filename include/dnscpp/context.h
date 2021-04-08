@@ -67,6 +67,11 @@ public:
      *  Destructor
      */
     virtual ~Context() = default;
+
+    /**
+     *  Expose the setter and getter of idFactory because user-space needs to be able to assign it
+     */
+    using Core::idFactory;
     
     /**
      *  Clear the list of nameservers
@@ -132,17 +137,7 @@ public:
      *  Set the capacity: number of operations to run at the same time
      *  @param  value       the new value
      */
-    void capacity(size_t value)
-    {
-        // The maximum capacity is 2^15. This is so that the probability of
-        // selecting a random free query ID is at least 50%. Although it's
-        // likely that you'll need a massive receive buffer for this.
-        constexpr const size_t bit15 = sizeof(uint16_t) * CHAR_BIT - 1;
-        constexpr const size_t maximum = 1u << bit15;
-
-        // store property
-        _capacity = std::min(maximum, std::max(size_t(1), value));
-    }
+    void capacity(size_t value);
     
     /**
      *  Enable or disable certain bits

@@ -107,22 +107,24 @@ public:
      *  Constructor
      *  To keep the behavior of lookups consistent with the behavior of remote lookups, we set
      *  a timer so that userspace will be informed in a later tick of the event loop
+     *  @param  idFactory
      *  @param  hosts
      *  @param  domain
      *  @param  type
      *  @param  handler
      */
-    LocalLookup(const Hosts &hosts, const char *domain, int type, Handler *handler) : 
-        Lookup(handler, ns_o_query, domain, type, false), _hosts(hosts) {}
+    LocalLookup(AbstractIdFactory *idFactory, const Hosts &hosts, const char *domain, int type, Handler *handler) :
+        Lookup(idFactory, handler, ns_o_query, domain, type, false), _hosts(hosts) {}
 
     /**
      *  Constructor
      *  This is a utility constructor for reverse lookups
+     *  @param  idFactory
      *  @param  hosts
      *  @param  ip
      *  @param  handler
      */
-    LocalLookup(const Hosts &hosts, const Ip &ip, Handler *handler) : LocalLookup(hosts, Reverse(ip), TYPE_PTR, handler) {}
+    LocalLookup(AbstractIdFactory *idFactory, const Hosts &hosts, const Ip &ip, Handler *handler) : LocalLookup(idFactory, hosts, Reverse(ip), TYPE_PTR, handler) {}
 
     /**
      *  Destructor

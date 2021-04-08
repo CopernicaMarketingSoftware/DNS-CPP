@@ -33,7 +33,7 @@ namespace DNS {
  *  @param  handler     user space object
  */
 RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
-    Lookup(handler, ns_o_query, domain, type, bits), _core(core) {}
+    Lookup(core->idFactory(), handler, ns_o_query, domain, type, bits), _core(core) {}
 
 /**
  *  Destructor
@@ -99,9 +99,6 @@ Handler *RemoteLookup::cleanup()
     // unsubscribe from the nameservers
     for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(_query.id());
 
-    // this query ID is no longer in use
-    _core->clearQueryId(_query.id());
-    
     // expose the handler
     return handler;
 }
@@ -144,9 +141,6 @@ bool RemoteLookup::execute(double now)
     
     // what if there are no nameservers?
     if (nscount == 0) return timeout();
-
-    // if it's the first time we do this lookup, create the unique query id now
-    if (_count == 0) _query.id(_core->generateUniqueQueryId());
 
     // which nameserver should we sent now?
     size_t target = _count % nscount;
