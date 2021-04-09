@@ -40,3 +40,5 @@
 #include <dnscpp/reverse.h>
 #include <dnscpp/tlsa.h>
 #include <dnscpp/idfactory.h>
+#include <dnscpp/monoticidfactory.h>
+#include <dnscpp/randomizedidfactory.h>

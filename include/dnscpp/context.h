@@ -67,11 +67,6 @@ public:
      *  Destructor
      */
     virtual ~Context() = default;
-
-    /**
-     *  Expose the setter and getter of idFactory because user-space needs to be able to assign it
-     */
-    using Core::idFactory;
     
     /**
      *  Clear the list of nameservers
@@ -206,6 +201,7 @@ public:
     /**
      *  Expose some getters from core
      */
+    using Core::idFactory;
     using Core::buffersize;
     using Core::bits;
     using Core::rotate;
