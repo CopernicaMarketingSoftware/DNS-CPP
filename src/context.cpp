@@ -20,6 +20,16 @@
 namespace DNS {
 
 /**
+ *  Set the capacity: number of operations to run at the same time
+ *  @param  value       the new value
+ */
+void Context::capacity(size_t value)
+{
+    // store property
+    _capacity = std::min((size_t)_ids.maxCapacity(), std::max(size_t(1), value));
+}
+
+/**
  *  Do a dns lookup
  *  @param  name        the record name to look for
  *  @param  type        type of record (normally you ask for an 'a' record)

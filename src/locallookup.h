@@ -112,7 +112,7 @@ public:
      *  @param  type
      *  @param  handler
      */
-    LocalLookup(const Hosts &hosts, const char *domain, int type, Handler *handler) : 
+    LocalLookup(const Hosts &hosts, const char *domain, int type, Handler *handler) :
         Lookup(handler, ns_o_query, domain, type, false), _hosts(hosts) {}
 
     /**

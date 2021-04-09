@@ -44,7 +44,7 @@ protected:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Lookup(Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) : 
+    Lookup(Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
         Operation(handler, op, dname, type, bits, data) {}
 
 public:

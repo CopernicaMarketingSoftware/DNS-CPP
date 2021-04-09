@@ -19,7 +19,6 @@
  *  Dependencies
  */
 #include "compressor.h"
-#include "randombits.h"
 #include "../include/dnscpp/type.h"
 #include "../include/dnscpp/request.h"
 

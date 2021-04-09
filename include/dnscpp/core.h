@@ -24,9 +24,13 @@
 #include "bits.h"
 #include "now.h"
 #include "lookup.h"
+#include "randomizedidfactory.h"
 #include <list>
 #include <deque>
 #include <memory>
+#include <queue>
+#include <random>
+#include <set>
 
 /**
  *  Begin of namespace
@@ -37,6 +41,7 @@ namespace DNS {
  *  Forward declarations
  */
 class Loop;
+class AbstractIdFactory;
 
 /**
  *  Class definition
@@ -49,6 +54,12 @@ protected:
      *  @var Loop
      */
     Loop *_loop;
+
+    /**
+     *  ID factory
+     *  @var RandomizedIdFactory<>
+     */
+    RandomizedIdFactory<> _ids;
 
     /**
      *  The IP addresses of the servers that can be accessed
@@ -75,16 +86,16 @@ protected:
      *  with data, there is a limit on the number of operations that can run. If
      *  there are more operations than we can handle, this buffer is used for 
      *  overflow (is not supposed to happen often!)
-     *  @var std::deque<std::shared_ptr<Lookup>>
+     *  @var std::queue<std::shared_ptr<Lookup>>
      */
-    std::deque<std::shared_ptr<Lookup>> _scheduled;
+    std::queue<std::shared_ptr<Lookup>> _scheduled;
     
     /**
      *  Lookups for which the max number of attempts have been reached (no further
      *  messages will be sent) and that are waiting for response or expiration
-     *  @var std::deque<std::shared_ptr<Lookup>>
+     *  @var std::queue<std::shared_ptr<Lookup>>
      */
-    std::deque<std::shared_ptr<Lookup>> _ready;
+    std::queue<std::shared_ptr<Lookup>> _ready;
     
     /**
      *  The next timer to run
@@ -215,6 +226,12 @@ public:
      *  @return Loop
      */
     Loop *loop() { return _loop; }
+
+    /**
+     *  Expose the ID factory
+     *  @return RandomizedIdFactory<>
+     */
+    RandomizedIdFactory<> *idFactory() { return &_ids; }
 
     /**
      *  The send and receive buffer size 

@@ -26,7 +26,7 @@
 #include "response.h"
 #include "timer.h"
 #include "watchable.h"
-#include <set>
+#include <map>
 
 /**
  *  Begin of the namespace
@@ -88,7 +88,7 @@ private:
      *  Set with the handlers
      *  @var set
      */
-    std::set<std::pair<uint16_t,Handler*>> _handlers;
+    std::map<uint16_t,Handler*> _handlers;
 
     /**
      *  Method that is called when a response is received
@@ -141,24 +141,17 @@ public:
     void subscribe(Handler *handler, uint16_t id)
     {
         // emplace the handler
-        _handlers.insert(std::make_pair(id, handler));
+        _handlers[id] = handler;
     }
     
     /**
      *  Unsubscribe from the socket, this is the counterpart of subscribe()
-     *  @param  handler     the handler that unsubscribes
      *  @param  id          id of the response that the handler is interested in
      */
-    void unsubscribe(Handler *handler, uint16_t id)
+    void unsubscribe(uint16_t id)
     {
-        // find the element
-        auto iter = _handlers.find(std::make_pair(id, handler));
-
-        // if it is not found, we leap out (this should not happen)
-        if (iter == _handlers.end()) return;
-
         // simply erase the element
-        _handlers.erase(iter);
+        _handlers.erase(id);
 
         // if nobody is listening to the socket any more, we can just as well close it
         if (_handlers.empty()) _udp.close();

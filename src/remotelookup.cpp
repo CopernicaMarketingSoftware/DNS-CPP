@@ -33,7 +33,7 @@ namespace DNS {
  *  @param  handler     user space object
  */
 RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
-    Lookup(handler, ns_o_query, domain, type, bits), _core(core), _id(rand()) {}
+    Lookup(handler, ns_o_query, domain, type, bits), _core(core) {}
 
 /**
  *  Destructor
@@ -95,10 +95,19 @@ Handler *RemoteLookup::cleanup()
     
     // forget the tcp connection
     _connection.reset();
+
+    // get the query id
+    const uint16_t queryId = _query.id();
     
     // unsubscribe from the nameservers
-    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this, _query.id());
-    
+    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(queryId);
+
+    // query is not in flight anymore
+    _core->idFactory()->free(queryId);
+
+    // clear the query id
+    _query.id(0);
+
     // expose the handler
     return handler;
 }
@@ -142,24 +151,27 @@ bool RemoteLookup::execute(double now)
     // what if there are no nameservers?
     if (nscount == 0) return timeout();
 
+    // generate a unique query id
+    _query.id(_core->idFactory()->generate());
+
     // which nameserver should we sent now?
-    size_t target = _core->rotate() ? (_count + _id) % nscount : _count % nscount;
+    size_t target = _count % nscount;
     
     // iterator for the next loop
     size_t i = 0;
-    
+
     // send a datagram to each nameserver
     for (auto &nameserver : nameservers)
     {
         // is this the target nameserver? (we use ++ postfix operator on purpose)
         if (target != i++) continue;
-        
+
+        // attach this as a handler for the id
+        nameserver.subscribe(this, _query.id());
+
         // send a datagram to this server
         nameserver.datagram(_query);
         
-        // in the first iteration we have not yet subscribed
-        if (_count < nscount) nameserver.subscribe(this, _query.id());
-
         // one more message has been sent
         _count += 1; _last = now;
         

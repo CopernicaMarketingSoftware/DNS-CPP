@@ -132,11 +132,7 @@ public:
      *  Set the capacity: number of operations to run at the same time
      *  @param  value       the new value
      */
-    void capacity(size_t value)
-    {
-        // store property
-        _capacity = std::max(size_t(1), value);
-    }
+    void capacity(size_t value);
     
     /**
      *  Enable or disable certain bits
@@ -205,6 +201,7 @@ public:
     /**
      *  Expose some getters from core
      */
+    using Core::idFactory;
     using Core::buffersize;
     using Core::bits;
     using Core::rotate;

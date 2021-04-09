@@ -26,7 +26,7 @@ namespace DNS {
  *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults) : _loop(loop) 
+Core::Core(Loop *loop, bool defaults) : _loop(loop), _ids(std::random_device{}())
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -52,7 +52,7 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop)
  *  @param  loop        your event loop
  *  @param  settings    settings from the resolv.conf file
  */
-Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop) 
+Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _ids(std::random_device{}())
 {
     // construct the nameservers
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i));
@@ -105,7 +105,7 @@ Operation *Core::add(Lookup *lookup)
     else
     {
         // we already have too many operations in progress, delay it
-        _scheduled.emplace_back(lookup);
+        _scheduled.emplace(lookup);
     }
     
     // expose the operation
@@ -174,7 +174,7 @@ bool Core::process(const std::shared_ptr<Lookup> &lookup, double now)
     if (!lookup->execute(now)) return true;
     
     // if no more attempts are expected, we put it in a special list
-    if (lookup->credits() == 0) _ready.push_back(lookup);
+    if (lookup->credits() == 0) _ready.push(lookup);
     
     // remember the lookup for the next attempt
     else _lookups.push_back(lookup);
@@ -200,7 +200,7 @@ void Core::proceed(double now, size_t count)
         if (!process(_scheduled.front(), now)) return;
         
         // this lookup is no longer scheduled
-        _scheduled.pop_front();
+        _scheduled.pop();
         
         // one extra operation is scheduled
         count -= 1;
@@ -276,7 +276,7 @@ void Core::expire()
         calls += 1;
         
         // forget this lookup because we are going to run it
-        _ready.pop_front();
+        _ready.pop();
     }
 
     // if there are more slots for scheduled operations, we start them now
@@ -286,8 +286,6 @@ void Core::expire()
     reschedule(now);
 }
 
-
-    
 /**
  *  End of namespace
  */

@@ -1,7 +1,9 @@
 /**
  *  Query.h
  * 
- *  Class to create the query that is to be sent to the DNS server
+ *  Class to create the query that is to be sent to the DNS server.
+ *  The "async operation" object decides what the query ID will be.
+ *  At construction this query ID remains zero.
  *  
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2020 Copernica BV
@@ -47,7 +49,7 @@ private:
      *  @var size_t
      */
     size_t _size = 0;
-    
+
     /**
      *  End of the buffer
      *  This is non-const because we also use it for writing
@@ -142,17 +144,13 @@ public:
     /**
      *  Destructor
      */
-    virtual ~Query() = default;
+    virtual ~Query() noexcept = default;
     
     /**
      *  The internal raw binary data
      *  @return const unsigned char *
      */
-    const unsigned char *data() const
-    {
-        // expose the buffer
-        return _buffer;
-    }
+    const unsigned char *data() const noexcept { return _buffer; }
     
     /**
      *  Size of the request
@@ -165,11 +163,18 @@ public:
     }
     
     /**
-     *  The ID inside this object
+     *  The ID inside this object. Note that this may be zero, unless
+     *  the query has been sent out over the wire.
      *  @return uint16_t
      */
-    uint16_t id() const;
-    
+    uint16_t id() const noexcept;
+
+    /**
+     *  Set the ID of this query
+     *  @param value
+     */
+    void id(uint16_t value) noexcept;
+
     /**
      *  The opcode
      *  @return uint8_t
