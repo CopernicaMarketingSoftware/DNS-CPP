@@ -1,5 +1,5 @@
 /**
- *  idfactory.h
+ *  abstractidfactory.h
  *
  *  Provides unique numbers for queries.
  *

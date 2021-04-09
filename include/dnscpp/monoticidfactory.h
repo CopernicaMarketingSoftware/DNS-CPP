@@ -15,7 +15,7 @@
 /**
  *  Dependencies
  */
-#include "idfactory.h"
+#include "abstractidfactory.h"
 #include <limits>
 
 /**
