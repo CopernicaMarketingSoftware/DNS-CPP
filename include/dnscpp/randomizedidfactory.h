@@ -18,6 +18,7 @@
 #include "idfactory.h"
 #include <random>
 #include <set>
+#include <cassert>
 
 /**
  *  Begin namespace
@@ -69,12 +70,28 @@ public:
      */
     uint16_t generate() override
     {
+        assert(_idsInUse.size() <= maxCapacity());
+
+        // the value that we'll return
         uint16_t result;
+
+        // loop forever
         while (true)
         {
+            // get a random number
             result = _distribution(_engine);
+
+            // if it's already in use, try again
+            // because the maxCapacity is at most 2^15, this has at least a
+            // 50% chance of not being in this set
+            // however, it is vital that the `free` method is called at an
+            // appropriate time for this assumption to work
             if (_idsInUse.count(result)) continue;
+
+            // ok, remember that we found a free ID
             _idsInUse.insert(result);
+
+            // return the ID
             return result;
         }
     }
