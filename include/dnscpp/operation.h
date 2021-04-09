@@ -47,7 +47,7 @@ protected:
      *  The query that we're going to send
      *  @var Query
      */
-    const Query _query;
+    Query _query;
         
     /**
      *  Constructor
@@ -60,8 +60,8 @@ protected:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Operation(AbstractIdFactory *idFactory, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
-        _handler(handler), _query(idFactory, op, dname, type, bits, data) {}
+    Operation(Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
+        _handler(handler), _query(op, dname, type, bits, data) {}
 
     /**
      *  Private destructor because userspace is not supposed to destruct this

@@ -17,6 +17,7 @@
 #include "../include/dnscpp/answer.h"
 #include "../include/dnscpp/handler.h"
 #include "../include/dnscpp/question.h"
+#include "../include/dnscpp/idfactory.h"
 #include "fakeresponse.h"
 
 /**
@@ -33,7 +34,7 @@ namespace DNS {
  *  @param  handler     user space object
  */
 RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
-    Lookup(core->idFactory(), handler, ns_o_query, domain, type, bits), _core(core) {}
+    Lookup(handler, ns_o_query, domain, type, bits), _core(core) {}
 
 /**
  *  Destructor
@@ -95,9 +96,18 @@ Handler *RemoteLookup::cleanup()
     
     // forget the tcp connection
     _connection.reset();
+
+    // get the query id
+    const uint16_t queryId = _query.id();
     
     // unsubscribe from the nameservers
-    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(_query.id());
+    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(queryId);
+
+    // query is not in flight anymore
+    _core->idFactory()->free(queryId);
+
+    // clear the query id
+    _query.id(0);
 
     // expose the handler
     return handler;
@@ -141,6 +151,9 @@ bool RemoteLookup::execute(double now)
     
     // what if there are no nameservers?
     if (nscount == 0) return timeout();
+
+    // generate a unique query id
+    _query.id(_core->idFactory()->generate());
 
     // which nameserver should we sent now?
     size_t target = _count % nscount;

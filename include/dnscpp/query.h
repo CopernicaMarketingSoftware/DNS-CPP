@@ -29,7 +29,6 @@ namespace DNS {
 /**
  *  Forward declarations
  */
-class AbstractIdFactory;
 class Question;
 class Response;
 
@@ -51,12 +50,6 @@ private:
      */
     size_t _size = 0;
 
-    /**
-     *  ID generator
-     *  @var AbstractIdFactory
-     */
-    AbstractIdFactory *_ids;
-    
     /**
      *  End of the buffer
      *  This is non-const because we also use it for writing
@@ -132,7 +125,6 @@ private:
 public:
     /**
      *  Constructor
-     *  @param  idFactory   your source for generating query IDs
      *  @param  op          the type of operation (normally a regular query)
      *  @param  dname       the domain to lookup
      *  @param  type        record type to look up
@@ -140,7 +132,7 @@ public:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Query(AbstractIdFactory *idFactory, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr);
+    Query(int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr);
 
     /**
      *  No copying (disabled because copying is expensive and we want the compiler
@@ -152,13 +144,13 @@ public:
     /**
      *  Destructor
      */
-    virtual ~Query();
+    virtual ~Query() noexcept = default;
     
     /**
      *  The internal raw binary data
      *  @return const unsigned char *
      */
-    const unsigned char *data() const;
+    const unsigned char *data() const noexcept { return _buffer; }
     
     /**
      *  Size of the request
@@ -175,7 +167,13 @@ public:
      *  the query has been sent out over the wire.
      *  @return uint16_t
      */
-    uint16_t id() const;
+    uint16_t id() const noexcept;
+
+    /**
+     *  Set the ID of this query
+     *  @param value
+     */
+    void id(uint16_t value) noexcept;
 
     /**
      *  The opcode
