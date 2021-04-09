@@ -27,7 +27,7 @@ namespace DNS {
 void Context::capacity(size_t value)
 {
     // store property
-    _capacity = std::min((size_t)_ids->maxCapacity(), std::max(size_t(1), value));
+    _capacity = std::min((size_t)_ids.maxCapacity(), std::max(size_t(1), value));
 }
 
 /**

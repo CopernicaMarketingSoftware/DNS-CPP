@@ -15,10 +15,10 @@
 /**
  *  Dependencies
  */
-#include "abstractidfactory.h"
 #include <random>
 #include <set>
 #include <cassert>
+#include <climits>
 
 /**
  *  Begin namespace
@@ -29,7 +29,7 @@ namespace DNS {
  *  Class declaration
  */
 template <class PseudoRandomEngine = std::default_random_engine>
-class RandomizedIdFactory final : public AbstractIdFactory
+class RandomizedIdFactory final
 {
     /**
      *  The pseudo-random number generator
@@ -63,12 +63,13 @@ public:
     /**
      *  Destroys the object.
      */
-    ~RandomizedIdFactory() noexcept override = default;
+    ~RandomizedIdFactory() noexcept = default;
 
     /**
-     *  @see AbstractIdFactory::generate
+     *  Return a new query ID
+     *  @return uint16_t
      */
-    uint16_t generate() override
+    uint16_t generate()
     {
         assert(_idsInUse.size() <= maxCapacity());
 
@@ -97,14 +98,16 @@ public:
     }
 
     /**
-     *  @see AbstractIdFactory::free
+     *  Free up a query ID that was previously generated with a call to `generate`
+     *  @param id query ID
      */
-    void free(uint16_t id) override { _idsInUse.erase(id); }
+    void free(uint16_t id) { _idsInUse.erase(id); }
 
     /**
-     *  @see AbstractIdFactory::maxCapacity
+     *  Get the amount of query IDs maximally allowed in-flight
+     *  @return uint16_t
      */
-    uint16_t maxCapacity() const noexcept override
+    uint16_t maxCapacity() const noexcept
     {
         // The maximum capacity is 2^15. This is so that the probability of
         // selecting a random free query ID is at least 50%. Although it's

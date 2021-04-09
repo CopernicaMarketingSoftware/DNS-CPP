@@ -39,6 +39,3 @@
 #include <dnscpp/question.h>
 #include <dnscpp/reverse.h>
 #include <dnscpp/tlsa.h>
-#include <dnscpp/abstractidfactory.h>
-#include <dnscpp/monoticidfactory.h>
-#include <dnscpp/randomizedidfactory.h>

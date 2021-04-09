@@ -163,14 +163,8 @@ int main(int argc, char **argv)
     // wrap the loop to make it accessible by dns-cpp
     DNS::LibEv myloop(loop);
 
-    // create id factory
-    // DNS::MonoticIdFactory idFactory;
-    std::random_device seed;
-    DNS::RandomizedIdFactory<std::mt19937> idFactory(seed());
-
     // create a dns context
     DNS::Context context(&myloop);
-    context.idFactory(&idFactory);
 
     context.buffersize(1024 * 1024); // size of the input buffer (high lowers risk of package loss)
     context.interval(3.0);           // number of seconds until the datagram is retried (possibly to next server) (this does not cancel previous requests)
