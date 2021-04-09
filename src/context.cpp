@@ -11,7 +11,6 @@
  *  Dependencies
  */
 #include "../include/dnscpp/context.h"
-#include "../include/dnscpp/idfactory.h"
 #include "remotelookup.h"
 #include "locallookup.h"
 

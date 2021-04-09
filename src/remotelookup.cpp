@@ -17,7 +17,6 @@
 #include "../include/dnscpp/answer.h"
 #include "../include/dnscpp/handler.h"
 #include "../include/dnscpp/question.h"
-#include "../include/dnscpp/idfactory.h"
 #include "fakeresponse.h"
 
 /**

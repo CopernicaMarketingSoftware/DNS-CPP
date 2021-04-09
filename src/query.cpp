@@ -20,7 +20,6 @@
 #include "../include/dnscpp/question.h"
 #include "../include/dnscpp/response.h"
 #include "../include/dnscpp/decompressed.h"
-#include "../include/dnscpp/idfactory.h"
 
 /**
  *  Begin of namespace
