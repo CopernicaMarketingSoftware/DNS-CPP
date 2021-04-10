@@ -24,7 +24,6 @@
 #include "bits.h"
 #include "now.h"
 #include "lookup.h"
-#include "randomizedidfactory.h"
 #include <list>
 #include <deque>
 #include <memory>
@@ -54,12 +53,6 @@ protected:
      *  @var Loop
      */
     Loop *_loop;
-
-    /**
-     *  ID factory
-     *  @var RandomizedIdFactory<>
-     */
-    RandomizedIdFactory<> _ids;
 
     /**
      *  The IP addresses of the servers that can be accessed
@@ -226,12 +219,6 @@ public:
      *  @return Loop
      */
     Loop *loop() { return _loop; }
-
-    /**
-     *  Expose the ID factory
-     *  @return RandomizedIdFactory<>
-     */
-    RandomizedIdFactory<> *idFactory() { return &_ids; }
 
     /**
      *  The send and receive buffer size 

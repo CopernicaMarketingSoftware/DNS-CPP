@@ -4,7 +4,7 @@
  *  Main context for DNS lookups. This is the starting point
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -201,7 +201,6 @@ public:
     /**
      *  Expose some getters from core
      */
-    using Core::idFactory;
     using Core::buffersize;
     using Core::bits;
     using Core::rotate;

@@ -20,11 +20,18 @@
 #include "../include/dnscpp/question.h"
 #include "../include/dnscpp/response.h"
 #include "../include/dnscpp/decompressed.h"
+#include "idgenerator.h"
 
 /**
  *  Begin of namespace
  */
 namespace DNS {
+
+/**
+ *  We need a generator to get random ids
+ *  @var IdGenerator
+ */
+static IdGenerator randomids;
 
 /**
  *  Constructor
@@ -58,6 +65,9 @@ Query::Query(int op, const char *dname, int type, const Bits &bits, const unsign
     
     // no error
     header->rcode = ns_r_noerror;
+
+    // use a random ID
+    header->id = ntohs(randomids.generate());
     
     // Perform opcode specific processing
     switch (op) {

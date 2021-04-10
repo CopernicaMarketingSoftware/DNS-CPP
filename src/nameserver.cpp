@@ -105,22 +105,20 @@ size_t Nameserver::process(size_t maxcalls)
             // parse the response
             Response response(front.data(), front.size());
 
-            // find the handler for this query id
-            auto iter = _handlers.find(response.id());
+            // filter on the response, the beginning is simply the handler at nullptr
+            auto begin = _handlers.lower_bound(std::make_pair(response.id(), nullptr));
 
-            // if there's a handler
-            if (iter != _handlers.end())
+            // iterate over those elements, notifying each handler
+            for (auto iter = begin; iter != _handlers.end(); ++iter) 
             {
-                // if the handler is not a nullptr
-                if (iter->second)
-                {
-                    // invoke the callback of the handler
-                    // note that this handler may mutate our _handlers member variable
-                    iter->second->onReceived(this, response);
+                // if this element is not applicable any more, we're going to leap out (we're done)
+                if (iter->first != response.id()) break;
 
-                    // we have handled a response, so we increment a number
-                    result += 1;
-                }
+                // call the onreceived for the element
+                if (iter->second->onReceived(this, response)) result += 1;
+                
+                // the message was processed, we no longer need other handlers
+                break;
             }
         }
         catch (const std::runtime_error &error)

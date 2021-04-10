@@ -100,10 +100,7 @@ Handler *RemoteLookup::cleanup()
     const uint16_t queryId = _query.id();
     
     // unsubscribe from the nameservers
-    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(queryId);
-
-    // query is not in flight anymore
-    _core->idFactory()->free(queryId);
+    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this, queryId);
 
     // clear the query id
     _query.id(0);
@@ -150,9 +147,6 @@ bool RemoteLookup::execute(double now)
     
     // what if there are no nameservers?
     if (nscount == 0) return timeout();
-
-    // generate a unique query id
-    _query.id(_core->idFactory()->generate());
 
     // which nameserver should we sent now?
     size_t target = _count % nscount;
