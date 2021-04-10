@@ -170,12 +170,6 @@ public:
     uint16_t id() const noexcept;
 
     /**
-     *  Set the ID of this query
-     *  @param value
-     */
-    void id(uint16_t value) noexcept;
-
-    /**
      *  The opcode
      *  @return uint8_t
      */

@@ -102,9 +102,6 @@ Handler *RemoteLookup::cleanup()
     // unsubscribe from the nameservers
     for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this, queryId);
 
-    // clear the query id
-    _query.id(0);
-
     // expose the handler
     return handler;
 }

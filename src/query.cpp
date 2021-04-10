@@ -237,16 +237,6 @@ uint16_t Query::id() const noexcept
 }
 
 /**
- *  Set the ID of this query
- *  @param value
- */
-void Query::id(uint16_t value) noexcept
-{
-    // set the value
-    ((HEADER *)_buffer)->id = ntohs(value);
-}
-
-/**
  *  The opcode
  *  @return uint8_t
  */
