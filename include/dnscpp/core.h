@@ -27,9 +27,6 @@
 #include <list>
 #include <deque>
 #include <memory>
-#include <queue>
-#include <random>
-#include <set>
 
 /**
  *  Begin of namespace
@@ -40,7 +37,6 @@ namespace DNS {
  *  Forward declarations
  */
 class Loop;
-class AbstractIdFactory;
 
 /**
  *  Class definition
@@ -79,16 +75,16 @@ protected:
      *  with data, there is a limit on the number of operations that can run. If
      *  there are more operations than we can handle, this buffer is used for 
      *  overflow (is not supposed to happen often!)
-     *  @var std::queue<std::shared_ptr<Lookup>>
+     *  @var std::deque<std::shared_ptr<Lookup>>
      */
-    std::queue<std::shared_ptr<Lookup>> _scheduled;
+    std::deque<std::shared_ptr<Lookup>> _scheduled;
     
     /**
      *  Lookups for which the max number of attempts have been reached (no further
      *  messages will be sent) and that are waiting for response or expiration
-     *  @var std::queue<std::shared_ptr<Lookup>>
+     *  @var std::deque<std::shared_ptr<Lookup>>
      */
-    std::queue<std::shared_ptr<Lookup>> _ready;
+    std::deque<std::shared_ptr<Lookup>> _ready;
     
     /**
      *  The next timer to run

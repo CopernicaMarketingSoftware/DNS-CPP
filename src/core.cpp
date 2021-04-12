@@ -105,7 +105,7 @@ Operation *Core::add(Lookup *lookup)
     else
     {
         // we already have too many operations in progress, delay it
-        _scheduled.emplace(lookup);
+        _scheduled.emplace_back(lookup);
     }
     
     // expose the operation
@@ -174,7 +174,7 @@ bool Core::process(const std::shared_ptr<Lookup> &lookup, double now)
     if (!lookup->execute(now)) return true;
     
     // if no more attempts are expected, we put it in a special list
-    if (lookup->credits() == 0) _ready.push(lookup);
+    if (lookup->credits() == 0) _ready.push_back(lookup);
     
     // remember the lookup for the next attempt
     else _lookups.push_back(lookup);
@@ -200,7 +200,7 @@ void Core::proceed(double now, size_t count)
         if (!process(_scheduled.front(), now)) return;
         
         // this lookup is no longer scheduled
-        _scheduled.pop();
+        _scheduled.pop_front();
         
         // one extra operation is scheduled
         count -= 1;
@@ -276,7 +276,7 @@ void Core::expire()
         calls += 1;
         
         // forget this lookup because we are going to run it
-        _ready.pop();
+        _ready.pop_front();
     }
 
     // if there are more slots for scheduled operations, we start them now

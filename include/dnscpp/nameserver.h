@@ -85,7 +85,7 @@ private:
     std::list<Received> _responses;
 
     /**
-     *  Set with the handlers (we use this as a multimap, but a std::set is more efficient)
+     *  Set with the handlers (we originally used a multimap, but a std::set turned out to be more efficient)
      *  @var set
      */
     std::set<std::pair<uint16_t,Handler*>> _handlers;

@@ -54,6 +54,7 @@ bool Nameserver::datagram(const Query &query)
 void Nameserver::onReceived(time_t now, const sockaddr *address, const unsigned char *buffer, size_t size)
 {
     // parse the address
+    // @todo also check port number!
     Ip ip(address);
     
     // ignore messages not from ip

@@ -1,9 +1,7 @@
 /**
  *  Query.h
  * 
- *  Class to create the query that is to be sent to the DNS server.
- *  The "async operation" object decides what the query ID will be.
- *  At construction this query ID remains zero.
+ *  Class to create the query that is to be sent to the DNS server
  *  
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2020 Copernica BV
