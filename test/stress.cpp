@@ -18,6 +18,7 @@
 #include <math.h>
 #include <fstream>
 #include <iomanip>
+#include <sstream>
 
 /**
  *  The handler class
@@ -42,6 +43,8 @@ private:
      *  @var size_t
      */
     size_t _failures = 0;
+    size_t _servfails = 0;
+    size_t _nxdomains = 0;
     
     /**
      *  Number of timeouts
@@ -54,27 +57,27 @@ private:
         return 100.0 * ((double)count / _total);
     }
 
+    std::string printStatistic(const char *name, size_t value)
+    {
+        std::ostringstream ss;
+        ss << name << ": " << std::setw(7) << std::setprecision(4) << percent(value) << "%";
+        return ss.str();
+    }
+
     /**
      *  Show the status
      *  @param  operation       the operation that finished
      */
     void show(const DNS::Operation *operation)
     {
-        // parse the original request
-        DNS::Request request(operation);
-        DNS::Question question(request);
+        if ((_success + _servfails + _nxdomains + _failures + _timeouts) % 100 != 0) return;
 
-        if ((_success + _failures + _timeouts) % 100 == 0)
-        {
-            std::cerr << "success: "
-                << std::setw(7) << std::setprecision(4) << percent(_success)
-                << "%, failures: " << std::setw(7) << std::setprecision(4) << percent(_failures)
-                << "%, timeouts: " << std::setw(7) << std::setprecision(4) << percent(_timeouts)
-                << "%\n";
-        }
-        
-        // show result
-        // std::cout << _total << " " << _success << " " << _failures << " " << _timeouts << " " << (_success + _failures + _timeouts) << " (" << question.name() << ")" << std::endl;
+        std::cerr << printStatistic("success", _success)
+            << ", " << printStatistic("servfails", _servfails)
+            << ", " << printStatistic("nxdomains", _nxdomains)
+            << ", " << printStatistic("failures", _failures)
+            << ", " << printStatistic("timeouts", _timeouts)
+            << '\n';
     }
 
     /**
@@ -86,11 +89,8 @@ private:
     {
         // update counter
         _success += 1;
-        // parse the original request
-        DNS::Request request(operation);
-        DNS::Question question(request);
-        std::cout << question.name() << '\n';
 
+        // show what is going on
         show(operation);
     }
 
@@ -102,7 +102,18 @@ private:
     virtual void onFailure(const DNS::Operation *operation, int rcode) override
     {
         // update counter
-        _failures += 1;
+        switch (rcode)
+        {
+            case ns_r_servfail:
+                _servfails += 1;
+                break;
+            case ns_r_nxdomain:
+                _nxdomains += 1;
+                break;
+            default:
+                _failures += 1;
+                break;
+        }
 
         // show what is going on
         show(operation);
