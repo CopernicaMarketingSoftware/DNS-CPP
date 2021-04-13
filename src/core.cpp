@@ -77,6 +77,13 @@ Core::~Core()
     _loop->cancel(_timer, this);
 }
 
+/**
+ *  Method that is called when a response is received
+ *  @param  time        receive-time
+ *  @param  address     the address of the nameserver from which it is received
+ *  @param  response    the received response
+ *  @param  size        size of the response
+ */
 void Core::onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size)
 {
     // parse the IP
