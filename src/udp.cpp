@@ -174,6 +174,7 @@ void Udp::notify()
  *  Send a query to a nameserver (+open the socket when needed)
  *  @param  ip      IP address of the nameserver
  *  @param  query   the query to send
+ *  @param  buffersize
  *  @return bool
  */
 bool Udp::send(const Ip &ip, const Query &query, int buffersize)
