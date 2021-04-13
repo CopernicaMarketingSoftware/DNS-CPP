@@ -45,7 +45,7 @@ class AbstractIdFactory;
 /**
  *  Class definition
  */
-class Core : private Timer, private Watchable
+class Core : private Timer, private Watchable, private Udp::Handler
 {
 protected:
     /**
@@ -53,6 +53,12 @@ protected:
      *  @var Loop
      */
     Loop *_loop;
+
+    /**
+     *  UDP socket
+     *  @var Udp
+     */
+    Udp _udp;
 
     /**
      *  The IP addresses of the servers that can be accessed
@@ -206,6 +212,15 @@ protected:
      *  Destructor
      */
     virtual ~Core();
+
+    /**
+     *  Method that is called when a response is received
+     *  @param  time        receive-time
+     *  @param  address     the address of the nameserver from which it is received
+     *  @param  response    the received response
+     *  @param  size        size of the response
+     */
+    virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) override;
 
 public:
     /**

@@ -41,7 +41,7 @@ class Core;
 /**
  *  Class definition
  */
-class Nameserver : private Udp::Handler, private Watchable
+class Nameserver : private Watchable
 {
 public:
     /**
@@ -76,38 +76,28 @@ private:
      *  UDP socket to send messages to the nameserver
      *  @var    Udp
      */
-    Udp _udp;
+    Udp *_udp;
 
     /**
      *  All the buffered responses that came in 
      *  @var std::list
      */
-    std::list<Received> _responses;
+    std::list<std::basic_string<unsigned char>> _responses;
 
     /**
      *  Set with the handlers (we use this as a multimap, but a std::set is more efficient)
      *  @var set
      */
     std::set<std::pair<uint16_t,Handler*>> _handlers;
-
-    /**
-     *  Method that is called when a response is received
-     *  @param  now         the receive-time
-     *  @param  address     the address of the nameserver from which it is received
-     *  @param  buffer      the received response
-     *  @param  size        size of the response
-     */
-    virtual void onReceived(time_t now, const struct sockaddr *address, const unsigned char *buffer, size_t size) override;
-
-
 public:
     /**
      *  Constructor
      *  @param  core    the core object with the settings and event loop
      *  @param  ip      nameserver IP
+     *  @param  udp     udp
      *  @throws std::runtime_error
      */
-    Nameserver(Core *core, const Ip &ip);
+    Nameserver(Core *core, const Ip &ip, Udp *udp);
     
     /**
      *  No copying
@@ -125,6 +115,13 @@ public:
      *  @return Ip
      */
     const Ip &ip() const { return _ip; }
+
+    /**
+     *  Method that is called when a response is received
+     *  @param  buffer      the received response
+     *  @param  size        size of the response
+     */
+    void receive(const unsigned char *buffer, size_t size);
     
     /**
      *  Send a datagram to the nameserver
@@ -151,17 +148,8 @@ public:
      */
     void unsubscribe(Handler *handler, uint16_t id)
     {
-        // find the element
-        auto iter = _handlers.find(std::make_pair(id, handler));
-
-        // if it is not found, we leap out (this should not happen)
-        if (iter == _handlers.end()) return;
-
         // simply erase the element
-        _handlers.erase(iter);
-
-        // if nobody is listening to the socket any more, we can just as well close it
-        if (_handlers.empty()) _udp.close();
+        _handlers.erase(std::make_pair(id, handler));
     }
     
     /**
