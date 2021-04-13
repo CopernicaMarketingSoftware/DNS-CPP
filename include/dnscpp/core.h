@@ -54,6 +54,10 @@ protected:
      */
     Loop *_loop;
 
+    /**
+     *  UDP socket
+     *  @var Udp
+     */
     Udp _udp;
 
     /**
