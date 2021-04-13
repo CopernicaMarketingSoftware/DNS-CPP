@@ -43,7 +43,7 @@ Nameserver::~Nameserver() {}
 bool Nameserver::datagram(const Query &query)
 {
     // send the message
-    return _udp->send(_ip, query);
+    return _udp->send(_ip, query, _core->buffersize());
 }
 
 /**

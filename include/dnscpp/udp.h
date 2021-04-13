@@ -70,10 +70,10 @@ public:
     
 private:
     /**
-     *  The core object
-     *  @var Core
+     *  event loop
+     *  @var Loop*
      */
-    Core *_core;
+    Loop *_loop;
     
     /**
      *  The filedescriptor of the socket
@@ -89,7 +89,7 @@ private:
 
     /**
      *  The object that is interested in handling responses
-     *  @var Handler
+     *  @var Handler*
      */
     Handler *_handler;
     
@@ -110,19 +110,19 @@ private:
     /**
      *  Open the socket (this is optional, the socket is automatically opened when you start sending to it)
      *  @param  version
+     *  @param  buffersize
      *  @return bool
      */
-    bool open(int version);
-
+    bool open(int version, int buffersize);
 
 public:
     /**
      *  Constructor
-     *  @param  core        the core object
+     *  @param  loop        event loop
      *  @param  handler     object that will receive all incoming responses
      *  @throws std::runtime_error
      */
-    Udp(Core *core, Handler *handler);
+    Udp(Loop *loop, Handler *handler);
     
     /**
      *  No copying
@@ -140,9 +140,10 @@ public:
      *  Watch out: you need to be consistent in calling this with either ipv4 or ipv6 addresses
      *  @param  ip      IP address of the target nameserver
      *  @param  query   the query to send
+     *  @param  buffersize
      *  @return bool
      */
-    bool send(const Ip &ip, const Query &query);
+    bool send(const Ip &ip, const Query &query, int buffersize);
 
     /**
      *  Close the socket (this is useful if you do not expect incoming data anymore)

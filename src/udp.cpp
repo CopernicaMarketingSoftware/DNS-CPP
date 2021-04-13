@@ -29,12 +29,12 @@ namespace DNS {
 
 /**
  *  Constructor
- *  @param  core        core object
+ *  @param  loop        event loop
  *  @param  handler     object that is notified about incoming messages
  *  @throws std::runtime_error
  */
-Udp::Udp(Core *core, Handler *handler) : 
-    _core(core), 
+Udp::Udp(Loop *loop, Handler *handler) :
+    _loop(loop),
     _handler(handler)
 {
 }
@@ -63,9 +63,10 @@ int Udp::setintopt(int optname, int32_t optval)
 /**
  *  Open the socket
  *  @param  version
+ *  @param  buffersize
  *  @return bool
  */
-bool Udp::open(int version)
+bool Udp::open(int version, int buffersize)
 {
     // if already open
     if (_fd >= 0) return true;
@@ -78,15 +79,15 @@ bool Udp::open(int version)
     if (_fd < 0) return false;
 
     // if there is a buffer size to set, do so
-    if (_core->buffersize() > 0)
+    if (buffersize > 0)
     {
         // set the send and receive buffer to the requested buffer size
-        setintopt(SO_SNDBUF, _core->buffersize());
-        setintopt(SO_RCVBUF, _core->buffersize());
+        setintopt(SO_SNDBUF, buffersize);
+        setintopt(SO_RCVBUF, buffersize);
     }
 
     // we want to be notified when the socket receives data
-    _identifier = _core->loop()->add(_fd, 1, this);
+    _identifier = _loop->add(_fd, 1, this);
     
     // done
     return true;
@@ -102,7 +103,7 @@ bool Udp::close()
     if (_fd < 0) return false;
 
     // tell the event loop that we no longer are interested in notifications
-    _core->loop()->remove(_identifier, _fd, this);
+    _loop->remove(_identifier, _fd, this);
     
     // close the socket
     ::close(_fd);
@@ -175,10 +176,10 @@ void Udp::notify()
  *  @param  query   the query to send
  *  @return bool
  */
-bool Udp::send(const Ip &ip, const Query &query)
+bool Udp::send(const Ip &ip, const Query &query, int buffersize)
 {
     // if the socket is not yet open we need to open it
-    if (_fd < 0 && !open(ip.version())) return false;
+    if (_fd < 0 && !open(ip.version(), buffersize)) return false;
 
     // should we bind in the ipv4 or ipv6 fashion?
     if (ip.version() == 6)
