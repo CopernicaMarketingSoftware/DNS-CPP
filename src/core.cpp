@@ -26,7 +26,7 @@ namespace DNS {
  *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults) : _loop(loop)
+Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(this, this)
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -35,7 +35,7 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop)
     ResolvConf settings;
     
     // copy the nameservers
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i));
+    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i), &_udp);
     
     // take over some of the settings
     _timeout = settings.timeout();
@@ -52,10 +52,10 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop)
  *  @param  loop        your event loop
  *  @param  settings    settings from the resolv.conf file
  */
-Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop)
+Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _udp(this, this)
 {
     // construct the nameservers
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i));
+    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i), &_udp);
 
     // take over some of the settings
     _timeout = settings.timeout();
@@ -75,6 +75,18 @@ Core::~Core()
     
     // stop the timer
     _loop->cancel(_timer, this);
+}
+
+void Core::onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size)
+{
+    const Ip ip(addr);
+    for (auto &nameserver : _nameservers)
+    {
+        if (nameserver.ip() != ip) continue;
+        nameserver.receive(response, size);
+        // we need to process this queue
+        reschedule(now);
+    }
 }
 
 /**
@@ -278,6 +290,9 @@ void Core::expire()
         // forget this lookup because we are going to run it
         _ready.pop();
     }
+
+    // if nothing is inflight we can close the socket
+    if (_lookups.empty() && _ready.empty()) _udp.close();
 
     // if there are more slots for scheduled operations, we start them now
     if (_capacity > _lookups.size()) proceed(now, _capacity - _lookups.size());

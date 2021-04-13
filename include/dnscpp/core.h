@@ -45,7 +45,7 @@ class AbstractIdFactory;
 /**
  *  Class definition
  */
-class Core : private Timer, private Watchable
+class Core : private Timer, private Watchable, private Udp::Handler
 {
 protected:
     /**
@@ -53,6 +53,8 @@ protected:
      *  @var Loop
      */
     Loop *_loop;
+
+    Udp _udp;
 
     /**
      *  The IP addresses of the servers that can be accessed
@@ -206,6 +208,8 @@ protected:
      *  Destructor
      */
     virtual ~Core();
+
+    virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) override;
 
 public:
     /**

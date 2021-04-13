@@ -16,6 +16,7 @@
  *  Dependencies
  */
 #include <vector>
+#include "handler.h"
 #include "type.h"
 #include "core.h"
 #include "callbacks.h"
@@ -84,7 +85,7 @@ public:
     void nameserver(const Ip &ip)
     {
         // add to the member in the base class
-        _nameservers.emplace_back(static_cast<Core*>(this), ip);
+        _nameservers.emplace_back(static_cast<Core*>(this), ip, &_udp);
     }
 
     /**
@@ -162,8 +163,8 @@ public:
      *  @param  handler     object that will be notified when the query is ready
      *  @return operation   object to interact with the operation while it is in progress
      */
-    Operation *query(const char *domain, ns_type type, const Bits &bits, Handler *handler);
-    Operation *query(const char *domain, ns_type type, Handler *handler) { return query(domain, type, _bits, handler); }
+    Operation *query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler);
+    Operation *query(const char *domain, ns_type type, DNS::Handler *handler) { return query(domain, type, _bits, handler); }
     
     /**
      *  Do a reverse IP lookup, this is only meaningful for PTR lookups
@@ -172,8 +173,8 @@ public:
      *  @param  handler     object that will be notified when the query is ready
      *  @return operation   object to interact with the operation while it is in progress
      */
-    Operation *query(const Ip &ip, const Bits &bits, Handler *handler);
-    Operation *query(const Ip &ip, Handler *handler) { return query(ip, _bits, handler); }
+    Operation *query(const Ip &ip, const Bits &bits, DNS::Handler *handler);
+    Operation *query(const Ip &ip, DNS::Handler *handler) { return query(ip, _bits, handler); }
     
     /**
      *  Do a dns lookup and pass the result to callbacks
