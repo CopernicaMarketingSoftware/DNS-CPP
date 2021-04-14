@@ -24,6 +24,7 @@
 #include "bits.h"
 #include "now.h"
 #include "lookup.h"
+#include "processor.h"
 #include <list>
 #include <deque>
 #include <memory>
@@ -41,7 +42,7 @@ class Loop;
 /**
  *  Class definition
  */
-class Core : private Timer, private Watchable, private Udp::Handler
+class Core : private Timer, private Watchable, private Processor
 {
 protected:
     /**

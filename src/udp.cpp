@@ -30,12 +30,12 @@ namespace DNS {
 /**
  *  Constructor
  *  @param  loop        event loop
- *  @param  handler     object that is notified about incoming messages
+ *  @param  processor   object that is notified about incoming messages
  *  @throws std::runtime_error
  */
-Udp::Udp(Loop *loop, Handler *handler) :
+Udp::Udp(Loop *loop, Processor *processor) :
     _loop(loop),
-    _handler(handler)
+    _processor(processor)
 {
 }
 
@@ -166,7 +166,7 @@ void Udp::notify()
         if (bytes <= 0) break;
 
         // pass to the handler
-        _handler->onReceived(now, (struct sockaddr *)&from, buffer, bytes);
+        _processor->onReceived(now, (struct sockaddr *)&from, buffer, bytes);
     } 
 }
 

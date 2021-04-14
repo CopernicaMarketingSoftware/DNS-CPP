@@ -38,6 +38,7 @@ class Query;
 class Loop;
 class Ip;
 class Response;
+class Processor;
 
 /**
  *  Class definition
@@ -45,22 +46,6 @@ class Response;
 class Udp : private Monitor
 {
 public:
-    /**
-     *  Interface that can be implemented by listeners
-     */
-    class Handler
-    {
-    public:
-        /**
-         *  Method that is called when a response is received
-         *  @param  time        receive-time
-         *  @param  address     the address of the nameserver from which it is received
-         *  @param  response    the received response
-         *  @param  size        size of the response
-         */
-        virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) = 0;
-    };
-
     /**
      *  Helper method to set an integer socket option
      *  @param  optname
@@ -89,9 +74,9 @@ private:
 
     /**
      *  The object that is interested in handling responses
-     *  @var Handler*
+     *  @var Processor*
      */
-    Handler *_handler;
+    Processor *_processor;
     
     /**
      *  Method that is called from user-space when the socket becomes readable.
@@ -119,10 +104,10 @@ public:
     /**
      *  Constructor
      *  @param  loop        event loop
-     *  @param  handler     object that will receive all incoming responses
+     *  @param  Processor    object that will receive all incoming responses
      *  @throws std::runtime_error
      */
-    Udp(Loop *loop, Handler *handler);
+    Udp(Loop *loop, Processor *Processor);
     
     /**
      *  No copying
