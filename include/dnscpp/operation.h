@@ -47,11 +47,10 @@ protected:
      *  The query that we're going to send
      *  @var Query
      */
-    Query _query;
+    const Query _query;
         
     /**
      *  Constructor
-     *  @param  idFactory   your source for generating query IDs
      *  @param  handler     user space handler
      *  @param  op          the type of operation (normally a regular query)
      *  @param  dname       the domain to lookup
