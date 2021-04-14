@@ -68,6 +68,15 @@ private:
      */
     Loop *_loop;
 
+    /**
+     *  The object that is interested in handling responses
+     *  @var Handler*
+     */
+    Handler *_handler;
+
+    /**
+     *  Private helper struct to represent a socket
+     */
     struct Socket final : private Monitor
     {
         /**
@@ -88,14 +97,58 @@ private:
          */
         int fd = -1;
 
+        /**
+         *  Constructor does nothing but store a pointer to a Udp object.
+         *  Sockets are opened lazily
+         *  @param parent
+         */
         Socket(Udp *parent);
+
+        /**
+         *  Closes the file descriptor
+         */
         ~Socket();
 
+        /**
+         *  Check whether this socket has a valid file descriptor
+         *  @return bool
+         */
         bool valid() const noexcept { return fd > 0; }
+
+        /**
+         *  Implements the Monitor interface
+         */
         void notify() override;
+
+        /**
+         *  Send a query over this socket
+         *  @param  ip IP address to send to. The port is always assumed to be 53.
+         *  @param  query  The query
+         *  @return bool
+         */
         bool send(const Ip &ip, const Query &query);
+
+        /**
+         *  Send a query to a certain nameserver
+         *  @param  address     target address
+         *  @param  size        size of the address
+         *  @param  query       query to send
+         *  @return bool
+         */
         bool send(const struct sockaddr *address, size_t size, const Query &query);
+
+        /**
+         *  Open the socket
+         *  @param  version     IPv4 or IPv6. You must ensure this stays consistent over multiple requests (@todo)
+         *  @param  buffersize  The buffersize
+         *  @return bool
+         */
         bool open(int version, int buffersize);
+
+        /**
+         *  Close the socket
+         *  @return bool
+         */
         bool close();
 
         /**
@@ -106,15 +159,21 @@ private:
         int setintopt(int optname, int32_t optval);
     };
 
+    /**
+     *  Socket needs access to the loop and the buffersize
+     */
     friend class Socket;
 
     /**
-     *  The object that is interested in handling responses
-     *  @var Handler*
+     *  Collection of all sockets
+     *  @var std::vector<Socket>
      */
-    Handler *_handler;
-
     std::vector<Socket> _sockets;
+
+    /**
+     *  The next socket to use for sending a new query
+     *  @var size_t
+     */
     size_t _current = 0;
 
     /**
@@ -155,6 +214,10 @@ public:
      */
     bool send(const Ip &ip, const Query &query);
 
+    /**
+     *  Close all sockets
+     *  @todo: this method should disappear
+     */
     void close();
 };
     

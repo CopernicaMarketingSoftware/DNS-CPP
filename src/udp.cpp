@@ -27,8 +27,16 @@
  */
 namespace DNS {
 
+/**
+ *  Constructor does nothing but store a pointer to a Udp object.
+ *  Sockets are opened lazily
+ *  @param parent
+ */
 Udp::Socket::Socket(Udp *parent) : parent(parent) {}
 
+/**
+ *  Closes the file descriptor
+ */
 Udp::Socket::~Socket() { close(); }
 
 /**
@@ -44,6 +52,7 @@ Udp::Udp(Loop *loop, Handler *handler, size_t socketcount, int buffersize) :
     _handler(handler),
     _buffersize(buffersize)
 {
+    // create sockets
     for (size_t i = 0; i != socketcount; ++i) _sockets.emplace_back(this);
 }
 
@@ -156,12 +165,21 @@ void Udp::Socket::notify()
  */
 bool Udp::send(const Ip &ip, const Query &query)
 {
+    // choose a socket
     Socket &socket = _sockets[_current];
     ++_current;
     if (_current == _sockets.size()) _current = 0;
+
+    // send it via this socket
     return socket.send(ip, query);
 }
 
+/**
+ *  Send a query over this socket
+ *  @param  ip IP address to send to. The port is always assumed to be 53.
+ *  @param  query  The query
+ *  @return bool
+ */
 bool Udp::Socket::send(const Ip &ip, const Query &query)
 {
     // if the socket is not yet open we need to open it
@@ -216,8 +234,13 @@ bool Udp::Socket::send(const struct sockaddr *address, size_t size, const Query 
     return sendto(fd, query.data(), query.size(), MSG_NOSIGNAL, address, size) >= 0;
 }
 
+/**
+ *  Close all sockets
+ *  @todo: this method should disappear
+ */
 void Udp::close()
 {
+    // close all sockets
     std::for_each(_sockets.begin(), _sockets.end(), std::mem_fun_ref(&Socket::close));
 }
 
