@@ -52,6 +52,9 @@ Udp::Udp(Loop *loop, Handler *handler, size_t socketcount, int buffersize) :
     _handler(handler),
     _buffersize(buffersize)
 {
+    // we can't have zero sockets
+    socketcount = std::max((size_t)1, socketcount);
+
     // create sockets
     for (size_t i = 0; i != socketcount; ++i) _sockets.emplace_back(this);
 }
