@@ -182,6 +182,12 @@ public:
      *  @return bool
      */
     bool readable() const;
+    
+    /**
+     *  Does the socket have an inbound buffer (meaning: is there a backlog of unprocessed messages?)
+     *  @return bool
+     */
+    bool buffered() const { return !_responses.empty(); }
 };
     
 /**

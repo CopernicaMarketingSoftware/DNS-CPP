@@ -40,7 +40,7 @@ class Handler;
 /**
  *  Class definition
  */
-class RemoteLookup : public Lookup, private Nameserver::Handler, private Connection::Handler, private Processor
+class RemoteLookup : public Lookup, private Connection::Handler, private Processor
 {
 private:
     /**
@@ -81,13 +81,6 @@ private:
      *  @return bool        was the response processed?
      */
     virtual bool onReceived(const Ip &ip, const Response &response) override;
-
-    /**
-     *  Method that is called when a dgram response is received
-     *  @param  nameserver  the reporting nameserver
-     *  @param  response    the received response
-     */
-    virtual bool onReceived(Nameserver *nameserver, const Response &response) override;
 
     /**
      *  Called when the response has been received over tcp
