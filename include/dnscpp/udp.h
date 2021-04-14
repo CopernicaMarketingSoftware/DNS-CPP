@@ -61,15 +61,6 @@ public:
         virtual void onBuffered(Udp *udp) = 0;
     };
 
-    /**
-     *  Helper method to set an integer socket option
-     *  @param  optname
-     *  @param  optval
-     * 
-     *  @todo why is this public?
-     */
-    int setintopt(int optname, int32_t optval);
-    
 private:
     /**
      *  Pointer to our parent object
@@ -106,6 +97,13 @@ private:
      *  @var set
      */
     std::set<std::tuple<uint16_t,Ip,Processor*>> _processors;
+
+    /**
+     *  Helper method to set an integer socket option
+     *  @param  optname
+     *  @param  optval
+     */
+    int setintopt(int optname, int32_t optval);
 
     /**
      *  Method that is called from user-space when the socket becomes readable.
