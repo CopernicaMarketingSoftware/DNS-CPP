@@ -76,10 +76,11 @@ private:
 
     /**
      *  Method that is called when a dgram response is received
-     *  @param  nameserver  the reporting nameserver
+     *  @param  ip          the ip from where the response came (nameserver ip)
      *  @param  response    the received response
+     *  @return bool        was the response processed?
      */
-    virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) override;
+    virtual bool onReceived(const Ip &ip, const Response &response) override;
 
     /**
      *  Method that is called when a dgram response is received

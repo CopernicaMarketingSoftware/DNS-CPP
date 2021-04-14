@@ -42,7 +42,7 @@ class Loop;
 /**
  *  Class definition
  */
-class Core : private Timer, private Watchable, private Processor
+class Core : private Timer, private Watchable
 {
 protected:
     /**
@@ -217,7 +217,7 @@ protected:
      *  @param  response    the received response
      *  @param  size        size of the response
      */
-    virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) override;
+//    virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) override;
 
 public:
     /**

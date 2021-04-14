@@ -40,12 +40,16 @@ class Core;
 
 /**
  *  Class definition
+ * 
+ *  @todo is watchable still needed?
  */
-class Nameserver : private Watchable
+class Nameserver
 {
 public:
     /**
      *  Interface that can be implemented by listeners
+     * 
+     *  @todo is this interface still needed?
      */
     class Handler
     {

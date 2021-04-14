@@ -16,6 +16,7 @@
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/core.h"
 #include "../include/dnscpp/now.h"
+#include "../include/dnscpp/watcher.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdexcept>
@@ -160,12 +161,12 @@ void Udp::notify()
         // if there were no bytes, leap out
         if (bytes <= 0) break;
 
-        // pass to the handler
-        // @todo lookup the right processor
-        //_processor->onReceived(now, (struct sockaddr *)&from, buffer, bytes);
+        // schedule this message for later delivery
+        schedule((struct sockaddr *)&from, buffer, bytes);
     }
     
-    // @todo reschedule the processing of messages
+    // reschedule the processing of messages
+    // @todo tell our parent
     //reschedule(now);
 }
 
@@ -176,7 +177,7 @@ void Udp::notify()
  *  @param  response    response buffer
  *  @param  size        buffer size
  */
-void Udp::remember(const struct sockaddr *addr, const unsigned char *response, size_t size)
+void Udp::schedule(const struct sockaddr *addr, const unsigned char *response, size_t size)
 {
     // avoid exceptions (in case the ip cannot be parsed)
     try
@@ -189,6 +190,68 @@ void Udp::remember(const struct sockaddr *addr, const unsigned char *response, s
     {
         // ip address could not be parsed
     }
+}
+
+/**
+ *  Deliver messages that have already been received and buffered to their appropriate processor
+ *  @param  size_t      max number of calls to userspace
+ *  @return size_t      number of processed answers
+ */
+size_t Udp::deliver(size_t maxcalls)
+{
+    // if there is nothing to process
+    if (_responses.empty()) return 0;
+    
+    // result variable
+    size_t result = 0;
+    
+    // we are going to make a call to userspace, so we keep monitoring if `this` is not destructed
+    Watcher watcher(this);
+    
+    // look for a response
+    while (result < maxcalls && watcher.valid() && !_responses.empty())
+    {
+        // avoid exceptions (parsing the response could fail)
+        try
+        {
+            // note that the _handler->onReceived() triggers a call to user-space that might destruct 'this',
+            // which also causes _responses to be destructed. To avoid silly crashes we copy the oldest message
+            // to the local stack in a one-item-big list
+            decltype(_responses) oneitem;
+            
+            // move the first item from the _responses to the one-item list
+            oneitem.splice(oneitem.begin(), _responses, _responses.begin(), std::next(_responses.begin()));
+            
+            // get the first element
+            const auto &front = oneitem.front();
+
+            // parse the response
+            Response response(front.second.data(), front.second.size());
+
+            // filter on the response, the beginning is simply the handler at nullptr
+            auto begin = _processors.lower_bound(std::make_tuple(response.id(), front.first, nullptr));
+
+            // iterate over those elements, notifying each handler
+            for (auto iter = begin; iter != _processors.end(); ++iter) 
+            {
+                // if this element is not applicable any more, we're going to leap out (we're done)
+                if (std::get<0>(*iter) != response.id() || std::get<1>(*iter) != front.first) break;
+
+                // call the onreceived for the element
+                if (std::get<2>(*iter)->onReceived(front.first, response)) result += 1;
+                
+                // the message was processed, we no longer need other handlers
+                break;
+            }
+        }
+        catch (const std::runtime_error &error)
+        {
+            // parsing the response failed, or the callback handler threw an exception
+        }
+    }
+
+    // something was processed
+    return result;
 }
 
 /**

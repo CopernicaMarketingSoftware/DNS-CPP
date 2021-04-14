@@ -25,13 +25,12 @@ class Processor
 {
 public:
     /**
-     *  Method that is called when a response is received
-     *  @param  time        receive-time
-     *  @param  address     the address of the nameserver from which it is received
+     *  Method that is called when a dgram response is received
+     *  @param  ip          the ip from where the response came (nameserver ip)
      *  @param  response    the received response
-     *  @param  size        size of the response
+     *  @return bool
      */
-    virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) = 0;
+    virtual bool onReceived(const Ip &ip, const Response &response) = 0;
 };
 
 /**
