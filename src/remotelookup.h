@@ -72,6 +72,12 @@ private:
      *  @var Connection
      */
     std::unique_ptr<Connection> _connection;
+    
+    /**
+     *  Objects in which we're expecting an answer
+     *  @var std::set
+     */
+    std::set<std::pair<Processors*,Ip>> _subscriptions;
 
 
     /**

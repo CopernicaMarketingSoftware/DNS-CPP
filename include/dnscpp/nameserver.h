@@ -40,6 +40,9 @@ class Core;
 
 /**
  *  Class definition
+ * 
+ * 
+ *  @todo this class is now so thin, do we even need it?
  */
 class Nameserver
 {
@@ -92,13 +95,13 @@ public:
 
     /**
      *  Send a datagram to the nameserver
+     *  The processor is automatically added to the list of processors, you must
+     *  explicitly remove yourself when you're done
      *  @param  processor   the sending object that will be notified of all future responses
      *  @param  query       the query to send
-     *  @return Udp*        the socket over which the request was sent
-     * 
-     *  @todo use a different return-type to not expose the entire Udp class
+     *  @return Processors* collection of processers that is receiving responses
      */
-    Udp *datagram(Processor *processor, const Query &query);
+    Processors *datagram(Processor *processor, const Query &query);
 };
 
 /**

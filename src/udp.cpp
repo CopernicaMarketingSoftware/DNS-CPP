@@ -92,12 +92,11 @@ bool Udp::open(int version, int buffersize)
 
 /**
  *  Close the socket
- *  @return bool
  */
-bool Udp::close()
+void Udp::close()
 {
     // if already closed
-    if (_fd < 0) return false;
+    if (_fd < 0) return;
 
     // tell the event loop that we no longer are interested in notifications
     _loop->remove(_identifier, _fd, this);
@@ -107,9 +106,6 @@ bool Udp::close()
     
     // remember that socket is closed
     _fd = -1; _identifier = nullptr;
-    
-    // done
-    return true;
 }
 
 /**
@@ -179,8 +175,10 @@ void Udp::schedule(const struct sockaddr *addr, const unsigned char *response, s
     // avoid exceptions (in case the ip cannot be parsed)
     try
     {
+        // @todo inbound messages that do not come from port 53 can be ignored
+        
         // remember the response for now
-        // @todo make this more efficient
+        // @todo make this more efficient (without all the string-copying)
         _responses.emplace_back(std::make_pair(addr, std::basic_string<unsigned char>(response, size)));
     }
     catch (...)
@@ -257,11 +255,9 @@ size_t Udp::deliver(size_t maxcalls)
  *  @param  ip          IP address of the nameserver
  *  @param  query       the query to send
  *  @param  buffersize
- *  @return Udp         the object from which the user can unsubscribe
- * 
- *  @todo   return a different type of object
+ *  @return Processors  the object from which the user can unsubscribe
  */
-Udp *Udp::send(Processor *processor, const Ip &ip, const Query &query, int buffersize)
+Processors *Udp::send(Processor *processor, const Ip &ip, const Query &query, int buffersize)
 {
     // if the socket is not yet open we need to open it
     if (_fd < 0 && !open(ip.version(), buffersize)) return nullptr;
@@ -301,7 +297,7 @@ Udp *Udp::send(Processor *processor, const Ip &ip, const Query &query, int buffe
     }
     
     // subscribe this processor, it will be notified when we receive a response for this query
-    _processors.emplace(query.id(), ip, processor);
+    subscribe(processor, ip, query.id());
     
     // expose the object with subscriptions
     return this;
