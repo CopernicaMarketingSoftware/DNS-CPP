@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include "monitor.h"
+#include "watchable.h"
 #include <list>
 #include <string>
 #include <set>
@@ -44,7 +45,7 @@ class Processor;
 /**
  *  Class definition
  */
-class Udp : private Monitor
+class Udp : private Monitor, private Watchable
 {
 public:
     /**
@@ -114,7 +115,7 @@ private:
      *  @param  response    response buffer
      *  @param  size        buffer size
      */
-    void remember(const struct sockaddr *addr, const unsigned char *response, size_t size);
+    void schedule(const struct sockaddr *addr, const unsigned char *response, size_t size);
 
 
 public:
@@ -168,6 +169,13 @@ public:
      *  @todo should / could be private?
      */
     bool close();
+
+    /**
+     *  Deliver messages that have already been received and buffered to their appropriate processor
+     *  @param  size_t      max number of calls to userspace
+     *  @return size_t      number of processed answers
+     */
+    size_t deliver(size_t maxcalls);
 
     /**
      *  Is the socket now readable?

@@ -78,35 +78,6 @@ Core::~Core()
 }
 
 /**
- *  Method that is called when a response is received
- *  @param  time        receive-time
- *  @param  address     the address of the nameserver from which it is received
- *  @param  response    the received response
- *  @param  size        size of the response
- */
-void Core::onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size)
-{
-    // parse the IP
-    const Ip ip(addr);
-
-    // find the nameserver that sent this response
-    for (auto &nameserver : _nameservers)
-    {
-        // continue to the next nameserver if the response was not from this nameserver
-        if (nameserver.ip() != ip) continue;
-
-        // we found the nameserver that sent this response
-        nameserver.receive(response, size);
-
-        // we need to process this queue
-        reschedule(now);
-
-        // we can jump out of the loop now
-        break;
-    }
-}
-
-/**
  *  Add a new lookup to the list
  *  @param  lookup
  *  @return Operation
