@@ -209,7 +209,7 @@ void RemoteLookup::report(const Response &response)
  *  @param  response    the received response
  *  @return bool        was the response processed?
  */
-bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
+bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
 {
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
@@ -222,7 +222,7 @@ bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
     if (!response.truncated()) { report(response); return true; }
 
     // switch to tcp mode to retry the query to get a non-truncated response
-    _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this));
+    _connection.reset(new Connection(_core->loop(), ip, _query, response, this));
     
     // remember the start-time of the connection to reset the timeout-period
     _last = Now();

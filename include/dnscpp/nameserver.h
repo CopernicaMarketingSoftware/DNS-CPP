@@ -40,33 +40,15 @@ class Core;
 
 /**
  *  Class definition
- * 
- *  @todo is watchable still needed?
  */
 class Nameserver
 {
-public:
-    /**
-     *  Interface that can be implemented by listeners
-     * 
-     *  @todo is this interface still needed?
-     */
-    class Handler
-    {
-    public:
-        /**
-         *  Method that is called when a response is received
-         *  @param  nameserver  the reporting nameserver
-         *  @param  response    the received response
-         *  @return bool        was the response processed?
-         */
-        virtual bool onReceived(Nameserver *nameserver, const Response &response) = 0;
-    };
-    
 private:
     /**
      *  Pointer to the core object
      *  @var    Core
+     * 
+     *  @todo do we still need this?
      */
     Core *_core;
 
@@ -82,17 +64,9 @@ private:
      */
     Udp *_udp;
 
-    /**
-     *  All the buffered responses that came in 
-     *  @todo reimplement this in Udp
-     *  @var std::list
-     */
-    std::list<std::basic_string<unsigned char>> _responses;
-
 public:
     /**
      *  Constructor
-     *  @param  core    the core object with the settings and event loop
      *  @param  ip      nameserver IP
      *  @param  udp     udp
      *  @throws std::runtime_error
@@ -117,13 +91,6 @@ public:
     const Ip &ip() const { return _ip; }
 
     /**
-     *  Method that is called when a response is received
-     *  @param  buffer      the received response
-     *  @param  size        size of the response
-     */
-    void receive(const unsigned char *buffer, size_t size);
-    
-    /**
      *  Send a datagram to the nameserver
      *  @param  processor   the sending object that will be notified of all future responses
      *  @param  query       the query to send
@@ -132,21 +99,6 @@ public:
      *  @todo use a different return-type to not expose the entire Udp class
      */
     Udp *datagram(Processor *processor, const Query &query);
-
-    /**
-     *  Is the nameserver busy (meaning: is there a backlog of unprocessed messages?)
-     *  @return bool
-     */
-    bool busy() const { return !_responses.empty(); }
-
-    /**
-     *  Process cached responses (this is an internal method)
-     *  @param  maxcalls    max number of calls to userspace
-     *  @return size_t      number of processed answers
-     *  @internal
-     */
-    size_t process(size_t maxcalls);
-
 };
 
 /**

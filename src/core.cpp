@@ -118,12 +118,8 @@ Operation *Core::add(Lookup *lookup)
  */
 double Core::delay(double now)
 {
-    // check if there are any nameservers with 
-    for (auto &nameserver : _nameservers)
-    {
-        // is there an unprocessed queue, than we have to expire asap
-        if (nameserver.busy()) return 0.0;
-    }
+    // if there is an unprocessed inbound queue, we have to expire asap
+    if (_udp.buffered()) return 0.0;
     
     // if there is nothing scheduled
     if (_lookups.empty() && _ready.empty()) return -1.0;
@@ -225,6 +221,7 @@ void Core::expire()
     size_t calls = 0;
     
     // first we are going to check the nameservers if they have some data to process
+    /* @todo we keep this code here in case we are going to implement multiple udp sockets, so that we can use it as inspiration
     for (auto &nameserver : _nameservers)
     {
         // because processing a response may lead to user-space destructing everything,
@@ -245,7 +242,19 @@ void Core::expire()
         
         // is it meaningful to proceed
         if (calls > _maxcalls) break;        
-    }
+    }*/
+    
+    // first we check the udp sockets to see if they have data availeble
+    size_t count = _udp.deliver(_maxcalls - calls);
+
+    // something was processed, is the side-effect that userspace destucted `this`?
+    if (count > 0 && !watcher.valid()) return;
+    
+    // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
+    calls += count;
+
+    // start other operations now that some earlier operations are completed
+    proceed(now, count);
     
     // there was no data to process, so we are going to run jobs
     while (calls < _maxcalls && !_lookups.empty())
