@@ -26,7 +26,7 @@ namespace DNS {
  *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(loop)
+Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(loop, this)
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -52,7 +52,7 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(loop)
  *  @param  loop        your event loop
  *  @param  settings    settings from the resolv.conf file
  */
-Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _udp(loop)
+Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _udp(loop, this)
 {
     // construct the nameservers
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i), &_udp);
@@ -153,6 +153,23 @@ void Core::reschedule(double now)
     // check when the next operation should run
     _timer = seconds < 0 ? nullptr : _loop->timer(seconds, this);
     _immediate = seconds == 0.0;
+}
+
+/**
+ *  Method that is called when a UDP socket has a buffer that it wants to deliver
+ *  @param  udp         the socket with a buffer
+ */
+void Core::onBuffered(Udp *udp)
+{
+    // if we already had an immediate timer we do not have to set it
+    if (_timer != nullptr && _immediate) return;
+    
+    // if the timer is already running we have to reset it
+    if (_timer != nullptr) _loop->cancel(_timer, this);
+    
+    // check when the next operation should run
+    _timer = _loop->timer(0.0, this);
+    _immediate = true;
 }
 
 /**
