@@ -46,17 +46,19 @@ public:
      *  you can run any queries.
      *  @param  loop        your event loop
      *  @param  defaults    should system settings be loaded
+     *  @param  buffersize  size of the send & receive buffers of UDP sockets. Use 0 for system default
      */
-    Context(Loop *loop, bool defaults = true) : Core(loop, defaults) {}
+    Context(Loop *loop, bool defaults = true, int32_t buffersize = 0) : Core(loop, defaults, buffersize) {}
 
     /**
      *  Constructor
      *  @param  loop        your event loop
      *  @param  settings    settings parsed from the /etc/resolv.conf file
+     *  @param  buffersize  size of the send & receive buffers of UDP sockets. Use 0 for system default
      * 
      *  @deprecated
      */
-    Context(Loop *loop, const ResolvConf &settings) : Core(loop, settings) {}
+    Context(Loop *loop, const ResolvConf &settings, int32_t buffersize = 0) : Core(loop, settings, buffersize) {}
     
     /**
      *  No copying
@@ -86,17 +88,6 @@ public:
     {
         // add to the member in the base class
         _nameservers.emplace_back(static_cast<Core*>(this), ip, &_udp);
-    }
-
-    /**
-     *  The send and receive buffer size 
-     *  @param  size      the requested buffer size in bytes, or default with 0. 
-     *                    only gets applied to new sockets.
-     */
-    void buffersize(int32_t size) 
-    {
-        // store the property
-        _buffersize = size;
     }
     
     /**
@@ -202,7 +193,6 @@ public:
     /**
      *  Expose some getters from core
      */
-    using Core::buffersize;
     using Core::bits;
     using Core::rotate;
     using Core::expire;

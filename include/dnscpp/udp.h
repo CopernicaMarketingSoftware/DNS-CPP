@@ -42,7 +42,7 @@ class Response;
 /**
  *  Class definition
  */
-class Udp : private Monitor
+class Udp
 {
 public:
     /**
@@ -60,13 +60,6 @@ public:
          */
         virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) = 0;
     };
-
-    /**
-     *  Helper method to set an integer socket option
-     *  @param  optname
-     *  @param  optval
-     */
-    int setintopt(int optname, int32_t optval);
     
 private:
     /**
@@ -74,56 +67,74 @@ private:
      *  @var Loop*
      */
     Loop *_loop;
-    
-    /**
-     *  The filedescriptor of the socket
-     *  @var int
-     */
-    int _fd = -1;
-    
-    /**
-     *  User space identifier of this monitor
-     *  @var void *
-     */
-    void *_identifier = nullptr;
+
+    struct Socket final : private Monitor
+    {
+        /**
+         *  Pointer to a Udp object
+         *  @var Udp*
+         */
+        Udp *parent = nullptr;
+
+        /**
+         *  User space identifier of this monitor
+         *  @var void *
+         */
+        void *identifier = nullptr;
+
+        /**
+         *  The filedescriptor of the socket
+         *  @var int
+         */
+        int fd = -1;
+
+        Socket(Udp *parent);
+        ~Socket();
+
+        bool valid() const noexcept { return fd > 0; }
+        void notify() override;
+        bool send(const Ip &ip, const Query &query);
+        bool send(const struct sockaddr *address, size_t size, const Query &query);
+        bool open(int version, int buffersize);
+        bool close();
+
+        /**
+         *  Helper method to set an integer socket option
+         *  @param  optname
+         *  @param  optval
+         */
+        int setintopt(int optname, int32_t optval);
+    };
+
+    friend class Socket;
 
     /**
      *  The object that is interested in handling responses
      *  @var Handler*
      */
     Handler *_handler;
-    
-    /**
-     *  Method that is called from user-space when the socket becomes readable.
-     */
-    virtual void notify() override;
-    
-    /**
-     *  Send a query to a certain nameserver
-     *  @param  address     target address
-     *  @param  size        size of the address
-     *  @param  query       query to send
-     *  @return bool
-     */
-    bool send(const struct sockaddr *address, size_t size, const Query &query);
+
+    std::vector<Socket> _sockets;
+    size_t _current = 0;
 
     /**
-     *  Open the socket (this is optional, the socket is automatically opened when you start sending to it)
-     *  @param  version
-     *  @param  buffersize
-     *  @return bool
+     *  Size of the send and receive buffer. If set to zero, default
+     *  will be kept. This is limited by the system maximum (wmem_max and rmem_max)
+     *  @var size_t
      */
-    bool open(int version, int buffersize);
+    int32_t _buffersize = 0;
 
 public:
     /**
      *  Constructor
      *  @param  loop        event loop
      *  @param  handler     object that will receive all incoming responses
+     *  @param  socketcount number of UDP sockets to keep open
+     *  @param  buffersize  send & receive buffer size of each UDP socket
      *  @throws std::runtime_error
      */
-    Udp(Loop *loop, Handler *handler);
-    
+    Udp(Loop *loop, Handler *handler, size_t socketcount = 1, int buffersize = 0);
+
     /**
      *  No copying
      *  @param  that
@@ -133,30 +144,18 @@ public:
     /**
      *  Destructor
      */
-    virtual ~Udp();
+    virtual ~Udp() = default;
 
     /**
      *  Send a query to the socket
      *  Watch out: you need to be consistent in calling this with either ipv4 or ipv6 addresses
      *  @param  ip      IP address of the target nameserver
      *  @param  query   the query to send
-     *  @param  buffersize
      *  @return bool
      */
-    bool send(const Ip &ip, const Query &query, int buffersize);
+    bool send(const Ip &ip, const Query &query);
 
-    /**
-     *  Close the socket (this is useful if you do not expect incoming data anymore)
-     *  The socket will be automatically opened if you start sending to it
-     *  @return bool
-     */
-    bool close();
-
-    /**
-     *  Is the socket now readable?
-     *  @return bool
-     */
-    bool readable() const;
+    void close();
 };
     
 /**

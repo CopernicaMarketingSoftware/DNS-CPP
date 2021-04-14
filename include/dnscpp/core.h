@@ -107,13 +107,6 @@ protected:
      *  @var bool
      */
     double _immediate = false;
-    
-    /**
-     *  Size of the send and receive buffer. If set to zero, default
-     *  will be kept. This is limited by the system maximum (wmem_max and rmem_max)
-     *  @var size_t
-     */
-    int32_t _buffersize = 0;
 
     /**
      *  Max time that we wait for a response
@@ -197,7 +190,7 @@ protected:
      *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
      *  @throws std::runtime_error
      */
-    Core(Loop *loop, bool defaults);
+    Core(Loop *loop, bool defaults, int32_t buffersize);
 
     /**
      *  Protected constructor, only the derived class may construct it
@@ -206,7 +199,7 @@ protected:
      * 
      *  @deprecated
      */
-    Core(Loop *loop, const ResolvConf &settings);
+    Core(Loop *loop, const ResolvConf &settings, int32_t buffersize);
     
     /**
      *  Destructor
@@ -234,12 +227,6 @@ public:
      *  @return Loop
      */
     Loop *loop() { return _loop; }
-
-    /**
-     *  The send and receive buffer size 
-     *  @return int32_t
-     */
-    int32_t buffersize() const { return _buffersize; }
     
     /**
      *  The period between sending the datagram again

@@ -26,7 +26,7 @@ namespace DNS {
  *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(loop, this)
+Core::Core(Loop *loop, bool defaults, int32_t buffersize) : _loop(loop), _udp(loop, this, 4, buffersize)
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -52,7 +52,7 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(loop, this)
  *  @param  loop        your event loop
  *  @param  settings    settings from the resolv.conf file
  */
-Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _udp(loop, this)
+Core::Core(Loop *loop, const ResolvConf &settings, int32_t buffersize) : _loop(loop), _udp(loop, this, 4, buffersize)
 {
     // construct the nameservers
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i), &_udp);

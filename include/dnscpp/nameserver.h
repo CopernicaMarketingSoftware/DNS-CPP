@@ -73,7 +73,7 @@ private:
     Ip _ip;
     
     /**
-     *  UDP socket to send messages to the nameserver
+     *  UDP sockets to send messages to the nameserver
      *  @var    Udp
      */
     Udp *_udp;
