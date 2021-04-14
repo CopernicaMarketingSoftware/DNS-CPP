@@ -37,13 +37,14 @@ Nameserver::~Nameserver() {}
 
 /**
  *  Send a datagram to the nameserver
- *  @param  query
- *  @return bool
+ *  @param  processor       the object that will receive the response
+ *  @param  query           the query to send
+ *  @return Udp             the socket over which the request was sent
  */
-bool Nameserver::datagram(const Query &query)
+Udp *Nameserver::datagram(Processor *processor, const Query &query)
 {
     // send the message
-    return _udp->send(_ip, query, _core->buffersize());
+    return _udp->send(processor, _ip, query, _core->buffersize());
 }
 
 /**
@@ -62,6 +63,7 @@ void Nameserver::receive(const unsigned char *buffer, size_t size)
  *  @param  size_t          max number of calls to userspace
  *  @return size_t          number of processed answers
  */
+/* @todo implement this in Udp
 size_t Nameserver::process(size_t maxcalls)
 {
     // if there is nothing to process
@@ -118,6 +120,7 @@ size_t Nameserver::process(size_t maxcalls)
     // something was processed
     return result;
 }
+*/
     
 /**
  *  End of namespace

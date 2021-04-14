@@ -80,15 +80,11 @@ private:
 
     /**
      *  All the buffered responses that came in 
+     *  @todo reimplement this in Udp
      *  @var std::list
      */
     std::list<std::basic_string<unsigned char>> _responses;
 
-    /**
-     *  Set with the handlers (we originally used a multimap, but a std::set turned out to be more efficient)
-     *  @var set
-     */
-    std::set<std::pair<uint16_t,Handler*>> _handlers;
 public:
     /**
      *  Constructor
@@ -125,33 +121,14 @@ public:
     
     /**
      *  Send a datagram to the nameserver
-     *  @param  query
-     *  @return bool
+     *  @param  processor   the sending object that will be notified of all future responses
+     *  @param  query       the query to send
+     *  @return Udp*        the socket over which the request was sent
+     * 
+     *  @todo use a different return-type to not expose the entire Udp class
      */
-    bool datagram(const Query &query);
+    Udp *datagram(Processor *processor, const Query &query);
 
-    /**
-     *  Subscribe to the socket if you want to be notified about incoming responses
-     *  @param  handler     the handler that wants to receive an answer
-     *  @param  id          id of the response that the handler is interested in
-     */
-    void subscribe(Handler *handler, uint16_t id)
-    {
-        // emplace the handler
-        _handlers.insert(std::make_pair(id, handler));
-    }
-    
-    /**
-     *  Unsubscribe from the socket, this is the counterpart of subscribe()
-     *  @param  handler     the handler that unsubscribes
-     *  @param  id          id of the response that the handler is interested in
-     */
-    void unsubscribe(Handler *handler, uint16_t id)
-    {
-        // simply erase the element
-        _handlers.erase(std::make_pair(id, handler));
-    }
-    
     /**
      *  Is the nameserver busy (meaning: is there a backlog of unprocessed messages?)
      *  @return bool

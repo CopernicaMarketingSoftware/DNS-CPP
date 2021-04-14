@@ -23,6 +23,7 @@
 #include "../include/dnscpp/request.h"
 #include "../include/dnscpp/bits.h"
 #include "../include/dnscpp/now.h"
+#include "../include/dnscpp/processor.h"
 #include "connection.h"
 
 /**
@@ -39,7 +40,7 @@ class Handler;
 /**
  *  Class definition
  */
-class RemoteLookup : public Lookup, private Nameserver::Handler, private Connection::Handler
+class RemoteLookup : public Lookup, private Nameserver::Handler, private Connection::Handler, private Processor
 {
 private:
     /**
@@ -71,6 +72,14 @@ private:
      *  @var Connection
      */
     std::unique_ptr<Connection> _connection;
+
+
+    /**
+     *  Method that is called when a dgram response is received
+     *  @param  nameserver  the reporting nameserver
+     *  @param  response    the received response
+     */
+    virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) override;
 
     /**
      *  Method that is called when a dgram response is received

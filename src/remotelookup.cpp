@@ -96,8 +96,9 @@ Handler *RemoteLookup::cleanup()
     // forget the tcp connection
     _connection.reset();
     
-    // unsubscribe from the nameservers
-    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this, _query.id());
+    // unsubscribe from the UDP sockets
+    // @todo implement this
+    // for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this, _query.id());
 
     // expose the handler
     return handler;
@@ -155,10 +156,9 @@ bool RemoteLookup::execute(double now)
         if (target != i++) continue;
 
         // send a datagram to this server
-        nameserver.datagram(_query);
-        
-        // in the first iteration we have not yet subscribed
-        if (_count < nscount) nameserver.subscribe(this, _query.id());
+        // @todo store result as subscription
+        // @todo unsubscribe from older sockets
+        nameserver.datagram(this, _query);
         
         // one more message has been sent
         _count += 1; _last = now;
