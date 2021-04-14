@@ -47,7 +47,7 @@ Query::Query(int op, const char *dname, int type, const Bits &bits, const unsign
     // check if parameters fit in the header
     if (type < 0 || type > 65535) throw std::runtime_error("invalid type passed to dns query");
     
-    // make sure buffer is completely filled with zero's (this also ensures the query ID is zero by default)
+    // make sure buffer is completely filled with zero's
     memset(_buffer, 0, sizeof(_buffer));
     
     // for simpler access to the header-properties, we use a local variable
@@ -66,8 +66,8 @@ Query::Query(int op, const char *dname, int type, const Bits &bits, const unsign
     // no error
     header->rcode = ns_r_noerror;
 
-    // use a random ID
-    header->id = ntohs(randomids.generate());
+    // use a random ID (because it is random anyway we do not call htons())
+    header->id = randomids.generate();
     
     // Perform opcode specific processing
     switch (op) {
