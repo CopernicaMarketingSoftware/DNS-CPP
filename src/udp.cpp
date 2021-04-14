@@ -31,9 +31,10 @@ namespace DNS {
 /**
  *  Constructor
  *  @param  loop        event loop
+ *  @param  handler     handler object
  *  @throws std::runtime_error
  */
-Udp::Udp(Loop *loop) : _loop(loop) {}
+Udp::Udp(Loop *loop, Handler *handler) : _handler(handler), _loop(loop) {}
 
 /**
  *  Destructor
@@ -148,9 +149,6 @@ void Udp::notify()
     // structure will hold the source address (we use an ipv6 struct because that is also big enough for ipv4)
     struct sockaddr_in6 from; socklen_t fromlen = sizeof(from);
 
-    // get current time
-    Now now;
-
     // we want to get as much messages at onces as possible, but not run forever
     // @todo use scatter-gather io to optimize this further
     for (size_t messages = 0; messages < 1024; ++messages)
@@ -166,8 +164,7 @@ void Udp::notify()
     }
     
     // reschedule the processing of messages
-    // @todo tell our parent
-    //reschedule(now);
+    _handler->onBuffered(this);
 }
 
 /**

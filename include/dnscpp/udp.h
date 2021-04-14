@@ -49,13 +49,34 @@ class Udp : private Monitor, private Watchable
 {
 public:
     /**
+     *  Interface to be implemented by the parent
+     */
+    class Handler
+    {
+    public:
+        /**
+         *  Method that is called when the udp socket has a buffer available
+         *  @param  udp     the reporting socket
+         */
+        virtual void onBuffered(Udp *udp) = 0;
+    };
+
+    /**
      *  Helper method to set an integer socket option
      *  @param  optname
      *  @param  optval
+     * 
+     *  @todo why is this public?
      */
     int setintopt(int optname, int32_t optval);
     
 private:
+    /**
+     *  Pointer to our parent object
+     *  @var Handler
+     */
+    Handler *_handler;
+
     /**
      *  event loop
      *  @var Loop*
@@ -122,9 +143,10 @@ public:
     /**
      *  Constructor
      *  @param  loop        event loop
+     *  @param  handler     parent object
      *  @throws std::runtime_error
      */
-    Udp(Loop *loop);
+    Udp(Loop *loop, Handler *handler);
     
     /**
      *  No copying

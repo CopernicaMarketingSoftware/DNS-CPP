@@ -42,7 +42,7 @@ class Loop;
 /**
  *  Class definition
  */
-class Core : private Timer, private Watchable
+class Core : private Timer, private Watchable, private Udp::Handler
 {
 protected:
     /**
@@ -211,13 +211,17 @@ protected:
     virtual ~Core();
 
     /**
-     *  Method that is called when a response is received
-     *  @param  time        receive-time
-     *  @param  address     the address of the nameserver from which it is received
-     *  @param  response    the received response
-     *  @param  size        size of the response
+     *  Method that is called when a UDP socket has a buffer that it wants to deliver
+     *  @param  udp         the socket with a buffer
      */
-//    virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) override;
+    void onBuffered(Udp *udp) override;
+
+    /**
+     *  Method that is called when a UDP socket has a buffer that it wants to deliver
+     *  @param  now         current time
+     */
+    void reschedule(double now);
+
 
 public:
     /**
@@ -280,12 +284,6 @@ public:
      *  @return bool            does it exists in /etc/hosts?
      */
     bool exists(const char *hostname) const { return _hosts.lookup(hostname) != nullptr; }
-
-    /**
-     *  Reschedule the timer
-     *  @param  now         current time
-     */
-    void reschedule(double now);
 
     /**
      *  Expose the nameservers
