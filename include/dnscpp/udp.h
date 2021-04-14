@@ -24,6 +24,7 @@
 #include "monitor.h"
 #include <list>
 #include <string>
+#include <set>
 
 /**
  *  Begin of namespace
@@ -73,11 +74,17 @@ private:
     void *_identifier = nullptr;
 
     /**
-     *  The object that is interested in handling responses
-     *  @var Processor*
+     *  All the buffered responses that came in 
+     *  @var std::list
      */
-    Processor *_processor;
-    
+    std::list<std::pair<Ip,std::basic_string<unsigned char>>> _responses;
+
+    /**
+     *  Set with the handlers (we originally used a multimap, but a std::set turned out to be more efficient)
+     *  @var set
+     */
+    std::set<std::tuple<uint16_t,Ip,Processor*>> _processors;
+
     /**
      *  Method that is called from user-space when the socket becomes readable.
      */
@@ -100,14 +107,23 @@ private:
      */
     bool open(int version, int buffersize);
 
+    /**
+     *  Remember that a certain response was received (so that we can process it later,
+     *  when we have time for that, we now want to buffer the incoming messages fast)
+     *  @param  addr        the nameserver from which this message came
+     *  @param  response    response buffer
+     *  @param  size        buffer size
+     */
+    void remember(const struct sockaddr *addr, const unsigned char *response, size_t size);
+
+
 public:
     /**
      *  Constructor
      *  @param  loop        event loop
-     *  @param  Processor    object that will receive all incoming responses
      *  @throws std::runtime_error
      */
-    Udp(Loop *loop, Processor *Processor);
+    Udp(Loop *loop);
     
     /**
      *  No copying
@@ -123,17 +139,33 @@ public:
     /**
      *  Send a query to the socket
      *  Watch out: you need to be consistent in calling this with either ipv4 or ipv6 addresses
-     *  @param  ip      IP address of the target nameserver
-     *  @param  query   the query to send
+     *  @param  processor   the object that is sending (and that will be notified of all future responses)
+     *  @param  ip          IP address of the target nameserver
+     *  @param  query       the query to send
      *  @param  buffersize
-     *  @return bool
+     *  @return Udp
+     * 
+     *  @todo   buffersize is strange
      */
-    bool send(const Ip &ip, const Query &query, int buffersize);
+    Udp *send(Processor *processor, const Ip &ip, const Query &query, int buffersize);
+
+    /**
+     *  Unsubscribe from the socket
+     *  @param  processor   the object that is sending (and that will be notified of all future responses)
+     *  @param  ip          IP address of the target nameserver
+     *  @param  query       the query that was sent
+     *  @return bool
+     *
+     *  @todo should be in special class
+     */
+    bool unsubscribe(Processor *processor, const Ip &ip, const Query &query);
 
     /**
      *  Close the socket (this is useful if you do not expect incoming data anymore)
      *  The socket will be automatically opened if you start sending to it
      *  @return bool
+     * 
+     *  @todo should / could be private?
      */
     bool close();
 

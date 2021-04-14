@@ -30,14 +30,9 @@ namespace DNS {
 /**
  *  Constructor
  *  @param  loop        event loop
- *  @param  processor   object that is notified about incoming messages
  *  @throws std::runtime_error
  */
-Udp::Udp(Loop *loop, Processor *processor) :
-    _loop(loop),
-    _processor(processor)
-{
-}
+Udp::Udp(Loop *loop) : _loop(loop) {}
 
 /**
  *  Destructor
@@ -166,21 +161,50 @@ void Udp::notify()
         if (bytes <= 0) break;
 
         // pass to the handler
-        _processor->onReceived(now, (struct sockaddr *)&from, buffer, bytes);
-    } 
+        // @todo lookup the right processor
+        //_processor->onReceived(now, (struct sockaddr *)&from, buffer, bytes);
+    }
+    
+    // @todo reschedule the processing of messages
+    //reschedule(now);
+}
+
+/**
+ *  Remember that a certain response was received (so that we can process it later,
+ *  when we have time for that, we now want to buffer the incoming messages fast)
+ *  @param  addr        the nameserver from which this message came
+ *  @param  response    response buffer
+ *  @param  size        buffer size
+ */
+void Udp::remember(const struct sockaddr *addr, const unsigned char *response, size_t size)
+{
+    // avoid exceptions (in case the ip cannot be parsed)
+    try
+    {
+        // remember the response for now
+        // @todo make this more efficient
+        _responses.emplace_back(std::make_pair(addr, std::basic_string<unsigned char>(response, size)));
+    }
+    catch (...)
+    {
+        // ip address could not be parsed
+    }
 }
 
 /**
  *  Send a query to a nameserver (+open the socket when needed)
- *  @param  ip      IP address of the nameserver
- *  @param  query   the query to send
+ *  @param  processor   the object that will be notified of responses
+ *  @param  ip          IP address of the nameserver
+ *  @param  query       the query to send
  *  @param  buffersize
- *  @return bool
+ *  @return Udp         the object from which the user can unsubscribe
+ * 
+ *  @todo   return a different type of object
  */
-bool Udp::send(const Ip &ip, const Query &query, int buffersize)
+Udp *Udp::send(Processor *processor, const Ip &ip, const Query &query, int buffersize)
 {
     // if the socket is not yet open we need to open it
-    if (_fd < 0 && !open(ip.version(), buffersize)) return false;
+    if (_fd < 0 && !open(ip.version(), buffersize)) return nullptr;
 
     // should we bind in the ipv4 or ipv6 fashion?
     if (ip.version() == 6)
@@ -198,7 +222,7 @@ bool Udp::send(const Ip &ip, const Query &query, int buffersize)
         memcpy(&info.sin6_addr, (const struct in6_addr *)ip, sizeof(struct in6_addr));
         
         // pass on to other method
-        return send((struct sockaddr *)&info, sizeof(struct sockaddr_in6), query);
+        if (!send((struct sockaddr *)&info, sizeof(struct sockaddr_in6), query)) return nullptr;
     }
     else
     {
@@ -213,8 +237,14 @@ bool Udp::send(const Ip &ip, const Query &query, int buffersize)
         memcpy(&info.sin_addr, (const struct in_addr *)ip, sizeof(struct in_addr));
 
         // pass on to other method
-        return send((const sockaddr *)&info, sizeof(struct sockaddr_in), query);
+        if (!send((const sockaddr *)&info, sizeof(struct sockaddr_in), query)) return nullptr;
     }
+    
+    // subscribe this processor, it will be notified when we receive a response for this query
+    _processors.emplace(query.id(), ip, processor);
+    
+    // expose the object with subscriptions
+    return this;
 }
 
 /**
