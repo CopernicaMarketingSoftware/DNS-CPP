@@ -97,8 +97,14 @@ Handler *RemoteLookup::cleanup()
     _connection.reset();
     
     // unsubscribe from the UDP sockets
-    // @todo implement this
-    // for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this, _query.id());
+    for (const auto &subscription : _subscriptions)
+    {
+        // this is a pair
+        subscription.first->remove(this, subscription.second, _query.id());
+    }
+    
+    // we have no subscriptions left
+    _subscriptions.clear();
 
     // expose the handler
     return handler;
@@ -156,9 +162,10 @@ bool RemoteLookup::execute(double now)
         if (target != i++) continue;
 
         // send a datagram to this server
-        // @todo store result as subscription
-        // @todo unsubscribe from older sockets
-        nameserver.datagram(this, _query);
+        auto *processors = nameserver.datagram(this, _query);
+        
+        // store this subscription, so that we can unsubscribe on success
+        _subscriptions.emplace(std::make_pair(processors, nameserver.ip()));
         
         // one more message has been sent
         _count += 1; _last = now;

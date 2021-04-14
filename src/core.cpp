@@ -305,9 +305,6 @@ void Core::expire()
         _ready.pop_front();
     }
 
-    // if nothing is inflight we can close the socket
-    if (_lookups.empty() && _ready.empty()) _udp.close();
-
     // if there are more slots for scheduled operations, we start them now
     if (_capacity > _lookups.size()) proceed(now, _capacity - _lookups.size());
     
