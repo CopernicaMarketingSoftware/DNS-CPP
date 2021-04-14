@@ -25,9 +25,10 @@ namespace DNS {
  *  Constructor
  *  @param  core    the core object with the settings and event loop
  *  @param  ip      nameserver IP
+ *  @param  udp     udp
  *  @throws std::runtime_error
  */
-Nameserver::Nameserver(Core *core, const Ip &ip) : _core(core), _ip(ip), _udp(core, this) {}
+Nameserver::Nameserver(Core *core, const Ip &ip, Udp *udp) : _core(core), _ip(ip), _udp(udp) {}
 
 /**
  *  Destructor
@@ -42,32 +43,18 @@ Nameserver::~Nameserver() {}
 bool Nameserver::datagram(const Query &query)
 {
     // send the message
-    return _udp.send(_ip, query);
+    return _udp->send(_ip, query, _core->buffersize());
 }
 
 /**
  *  Method that is called when a response is received
- *  @param  address     the address of the nameserver from which it is received
  *  @param  buffer      the received response
  *  @param  size        size of the response
  */
-void Nameserver::onReceived(time_t now, const sockaddr *address, const unsigned char *buffer, size_t size)
+void Nameserver::receive(const unsigned char *buffer, size_t size)
 {
-    // parse the address
-    // @todo also check port number!
-    Ip ip(address);
-    
-    // ignore messages not from ip
-    if (_ip != ip) return;
-
-    // if nobody is interested there is no point in handling the message
-    if (_handlers.empty()) return;
-
     // add to the responses
-    _responses.emplace_back(address, buffer, size);
-    
-    // let the core that we need to process this queue
-    _core->reschedule(now);
+    _responses.emplace_back(buffer, size);
 }
 
 /**
