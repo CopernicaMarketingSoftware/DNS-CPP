@@ -47,18 +47,20 @@ public:
      *  @param  loop        your event loop
      *  @param  defaults    should system settings be loaded
      *  @param  buffersize  size of the send & receive buffers of UDP sockets. Use 0 for system default
+     *  @param  socketcount number of UDP sockets to maintain
      */
-    Context(Loop *loop, bool defaults = true, int32_t buffersize = 0) : Core(loop, defaults, buffersize) {}
+    Context(Loop *loop, bool defaults = true, int32_t buffersize = 0, size_t socketcount = 1) : Core(loop, defaults, buffersize, socketcount) {}
 
     /**
      *  Constructor
      *  @param  loop        your event loop
      *  @param  settings    settings parsed from the /etc/resolv.conf file
      *  @param  buffersize  size of the send & receive buffers of UDP sockets. Use 0 for system default
+     *  @param  socketcount number of UDP sockets to maintain
      * 
      *  @deprecated
      */
-    Context(Loop *loop, const ResolvConf &settings, int32_t buffersize = 0) : Core(loop, settings, buffersize) {}
+    Context(Loop *loop, const ResolvConf &settings, int32_t buffersize = 0, size_t socketcount = 1) : Core(loop, settings, buffersize, socketcount) {}
     
     /**
      *  No copying

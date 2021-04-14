@@ -188,18 +188,22 @@ protected:
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
      *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
+     *  @param  buffersize  send & receive buffer size of each UDP socket
+     *  @param  socketcount number of UDP sockets to maintain
      *  @throws std::runtime_error
      */
-    Core(Loop *loop, bool defaults, int32_t buffersize);
+    Core(Loop *loop, bool defaults, int32_t buffersize, size_t socketcount);
 
     /**
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
      *  @param  settings    settings from the resolv.conf file
+     *  @param  buffersize  send & receive buffer size of each UDP socket
+     *  @param  socketcount number of UDP sockets to maintain
      * 
      *  @deprecated
      */
-    Core(Loop *loop, const ResolvConf &settings, int32_t buffersize);
+    Core(Loop *loop, const ResolvConf &settings, int32_t buffersize, size_t socketcount);
     
     /**
      *  Destructor
