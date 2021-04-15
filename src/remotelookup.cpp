@@ -80,6 +80,22 @@ double RemoteLookup::delay(double now) const
 }
 
 /**
+ *  Unsubscribe from all inbound UDP sockets
+ */
+void RemoteLookup::unsubscribe()
+{
+    // unsubscribe from the UDP sockets
+    for (const auto &subscription : _subscriptions)
+    {
+        // this is a pair
+        subscription.first->unsubscribe(this, subscription.second, _query.id());
+    }
+    
+    // we have no subscriptions left
+    _subscriptions.clear();
+}    
+
+/**
  *  Cleanup the object
  *  We want to cleanup the job _before_ it is destructed, to handle the situation
  *  where user-space already destructs _core while the job is reporting its result
@@ -96,15 +112,8 @@ Handler *RemoteLookup::cleanup()
     // forget the tcp connection
     _connection.reset();
     
-    // unsubscribe from the UDP sockets
-    for (const auto &subscription : _subscriptions)
-    {
-        // this is a pair
-        subscription.first->unsubscribe(this, subscription.second, _query.id());
-    }
-    
-    // we have no subscriptions left
-    _subscriptions.clear();
+    // unsubscribe from all inbound sockets
+    unsubscribe();
 
     // expose the handler
     return handler;
@@ -235,7 +244,8 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     // switch to tcp mode to retry the query to get a non-truncated response
     _connection.reset(new Connection(_core->loop(), ip, _query, response, this));
     
-    // @todo we can unsubscribe from all inbound udp sockets because we're no longer interested in those responses
+    // we can unsubscribe from all inbound udp sockets because we're no longer interested in those responses
+    unsubscribe();
     
     // remember the start-time of the connection to reset the timeout-period
     _last = Now();

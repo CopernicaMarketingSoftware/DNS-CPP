@@ -166,6 +166,11 @@ private:
      *  Cancel the operation
      */
     virtual void cancel() override;
+    
+    /**
+     *  Method to unsubscribe from all UDP inbound sockets
+     */
+    void unsubscribe();
 
 public:
     /**
