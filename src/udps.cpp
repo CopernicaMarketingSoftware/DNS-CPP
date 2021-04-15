@@ -89,13 +89,24 @@ size_t Udps::deliver(size_t maxcalls)
  */
 Inbound *Udps::send(const Ip &ip, const Query &query, int32_t buffersize)
 {
-    // choose a socket
-    Udp &socket = *_current;
-    ++_current;
-    if (_current == _sockets.end()) _current = _sockets.begin();
+    // If there is a socket with no subscribers: use that one + mark it as current
+    for (auto iter = _sockets.begin(); iter != _sockets.end(); ++iter)
+    {
+        // continue if this one has subs
+        if (iter->subscriberCount()) continue;
 
-    // send it via this socket
-    return socket.send(ip, query, buffersize);
+        // OK: send the query with this one
+        Inbound *inbound = iter->send(ip, query, buffersize);
+
+        // mark it as current
+        _current = iter;
+
+        // done
+        return inbound;
+    }
+
+    // If all the sockets already have subscribers: use the current
+    return _current->send(ip, query, buffersize);
 }
 
 /**

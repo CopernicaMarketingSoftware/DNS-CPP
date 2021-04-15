@@ -87,6 +87,12 @@ public:
      *  @param  id              the query ID in which it was interested
      */
     void unsubscribe(Processor *processor, const Ip &ip, uint16_t id);
+
+    /**
+     *  Get the number of subscribers to this inbound object.
+     *  @return count
+     */
+    size_t subscriberCount() const noexcept { return _processors.size(); }
 };
     
 /**

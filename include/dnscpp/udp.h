@@ -16,7 +16,7 @@ class Watcher;
 /**
  *  Class declaration
  */
-class Udp final : private Monitor, private Inbound
+class Udp final : public Inbound, private Monitor
 {
 public:
 
