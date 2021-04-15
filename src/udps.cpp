@@ -10,7 +10,7 @@
 /**
  *  Dependencies
  */
-#include "../include/dnscpp/udp.h"
+#include "../include/dnscpp/udps.h"
 #include "../include/dnscpp/loop.h"
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/query.h"
@@ -34,12 +34,12 @@ namespace DNS {
  *  Sockets are opened lazily
  *  @param parent
  */
-Udp::Socket::Socket(Udp *parent) : parent(parent) {}
+Udps::Socket::Socket(Udps *parent) : parent(parent) {}
 
 /**
  *  Closes the file descriptor
  */
-Udp::Socket::~Socket() { close(); }
+Udps::Socket::~Socket() { close(); }
 
 /**
  *  Constructor
@@ -48,7 +48,7 @@ Udp::Socket::~Socket() { close(); }
  *  @param  socketcount number of UDP sockets to keep open
  *  @throws std::runtime_error
  */
-Udp::Udp(Loop *loop, Handler *handler, size_t socketcount) :
+Udps::Udps(Loop *loop, Handler *handler, size_t socketcount) :
     _loop(loop),
     _handler(handler)
 {
@@ -68,7 +68,7 @@ Udp::Udp(Loop *loop, Handler *handler, size_t socketcount) :
  *  @param  optval
  *  @param  optlen
  */
-int Udp::Socket::setintopt(int optname, int32_t optval)
+int Udps::Socket::setintopt(int optname, int32_t optval)
 {
     // set the socket option
     return setsockopt(fd, SOL_SOCKET, optname, &optval, 4);
@@ -80,7 +80,7 @@ int Udp::Socket::setintopt(int optname, int32_t optval)
  *  @param  buffersize
  *  @return bool
  */
-bool Udp::Socket::open(int version, int32_t buffersize)
+bool Udps::Socket::open(int version, int32_t buffersize)
 {
     // if already open
     if (fd >= 0) return true;
@@ -110,7 +110,7 @@ bool Udp::Socket::open(int version, int32_t buffersize)
 /**
  *  Close the socket
  */
-void Udp::Socket::close()
+void Udps::Socket::close()
 {
     // if already closed
     if (!valid()) return;
@@ -129,7 +129,7 @@ void Udp::Socket::close()
  *  Method that is called from user-space when the socket becomes readable.
  *  @param  now
  */
-void Udp::Socket::notify()
+void Udps::Socket::notify()
 {
     // do nothing if there is no socket (how is that possible!?)
     if (!valid()) return;
@@ -176,7 +176,7 @@ void Udp::Socket::notify()
  *  @param[in]  maxcalls  The max number of callback handlers to invoke
  *  @return     number of callback handlers invoked
  */
-size_t Udp::Socket::deliver(Watcher *watcher, size_t maxcalls)
+size_t Udps::Socket::deliver(Watcher *watcher, size_t maxcalls)
 {
     // the number of callback handlers invoked
     size_t result = 0;
@@ -233,7 +233,7 @@ size_t Udp::Socket::deliver(Watcher *watcher, size_t maxcalls)
  *  @param   maxcalls  the max number of callback handlers to invoke
  *  @return  number of callback handlers invoked
  */
-size_t Udp::deliver(size_t maxcalls)
+size_t Udps::deliver(size_t maxcalls)
 {
     // result variable
     size_t result = 0;
@@ -255,7 +255,7 @@ size_t Udp::deliver(size_t maxcalls)
  *  @param  buffersize
  *  @return inbound
  */
-Inbound *Udp::send(const Ip &ip, const Query &query, int32_t buffersize)
+Inbound *Udps::send(const Ip &ip, const Query &query, int32_t buffersize)
 {
     // choose a socket
     Socket &socket = *_current;
@@ -273,7 +273,7 @@ Inbound *Udp::send(const Ip &ip, const Query &query, int32_t buffersize)
  *  @param  buffersize
  *  @return Inbound     the object that will receive the inbound response
  */
-Inbound *Udp::Socket::send(const Ip &ip, const Query &query, int32_t buffersize)
+Inbound *Udps::Socket::send(const Ip &ip, const Query &query, int32_t buffersize)
 {
     // if the socket is not yet open we need to open it
     if (!open(ip.version(), buffersize)) return nullptr;
@@ -323,7 +323,7 @@ Inbound *Udp::Socket::send(const Ip &ip, const Query &query, int32_t buffersize)
  *  @param  query       query to send
  *  @return bool
  */
-bool Udp::Socket::send(const struct sockaddr *address, size_t size, const Query &query)
+bool Udps::Socket::send(const struct sockaddr *address, size_t size, const Query &query)
 {
     // send over the socket
     // @todo include MSG_DONTWAIT + implement non-blocking????
@@ -334,7 +334,7 @@ bool Udp::Socket::send(const struct sockaddr *address, size_t size, const Query 
  *  Close all sockets
  *  @todo: this method should disappear
  */
-void Udp::close()
+void Udps::close()
 {
     // close all sockets
     std::for_each(_sockets.begin(), _sockets.end(), std::mem_fun_ref(&Socket::close));

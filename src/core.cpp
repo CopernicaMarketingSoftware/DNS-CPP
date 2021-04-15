@@ -169,7 +169,7 @@ void Core::reschedule(double now)
  *  Method that is called when a UDP socket has a buffer that it wants to deliver
  *  @param  udp         the socket with a buffer
  */
-void Core::onBuffered(Udp *udp)
+void Core::onBuffered(Udps *udp)
 {
     // if we already had an immediate timer we do not have to set it
     if (_timer != nullptr && _immediate) return;

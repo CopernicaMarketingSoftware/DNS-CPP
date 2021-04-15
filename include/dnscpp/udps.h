@@ -45,7 +45,7 @@ class Processor;
 /**
  *  Class definition
  */
-class Udp : private Watchable
+class Udps : private Watchable
 {
 public:
     /**
@@ -58,7 +58,7 @@ public:
          *  Method that is called when the udp socket has a buffer available
          *  @param  udp     the reporting socket
          */
-        virtual void onBuffered(Udp *udp) = 0;
+        virtual void onBuffered(Udps *udp) = 0;
     };
 
 private:
@@ -83,7 +83,7 @@ private:
          *  Pointer to a Udp object
          *  @var Udp*
          */
-        Udp *parent = nullptr;
+        Udps *parent = nullptr;
 
         /**
          *  User space identifier of this monitor
@@ -108,7 +108,7 @@ private:
          *  Sockets are opened lazily
          *  @param parent
          */
-        Socket(Udp *parent);
+        Socket(Udps *parent);
 
         /**
          *  Closes the file descriptor
@@ -205,18 +205,18 @@ public:
      *  @param  socketcount number of UDP sockets to keep open
      *  @throws std::runtime_error
      */
-    Udp(Loop *loop, Handler *handler, size_t socketcount = 1);
+    Udps(Loop *loop, Handler *handler, size_t socketcount = 1);
 
     /**
      *  No copying
      *  @param  that
      */
-    Udp(const Udp &that) = delete;
+    Udps(const Udps &that) = delete;
         
     /**
      *  Destructor
      */
-    virtual ~Udp() = default;
+    virtual ~Udps() = default;
 
     /**
      *  Send a query to the socket
