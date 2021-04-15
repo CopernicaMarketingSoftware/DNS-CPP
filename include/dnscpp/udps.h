@@ -23,7 +23,7 @@
 #include <sys/socket.h>
 #include "monitor.h"
 #include "watchable.h"
-#include "inbound.h"
+#include "udp.h"
 #include <list>
 #include <string>
 
@@ -45,7 +45,7 @@ class Processor;
 /**
  *  Class definition
  */
-class Udps : private Watchable
+class Udps : private Watchable, Udp::Handler
 {
 public:
     /**
@@ -75,127 +75,28 @@ private:
     Handler *_handler;
 
     /**
-     *  Private helper struct to represent a socket
-     */
-    struct Socket final : private Monitor, private Inbound
-    {
-        /**
-         *  Pointer to a Udp object
-         *  @var Udp*
-         */
-        Udps *parent = nullptr;
-
-        /**
-         *  User space identifier of this monitor
-         *  @var void *
-         */
-        void *identifier = nullptr;
-
-        /**
-         *  The filedescriptor of the socket
-         *  @var int
-         */
-        int fd = -1;
-
-        /**
-         *  All the buffered responses that came in
-         *  @var std::list
-         */
-        std::list<std::pair<Ip,std::basic_string<unsigned char>>> responses;
-
-        /**
-         *  Constructor does nothing but store a pointer to a Udp object.
-         *  Sockets are opened lazily
-         *  @param parent
-         */
-        Socket(Udps *parent);
-
-        /**
-         *  Closes the file descriptor
-         */
-        ~Socket();
-
-        /**
-         *  Check whether this socket has a valid file descriptor
-         *  @return bool
-         */
-        bool valid() const noexcept { return fd > 0; }
-
-        /**
-         *  Implements the Monitor interface
-         */
-        void notify() override;
-
-        /**
-         *  Send a query over this socket
-         *  @param  ip IP address to send to. The port is always assumed to be 53.
-         *  @param  query  The query
-         *  @param  buffersize
-         *  @return this, or nullptr if something went wrong
-         */
-        Inbound *send(const Ip &ip, const Query &query, int32_t buffersize);
-
-        /**
-         *  Send a query to a certain nameserver
-         *  @param  address     target address
-         *  @param  size        size of the address
-         *  @param  query       query to send
-         *  @return bool
-         */
-        bool send(const struct sockaddr *address, size_t size, const Query &query);
-
-        /**
-         *  Open the socket
-         *  @param  version     IPv4 or IPv6. You must ensure this stays consistent over multiple requests (@todo)
-         *  @param  buffersize  The buffersize
-         *  @return bool
-         */
-        bool open(int version, int32_t buffersize);
-
-        /**
-         *  Close the socket
-         *  @return bool
-         */
-        void close() override;
-
-        /**
-         *  Invoke callback handlers for buffered raw responses
-         *  @param   watcher   to keep track if the parent object remains valid
-         *  @param   maxcalls  the max number of callback handlers to invoke
-         *  @return  number of callback handlers invoked
-         */
-        size_t deliver(Watcher *watcher, size_t maxcalls);
-
-        /**
-         *  Helper method to set an integer socket option
-         *  @param  optname
-         *  @param  optval
-         */
-        int setintopt(int optname, int32_t optval);
-    };
-
-    /**
-     *  Socket needs access to the loop and the buffersize
-     */
-    friend class Socket;
-
-    /**
      *  Collection of all sockets
-     *  @var std::vector<Socket>
+     *  @var std::list<Udp>
      */
-    std::list<Socket> _sockets;
+    std::list<Udp> _sockets;
 
     /**
      *  The next socket to use for sending a new query
      *  @var size_t
      */
-    std::list<Socket>::iterator _current;
+    std::list<Udp>::iterator _current;
 
     /**
      *  Close all sockets
      *  @todo: this method should disappear
      */
     void close();
+
+    /**
+     *  Implement the Udp::Handler interface
+     */
+    Loop *loop() override final { return _loop; }
+    void onBuffered() override final { _handler->onBuffered(this); }
 
 public:
     /**
@@ -244,13 +145,13 @@ public:
     bool readable() const;
 
     /**
-     *  Does the socket have an inbound buffer (meaning: is there a backlog of unprocessed messages?)
+     *  Does one of the sockets have an inbound buffer (meaning: is there a backlog of unprocessed messages?)
      *  @return bool
      */
     bool buffered() const
     {
         // if there's a buffered response in one of the sockets then we consider ourselves buffered
-        for (const auto &sock : _sockets) if (!sock.responses.empty()) return true;
+        for (const auto &sock : _sockets) if (sock.buffered()) return true;
 
         // otherwise we're not buffered
         return false;
