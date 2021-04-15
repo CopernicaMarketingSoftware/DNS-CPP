@@ -45,7 +45,7 @@ class Processor;
 /**
  *  Class definition
  */
-class Udp : private Watchable, private Inbound
+class Udp : private Watchable
 {
 public:
     /**
@@ -77,7 +77,7 @@ private:
     /**
      *  Private helper struct to represent a socket
      */
-    struct Socket final : private Monitor
+    struct Socket final : private Monitor, private Inbound
     {
         /**
          *  Pointer to a Udp object
@@ -96,6 +96,12 @@ private:
          *  @var int
          */
         int fd = -1;
+
+        /**
+         *  All the buffered responses that came in
+         *  @var std::list
+         */
+        std::list<std::pair<Ip,std::basic_string<unsigned char>>> responses;
 
         /**
          *  Constructor does nothing but store a pointer to a Udp object.
@@ -125,9 +131,9 @@ private:
          *  @param  ip IP address to send to. The port is always assumed to be 53.
          *  @param  query  The query
          *  @param  buffersize
-         *  @return whether it got sent
+         *  @return this, or nullptr if something went wrong
          */
-        bool send(const Ip &ip, const Query &query, int32_t buffersize);
+        Inbound *send(const Ip &ip, const Query &query, int32_t buffersize);
 
         /**
          *  Send a query to a certain nameserver
@@ -150,7 +156,15 @@ private:
          *  Close the socket
          *  @return bool
          */
-        void close();
+        void close() override;
+
+        /**
+         *  Invoke callback handlers for buffered raw responses
+         *  @param   watcher   to keep track if the parent object remains valid
+         *  @param   maxcalls  the max number of callback handlers to invoke
+         *  @return  number of callback handlers invoked
+         */
+        size_t deliver(Watcher *watcher, size_t maxcalls);
 
         /**
          *  Helper method to set an integer socket option
@@ -169,25 +183,19 @@ private:
      *  Collection of all sockets
      *  @var std::vector<Socket>
      */
-    std::vector<Socket> _sockets;
-
-    /**
-     *  All the buffered responses that came in
-     *  @var std::list
-     */
-    std::list<std::pair<Ip,std::basic_string<unsigned char>>> _responses;
+    std::list<Socket> _sockets;
 
     /**
      *  The next socket to use for sending a new query
      *  @var size_t
      */
-    size_t _current = 0;
+    std::list<Socket>::iterator _current;
 
     /**
      *  Close all sockets
      *  @todo: this method should disappear
      */
-    void close() override;
+    void close();
 
 public:
     /**
@@ -239,7 +247,11 @@ public:
      *  Does the socket have an inbound buffer (meaning: is there a backlog of unprocessed messages?)
      *  @return bool
      */
-    bool buffered() const { return !_responses.empty(); }
+    bool buffered() const
+    {
+        for (const auto &sock : _sockets) if (!sock.responses.empty()) return true;
+        return false;
+    }
 };
     
 /**

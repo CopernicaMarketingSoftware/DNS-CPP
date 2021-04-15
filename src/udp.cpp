@@ -57,6 +57,9 @@ Udp::Udp(Loop *loop, Handler *handler, size_t socketcount) :
 
     // create sockets
     for (size_t i = 0; i != socketcount; ++i) _sockets.emplace_back(this);
+
+    // set the first socket to use
+    _current = _sockets.begin();
 }
 
 /**
@@ -155,7 +158,7 @@ void Udp::Socket::notify()
 
             // remember the response for now
             // @todo make this more efficient (without all the string-copying)
-            parent->_responses.emplace_back(reinterpret_cast<const sockaddr*>(&from), std::basic_string<unsigned char>(buffer, bytes));
+            responses.emplace_back(reinterpret_cast<const sockaddr*>(&from), std::basic_string<unsigned char>(buffer, bytes));
         }
         catch (...)
         {
@@ -168,34 +171,29 @@ void Udp::Socket::notify()
 }
 
 /**
- *  Deliver messages that have already been received and buffered to their appropriate processor
- *  @param  size_t      max number of calls to userspace
- *  @return size_t      number of processed answers
+ *  Invoke callback handlers for buffered raw responses
+ *  @param      watcher   The watcher to keep track if the parent object remains valid
+ *  @param[in]  maxcalls  The max number of callback handlers to invoke
+ *  @return     number of callback handlers invoked
  */
-size_t Udp::deliver(size_t maxcalls)
+size_t Udp::Socket::deliver(Watcher *watcher, size_t maxcalls)
 {
-    // if there is nothing to process
-    if (_responses.empty()) return 0;
-
-    // result variable
+    // the number of callback handlers invoked
     size_t result = 0;
 
-    // we are going to make a call to userspace, so we keep monitoring if `this` is not destructed
-    Watcher watcher(this);
-
     // look for a response
-    while (result < maxcalls && watcher.valid() && !_responses.empty())
+    while (result < maxcalls && watcher->valid() && !responses.empty())
     {
         // avoid exceptions (parsing the response could fail)
         try
         {
             // note that the _handler->onReceived() triggers a call to user-space that might destruct 'this',
-            // which also causes _responses to be destructed. To avoid silly crashes we copy the oldest message
+            // which also causes responses to be destructed. To avoid silly crashes we copy the oldest message
             // to the local stack in a one-item-big list
-            decltype(_responses) oneitem;
+            decltype(responses) oneitem;
 
-            // move the first item from the _responses to the one-item list
-            oneitem.splice(oneitem.begin(), _responses, _responses.begin(), std::next(_responses.begin()));
+            // move the first item from the responses to the one-item list
+            oneitem.splice(oneitem.begin(), responses, responses.begin(), std::next(responses.begin()));
 
             // get the first element
             const auto &front = oneitem.front();
@@ -225,7 +223,28 @@ size_t Udp::deliver(size_t maxcalls)
         }
     }
 
-    // something was processed
+    // done
+    return result;
+}
+
+/**
+ *  Invoke callback handlers for buffered raw responses
+ *  @param   watcher   to keep track if the parent object remains valid
+ *  @param   maxcalls  the max number of callback handlers to invoke
+ *  @return  number of callback handlers invoked
+ */
+size_t Udp::deliver(size_t maxcalls)
+{
+    // result variable
+    size_t result = 0;
+
+    // we are going to make a call to userspace, so we keep monitoring if `this` is not destructed
+    Watcher watcher(this);
+
+    // deliver from all sockets
+    for (auto &socket : _sockets) result += socket.deliver(&watcher, maxcalls);
+
+    // return the number of buffered responses that were processed
     return result;
 }
 
@@ -239,12 +258,12 @@ size_t Udp::deliver(size_t maxcalls)
 Inbound *Udp::send(const Ip &ip, const Query &query, int32_t buffersize)
 {
     // choose a socket
-    Socket &socket = _sockets[_current];
+    Socket &socket = *_current;
     ++_current;
-    if (_current == _sockets.size()) _current = 0;
+    if (_current == _sockets.end()) _current = _sockets.begin();
 
     // send it via this socket
-    return socket.send(ip, query, buffersize) ? this : nullptr;
+    return socket.send(ip, query, buffersize);
 }
 
 /**
@@ -254,10 +273,10 @@ Inbound *Udp::send(const Ip &ip, const Query &query, int32_t buffersize)
  *  @param  buffersize
  *  @return Inbound     the object that will receive the inbound response
  */
-bool Udp::Socket::send(const Ip &ip, const Query &query, int32_t buffersize)
+Inbound *Udp::Socket::send(const Ip &ip, const Query &query, int32_t buffersize)
 {
     // if the socket is not yet open we need to open it
-    if (!open(ip.version(), buffersize)) return false;
+    if (!open(ip.version(), buffersize)) return nullptr;
 
     // should we bind in the ipv4 or ipv6 fashion?
     if (ip.version() == 6)
@@ -275,7 +294,7 @@ bool Udp::Socket::send(const Ip &ip, const Query &query, int32_t buffersize)
         memcpy(&info.sin6_addr, (const struct in6_addr *)ip, sizeof(struct in6_addr));
         
         // pass on to other method
-        if (!send((struct sockaddr *)&info, sizeof(struct sockaddr_in6), query)) return false;
+        if (!send((struct sockaddr *)&info, sizeof(struct sockaddr_in6), query)) return nullptr;
     }
     else
     {
@@ -290,11 +309,11 @@ bool Udp::Socket::send(const Ip &ip, const Query &query, int32_t buffersize)
         memcpy(&info.sin_addr, (const struct in_addr *)ip, sizeof(struct in_addr));
 
         // pass on to other method
-        if (!send((const sockaddr *)&info, sizeof(struct sockaddr_in), query)) return false;
+        if (!send((const sockaddr *)&info, sizeof(struct sockaddr_in), query)) return nullptr;
     }
 
     // everything went OK!
-    return true;
+    return this;
 }
 
 /**
