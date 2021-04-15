@@ -117,7 +117,7 @@ public:
     /**
      *  Closes the file descriptor
      */
-    ~Udp();
+    virtual ~Udp();
 
     /**
      *  Send a query over this socket
