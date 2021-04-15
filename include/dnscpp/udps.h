@@ -81,12 +81,6 @@ private:
     std::list<Udp>::iterator _current;
 
     /**
-     *  Close all sockets
-     *  @todo: this method should disappear
-     */
-    void close();
-
-    /**
      *  This method is called when a UDP socket has an inbound buffer that requires processing
      *  @param  udp     the reporting object
      */
