@@ -1,85 +1,50 @@
-/**
- *  Udp.h
- *
- *  Internal class that implements a UDP socket over which messages
- *  can be sent to nameservers. You normally do not have to construct
- *  this class in user space, it is used internally by the Context class.
- *
- *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
- */
-
-/**
- *  Include guard
- */
 #pragma once
 
-/**
- *  Dependencies
- */
-#include <vector>
-#include <algorithm>
-#include <stdlib.h>
-#include <sys/socket.h>
 #include "monitor.h"
-#include "watchable.h"
 #include "inbound.h"
 #include <list>
-#include <string>
 
 /**
- *  Begin of namespace
+ *  Begin namespace
  */
 namespace DNS {
 
-/**
- *  Forward declarations
- */
-class Core;
-class Query;
 class Loop;
-class Ip;
-class Response;
-class Processor;
+class Query;
+class Watcher;
 
 /**
- *  Class definition
+ *  Class declaration
  */
-class Udp : private Monitor, private Watchable, private Inbound
+class Udp final : public Inbound, private Monitor
 {
 public:
+
     /**
-     *  Interface to be implemented by the parent
+     *  Interface to communicate with this object
      */
     class Handler
     {
     public:
         /**
-         *  Method that is called when the udp socket has a buffer available
-         *  @param  udp     the reporting socket
+         *  Provide this object access to a loop
+         *  @return loop
          */
-        virtual void onBuffered(Udp *udp) = 0;
+        virtual Loop *loop() = 0;
+
+        /**
+         *  Event that is invoked when this object has buffered responses available
+         */
+        virtual void onBuffered() = 0;
     };
 
 private:
     /**
-     *  Pointer to our parent object
-     *  @var Handler
+     *  Pointer to a handler object
+     *  @var Udp*
      */
-    Handler *_handler;
+    Handler *_handler = nullptr;
 
-    /**
-     *  event loop
-     *  @var Loop*
-     */
-    Loop *_loop;
-    
-    /**
-     *  The filedescriptor of the socket
-     *  @var int
-     */
-    int _fd = -1;
-    
     /**
      *  User space identifier of this monitor
      *  @var void *
@@ -87,7 +52,13 @@ private:
     void *_identifier = nullptr;
 
     /**
-     *  All the buffered responses that came in 
+     *  The filedescriptor of the socket
+     *  @var int
+     */
+    int _fd = -1;
+
+    /**
+     *  All the buffered responses that came in
      *  @var std::list
      */
     std::list<std::pair<Ip,std::basic_string<unsigned char>>> _responses;
@@ -100,10 +71,16 @@ private:
     int setintopt(int optname, int32_t optval);
 
     /**
-     *  Method that is called from user-space when the socket becomes readable.
+     *  Check whether this socket has a valid file descriptor
+     *  @return bool
      */
-    virtual void notify() override;
-    
+    bool valid() const noexcept { return _fd > 0; }
+
+    /**
+     *  Implements the Monitor interface
+     */
+    void notify() override;
+
     /**
      *  Send a query to a certain nameserver
      *  @param  address     target address
@@ -114,82 +91,57 @@ private:
     bool send(const struct sockaddr *address, size_t size, const Query &query);
 
     /**
-     *  Open the socket (this is optional, the socket is automatically opened when you start sending to it)
-     *  @param  version
-     *  @param  buffersize
+     *  Open the socket
+     *  @param  version     IPv4 or IPv6. You must ensure this stays consistent over multiple requests (@todo)
+     *  @param  buffersize  The buffersize
      *  @return bool
      */
-    bool open(int version, int buffersize);
-
-    /**
-     *  Close the socket (this is useful if you do not expect incoming data anymore)
-     *  The socket will be automatically opened if you start sending to it
-     */
-    virtual void close() override;
-
-    /**
-     *  Remember that a certain response was received (so that we can process it later,
-     *  when we have time for that, we now want to buffer the incoming messages fast)
-     *  @param  addr        the nameserver from which this message came
-     *  @param  response    response buffer
-     *  @param  size        buffer size
-     */
-    void schedule(const struct sockaddr *addr, const unsigned char *response, size_t size);
-
+    bool open(int version, int32_t buffersize);
 
 public:
     /**
-     *  Constructor
-     *  @param  loop        event loop
-     *  @param  handler     parent object
-     *  @throws std::runtime_error
+     *  Constructor does nothing but store a pointer to a handler object.
+     *  Sockets are opened lazily
+     *  @param handler
      */
-    Udp(Loop *loop, Handler *handler);
-    
-    /**
-     *  No copying
-     *  @param  that
-     */
-    Udp(const Udp &that) = delete;
-        
-    /**
-     *  Destructor
-     */
-    virtual ~Udp();
+    Udp(Handler *handler);
 
     /**
-     *  Send a query to the socket
-     *  Watch out: you need to be consistent in calling this with either ipv4 or ipv6 addresses
-     *  @param  ip          IP address of the target nameserver
-     *  @param  query       the query to send
-     *  @param  buffersize  strange parameter
-     *  @return Inbound     the inbound object over which the message is sent
-     * 
-     *  @todo   buffersize is strange
+     *  Closes the file descriptor
      */
-    Inbound *send(const Ip &ip, const Query &query, int buffersize);
+    ~Udp();
 
     /**
-     *  Deliver messages that have already been received and buffered to their appropriate processor
-     *  @param  size_t      max number of calls to userspace
-     *  @return size_t      number of processed answers
+     *  Send a query over this socket
+     *  @param  ip IP address to send to. The port is always assumed to be 53.
+     *  @param  query  The query
+     *  @param  buffersize
+     *  @return this, or nullptr if something went wrong
      */
-    size_t deliver(size_t maxcalls);
+    Inbound *send(const Ip &ip, const Query &query, int32_t buffersize);
 
     /**
-     *  Is the socket now readable?
+     *  Close the socket
      *  @return bool
      */
-    bool readable() const;
-    
+    void close() override;
+
     /**
-     *  Does the socket have an inbound buffer (meaning: is there a backlog of unprocessed messages?)
+     *  Invoke callback handlers for buffered raw responses
+     *  @param   watcher   to keep track if the parent object remains valid
+     *  @param   maxcalls  the max number of callback handlers to invoke
+     *  @return  number of callback handlers invoked
+     */
+    size_t deliver(Watcher *watcher, size_t maxcalls);
+
+    /**
+     *  Return true if there are buffered raw responses
      *  @return bool
      */
-    bool buffered() const { return !_responses.empty(); }
+    bool buffered() const noexcept { return !_responses.empty(); }
 };
-    
+
 /**
- *  End of namespace
+ *  End namespace
  */
 }

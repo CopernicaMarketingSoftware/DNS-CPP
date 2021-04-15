@@ -18,6 +18,7 @@
 /**
  *  Dependencies
  */
+#include "udps.h"
 #include "resolvconf.h"
 #include "hosts.h"
 #include "bits.h"
@@ -25,8 +26,6 @@
 #include "lookup.h"
 #include "processor.h"
 #include "timer.h"
-#include "watchable.h"
-#include "../include/dnscpp/udp.h"
 #include <list>
 #include <deque>
 #include <memory>
@@ -44,7 +43,7 @@ class Loop;
 /**
  *  Class definition
  */
-class Core : private Timer, private Watchable, private Udp::Handler
+class Core : private Timer, private Watchable, private Udps::Handler
 {
 protected:
     /**
@@ -57,8 +56,8 @@ protected:
      *  UDP socket (we need two for ipv4 and ipv6 traffic)
      *  @var Udp
      */
-    Udp _ipv4;
-    Udp _ipv6;
+    Udps _ipv4;
+    Udps _ipv6;
 
     /**
      *  The IP addresses of the servers that can be accessed
@@ -107,13 +106,6 @@ protected:
      *  @var bool
      */
     double _immediate = false;
-    
-    /**
-     *  Size of the send and receive buffer. If set to zero, default
-     *  will be kept. This is limited by the system maximum (wmem_max and rmem_max)
-     *  @var size_t
-     */
-    int32_t _buffersize = 0;
 
     /**
      *  Max time that we wait for a response
@@ -150,7 +142,14 @@ protected:
      *  @var size_t
      */
     size_t _capacity = 100;
-    
+
+    /**
+     *  Size of the send and receive buffer. If set to zero, default
+     *  will be kept. This is limited by the system maximum (wmem_max and rmem_max)
+     *  @var int32_t
+     */
+    int32_t _buffersize = 0;
+
     /**
      *  The max number of calls to be made to userspace in one iteration
      *  @var size_t
@@ -195,18 +194,20 @@ protected:
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
      *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
+     *  @param  socketcount number of UDP sockets to maintain
      *  @throws std::runtime_error
      */
-    Core(Loop *loop, bool defaults);
+    Core(Loop *loop, bool defaults, size_t socketcount);
 
     /**
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
      *  @param  settings    settings from the resolv.conf file
+     *  @param  socketcount number of UDP sockets to maintain
      * 
      *  @deprecated
      */
-    Core(Loop *loop, const ResolvConf &settings);
+    Core(Loop *loop, const ResolvConf &settings, size_t socketcount);
     
     /**
      *  Destructor
@@ -217,7 +218,7 @@ protected:
      *  Method that is called when a UDP socket has a buffer that it wants to deliver
      *  @param  udp         the socket with a buffer
      */
-    void onBuffered(Udp *udp) override;
+    void onBuffered(Udps *udp) override;
 
     /**
      *  Method that is called when a UDP socket has a buffer that it wants to deliver
@@ -238,12 +239,6 @@ public:
      *  @return Loop
      */
     Loop *loop() { return _loop; }
-
-    /**
-     *  The send and receive buffer size 
-     *  @return int32_t
-     */
-    int32_t buffersize() const { return _buffersize; }
     
     /**
      *  The period between sending the datagram again

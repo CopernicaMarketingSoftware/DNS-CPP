@@ -46,17 +46,20 @@ public:
      *  you can run any queries.
      *  @param  loop        your event loop
      *  @param  defaults    should system settings be loaded
+     *  @param  socketcount number of UDP sockets to maintain
      */
-    Context(Loop *loop, bool defaults = true) : Core(loop, defaults) {}
+    Context(Loop *loop, bool defaults = true, size_t socketcount = 1) : Core(loop, defaults, socketcount) {}
 
     /**
      *  Constructor
      *  @param  loop        your event loop
      *  @param  settings    settings parsed from the /etc/resolv.conf file
+     *  @param  buffersize  size of the send & receive buffers of UDP sockets. Use 0 for system default
+     *  @param  socketcount number of UDP sockets to maintain
      * 
      *  @deprecated
      */
-    Context(Loop *loop, const ResolvConf &settings) : Core(loop, settings) {}
+    Context(Loop *loop, const ResolvConf &settings, size_t socketcount = 1) : Core(loop, settings, socketcount) {}
     
     /**
      *  No copying
@@ -87,17 +90,6 @@ public:
         // add to the member in the base class
         _nameservers.emplace_back(ip);
     }
-
-    /**
-     *  The send and receive buffer size 
-     *  @param  size      the requested buffer size in bytes, or default with 0. 
-     *                    only gets applied to new sockets.
-     */
-    void buffersize(int32_t size) 
-    {
-        // store the property
-        _buffersize = size;
-    }
     
     /**
      *  Set max time to wait for a response
@@ -127,6 +119,16 @@ public:
     {
         // update member
         _attempts = attempts;
+    }
+
+    /**
+     *  Set the send & receive buffer size of each individual UDP socket
+     *  @param value  the value to set
+     */
+    void buffersize(int32_t value)
+    {
+        // update member
+        _buffersize = value;
     }
 
     /**
@@ -202,7 +204,6 @@ public:
     /**
      *  Expose some getters from core
      */
-    using Core::buffersize;
     using Core::bits;
     using Core::rotate;
     using Core::expire;

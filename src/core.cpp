@@ -24,9 +24,14 @@ namespace DNS {
  *  Constructor
  *  @param  loop        your event loop
  *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
+ *  @param  buffersize  send & receive buffer size of each UDP socket
+ *  @param  socketcount number of UDP sockets to maintain
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults) : _loop(loop), _ipv4(loop, this), _ipv6(loop, this)
+Core::Core(Loop *loop, bool defaults, size_t socketcount) :
+    _loop(loop),
+    _ipv4(loop, this, socketcount),
+    _ipv6(loop, this, socketcount)
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -51,8 +56,13 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop), _ipv4(loop, this), _ipv6(lo
  *  Protected constructor, only the derived class may construct it
  *  @param  loop        your event loop
  *  @param  settings    settings from the resolv.conf file
+ *  @param  buffersize  send & receive buffer size of each UDP socket
+ *  @param  socketcount number of UDP sockets to maintain
  */
-Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _ipv4(loop, this), _ipv6(loop, this)
+Core::Core(Loop *loop, const ResolvConf &settings, size_t socketcount) :
+    _loop(loop),
+    _ipv4(loop, this, socketcount),
+    _ipv6(loop, this, socketcount)
 {
     // construct the nameservers
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
@@ -159,14 +169,14 @@ void Core::reschedule(double now)
  *  Method that is called when a UDP socket has a buffer that it wants to deliver
  *  @param  udp         the socket with a buffer
  */
-void Core::onBuffered(Udp *udp)
+void Core::onBuffered(Udps *udp)
 {
     // if we already had an immediate timer we do not have to set it
     if (_timer != nullptr && _immediate) return;
-    
+
     // if the timer is already running we have to reset it
     if (_timer != nullptr) _loop->cancel(_timer, this);
-    
+
     // check when the next operation should run
     _timer = _loop->timer(0.0, this);
     _immediate = true;
@@ -260,14 +270,14 @@ void Core::expire()
         // is it meaningful to proceed
         if (calls > _maxcalls) break;        
     }*/
-    
+
     // first we check the udp sockets to see if they have data availeble
     // @todo we repeat code for ipv4 and ipv6, this can probably be done in a more elegant way
     size_t count = _ipv4.deliver(_maxcalls - calls);
 
     // something was processed, is the side-effect that userspace destucted `this`?
     if (count > 0 && !watcher.valid()) return;
-    
+
     // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
     calls += count;
 
@@ -276,7 +286,7 @@ void Core::expire()
 
     // something was processed, is the side-effect that userspace destucted `this`?
     if (count > 0 && !watcher.valid()) return;
-    
+
     // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
     calls += count;
 
