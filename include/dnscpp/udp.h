@@ -171,20 +171,11 @@ private:
      */
     std::vector<Socket> _sockets;
 
-    struct BufferedResponse final
-    {
-        Ip ip;
-        std::basic_string<unsigned char> buffer;
-        Socket *socket;
-
-        BufferedResponse(const sockaddr *from, const unsigned char *buf, int size, Socket *socket) : ip(from), buffer(buf, size), socket(socket) {}
-    };
-
     /**
      *  All the buffered responses that came in
      *  @var std::list
      */
-    std::list<BufferedResponse> _responses;
+    std::list<std::pair<Ip,std::basic_string<unsigned char>>> _responses;
 
     /**
      *  The next socket to use for sending a new query

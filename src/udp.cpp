@@ -155,7 +155,7 @@ void Udp::Socket::notify()
 
             // remember the response for now
             // @todo make this more efficient (without all the string-copying)
-            parent->_responses.emplace_back(reinterpret_cast<const sockaddr*>(&from), buffer, bytes, this);
+            parent->_responses.emplace_back(reinterpret_cast<const sockaddr*>(&from), std::basic_string<unsigned char>(buffer, bytes));
         }
         catch (...)
         {
@@ -201,19 +201,19 @@ size_t Udp::deliver(size_t maxcalls)
             const auto &front = oneitem.front();
 
             // parse the response
-            Response response(front.buffer.data(), front.buffer.size());
+            Response response(front.second.data(), front.second.size());
 
             // filter on the response, the beginning is simply the handler at nullptr
-            auto begin = _processors.lower_bound(std::make_tuple(response.id(), front.ip, nullptr));
+            auto begin = _processors.lower_bound(std::make_tuple(response.id(), front.first, nullptr));
 
             // iterate over those elements, notifying each handler
             for (auto iter = begin; iter != _processors.end(); ++iter)
             {
                 // if this element is not applicable any more, we're going to leap out (we're done)
-                if (std::get<0>(*iter) != response.id() || std::get<1>(*iter) != front.ip) break;
+                if (std::get<0>(*iter) != response.id() || std::get<1>(*iter) != front.first) break;
 
                 // call the onreceived for the element
-                if (std::get<2>(*iter)->onReceived(front.ip, response)) result += 1;
+                if (std::get<2>(*iter)->onReceived(front.first, response)) result += 1;
 
                 // the message was processed, we no longer need other handlers
                 break;
