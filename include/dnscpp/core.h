@@ -144,13 +144,6 @@ protected:
     size_t _capacity = 100;
 
     /**
-     *  Size of the send and receive buffer. If set to zero, default
-     *  will be kept. This is limited by the system maximum (wmem_max and rmem_max)
-     *  @var int32_t
-     */
-    int32_t _buffersize = 0;
-
-    /**
      *  The max number of calls to be made to userspace in one iteration
      *  @var size_t
      */

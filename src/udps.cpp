@@ -97,10 +97,9 @@ size_t Udps::deliver(size_t maxcalls)
  *  Send a query to a nameserver (+open the socket when needed)
  *  @param  ip      IP address of the nameserver
  *  @param  query   the query to send
- *  @param  buffersize
  *  @return inbound
  */
-Inbound *Udps::send(const Ip &ip, const Query &query, int32_t buffersize)
+Inbound *Udps::send(const Ip &ip, const Query &query)
 {
     // If there is a socket with no subscribers: use that one + mark it as current
     for (auto iter = _sockets.begin(); iter != _sockets.end(); ++iter)
@@ -109,7 +108,7 @@ Inbound *Udps::send(const Ip &ip, const Query &query, int32_t buffersize)
         if (iter->subscriberCount()) continue;
 
         // OK: send the query with this one
-        Inbound *inbound = iter->send(ip, query, buffersize);
+        Inbound *inbound = iter->send(ip, query);
 
         // mark it as current
         _current = iter;
@@ -119,7 +118,7 @@ Inbound *Udps::send(const Ip &ip, const Query &query, int32_t buffersize)
     }
 
     // If all the sockets already have subscribers: use the current
-    return _current->send(ip, query, buffersize);
+    return _current->send(ip, query);
 }
 
 /**

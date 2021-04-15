@@ -139,11 +139,7 @@ public:
      *  Set the send & receive buffer size of each individual UDP socket
      *  @param value  the value to set
      */
-    void buffersize(int32_t value)
-    {
-        // update member
-        _buffersize = value;
-    }
+    void buffersize(int32_t value);
 
     /**
      *  Set the capacity: number of operations to run at the same time

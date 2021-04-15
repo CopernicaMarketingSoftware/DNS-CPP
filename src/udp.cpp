@@ -40,10 +40,9 @@ int Udp::setintopt(int optname, int32_t optval)
 /**
  *  Open the socket
  *  @param  version
- *  @param  buffersize
  *  @return bool
  */
-bool Udp::open(int version, int32_t buffersize)
+bool Udp::open(int version)
 {
     // if already open
     if (_fd >= 0) return true;
@@ -55,16 +54,15 @@ bool Udp::open(int version, int32_t buffersize)
     // check for success
     if (_fd < 0) return false;
 
-    // if there is a buffer size to set, do so
-    if (buffersize > 0)
-    {
-        // set the send and receive buffer to the requested buffer size
-        setintopt(SO_SNDBUF, buffersize);
-        setintopt(SO_RCVBUF, buffersize);
-    }
-
     // we want to be notified when the socket receives data
     _identifier = _loop->add(_fd, 1, this);
+
+    // if there is a buffer size to set, do so
+    if (_buffersize == 0) return true;
+
+    // set the send and receive buffer to the requested buffer size
+    setintopt(SO_SNDBUF, _buffersize);
+    setintopt(SO_RCVBUF, _buffersize);
 
     // done
     return true;
@@ -96,13 +94,12 @@ void Udp::close()
  *  Send a query over this socket
  *  @param  ip          IP address of the nameserver
  *  @param  query       the query to send
- *  @param  buffersize
  *  @return Inbound     the object that will receive the inbound response
  */
-Inbound *Udp::send(const Ip &ip, const Query &query, int32_t buffersize)
+Inbound *Udp::send(const Ip &ip, const Query &query)
 {
     // if the socket is not yet open we need to open it
-    if (!open(ip.version(), buffersize)) return nullptr;
+    if (!open(ip.version())) return nullptr;
 
     // should we bind in the ipv4 or ipv6 fashion?
     if (ip.version() == 6)
