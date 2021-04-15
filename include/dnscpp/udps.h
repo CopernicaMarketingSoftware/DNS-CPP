@@ -63,12 +63,6 @@ public:
 
 private:
     /**
-     *  event loop
-     *  @var Loop*
-     */
-    Loop *_loop;
-
-    /**
      *  The object that is interested in handling responses
      *  @var Handler*
      */
@@ -93,10 +87,21 @@ private:
     void close();
 
     /**
-     *  Implement the Udp::Handler interface
+     *  This method is called when a UDP socket has an inbound buffer that requires processing
+     *  @param  udp     the reporting object
      */
-    Loop *loop() override final { return _loop; }
-    void onBuffered() override final { _handler->onBuffered(this); }
+    virtual void onBuffered(Udp *udp) override 
+    { 
+        // pass on to the handler
+        _handler->onBuffered(this); 
+    }
+    
+    /**
+     *  Method that is called when an inbound socket is closed
+     *  @param  udp     the reporting object
+     */
+    virtual void onClosed(Udp *udp) override;
+    
 
 public:
     /**

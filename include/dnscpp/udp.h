@@ -16,7 +16,7 @@ class Watcher;
 /**
  *  Class declaration
  */
-class Udp final : public Inbound, private Monitor
+class Udp : public Inbound, private Monitor
 {
 public:
 
@@ -27,18 +27,25 @@ public:
     {
     public:
         /**
-         *  Provide this object access to a loop
-         *  @return loop
+         *  Method that is invoked when this object has buffered responses available
+         *  @param  udp     the reporting object
          */
-        virtual Loop *loop() = 0;
-
+        virtual void onBuffered(Udp *udp) = 0;
+        
         /**
-         *  Event that is invoked when this object has buffered responses available
+         *  Method that is called when this socket has closed (and is no longer in use
+         *  @param  udp     the reporting object
          */
-        virtual void onBuffered() = 0;
+        virtual void onClosed(Udp *udp) = 0;
     };
 
 private:
+    /**
+     *  The main event loop
+     *  @var Loop*
+     */
+    Loop *_loop;
+
     /**
      *  Pointer to a handler object
      *  @var Udp*
@@ -102,9 +109,10 @@ public:
     /**
      *  Constructor does nothing but store a pointer to a handler object.
      *  Sockets are opened lazily
-     *  @param handler
+     *  @param  loop        the event loop
+     *  @param  handler     parent object that is notified in case of relevant events
      */
-    Udp(Handler *handler);
+    Udp(Loop *loop, Handler *handler);
 
     /**
      *  Closes the file descriptor
