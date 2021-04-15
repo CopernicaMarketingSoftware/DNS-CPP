@@ -245,30 +245,6 @@ void Core::expire()
     // number of calls made
     size_t calls = 0;
     
-    // first we are going to check the nameservers if they have some data to process
-    /* @todo we keep this code here in case we are going to implement multiple udp sockets, so that we can use it as inspiration
-    for (auto &nameserver : _nameservers)
-    {
-        // because processing a response may lead to user-space destructing everything,
-        // we leap out if there was indeed something processed
-        size_t count = nameserver.process(_maxcalls - calls);
-        
-        // if nothing was processed we move one
-        if (count == 0) continue;
-        
-        // something was processed, is the side-effect that userspace destucted `this`?
-        if (!watcher.valid()) return;
-
-        // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
-        calls += count;
-
-        // start other operations now that some earlier operations are completed
-        proceed(now, count);
-        
-        // is it meaningful to proceed
-        if (calls > _maxcalls) break;        
-    }*/
-
     // first we check the udp sockets to see if they have data availeble
     // @todo we repeat code for ipv4 and ipv6, this can probably be done in a more elegant way
     size_t count = _ipv4.deliver(_maxcalls - calls);
