@@ -16,13 +16,15 @@
  *  Dependencies
  */
 #include <memory>
-#include "../include/dnscpp/nameserver.h"
+#include <set>
 #include "../include/dnscpp/timer.h"
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/lookup.h"
 #include "../include/dnscpp/request.h"
 #include "../include/dnscpp/bits.h"
 #include "../include/dnscpp/now.h"
+#include "../include/dnscpp/ip.h"
+#include "../include/dnscpp/processor.h"
 #include "connection.h"
 
 /**
@@ -35,11 +37,12 @@ namespace DNS {
  */
 class Core;
 class Handler;
+class Inbound;
 
 /**
  *  Class definition
  */
-class RemoteLookup : public Lookup, private Nameserver::Handler, private Connection::Handler
+class RemoteLookup : public Lookup, private Connection::Handler, private Processor
 {
 private:
     /**
@@ -71,13 +74,21 @@ private:
      *  @var Connection
      */
     std::unique_ptr<Connection> _connection;
+    
+    /**
+     *  Objects to which we're subscribed for inbound messages
+     *  @var std::set
+     */
+    std::set<std::pair<Inbound*,Ip>> _subscriptions;
+
 
     /**
      *  Method that is called when a dgram response is received
-     *  @param  nameserver  the reporting nameserver
+     *  @param  ip          the ip from where the response came (nameserver ip)
      *  @param  response    the received response
+     *  @return bool        was the response processed?
      */
-    virtual bool onReceived(Nameserver *nameserver, const Response &response) override;
+    virtual bool onReceived(const Ip &ip, const Response &response) override;
 
     /**
      *  Called when the response has been received over tcp

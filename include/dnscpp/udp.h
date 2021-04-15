@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include "monitor.h"
+#include "watchable.h"
+#include "inbound.h"
 #include <list>
 #include <string>
 
@@ -38,29 +40,27 @@ class Query;
 class Loop;
 class Ip;
 class Response;
+class Processor;
 
 /**
  *  Class definition
  */
-class Udp
+class Udp : private Watchable, private Inbound
 {
 public:
     /**
-     *  Interface that can be implemented by listeners
+     *  Interface to be implemented by the parent
      */
     class Handler
     {
     public:
         /**
-         *  Method that is called when a response is received
-         *  @param  time        receive-time
-         *  @param  address     the address of the nameserver from which it is received
-         *  @param  response    the received response
-         *  @param  size        size of the response
+         *  Method that is called when the udp socket has a buffer available
+         *  @param  udp     the reporting socket
          */
-        virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) = 0;
+        virtual void onBuffered(Udp *udp) = 0;
     };
-    
+
 private:
     /**
      *  event loop
@@ -124,9 +124,10 @@ private:
          *  Send a query over this socket
          *  @param  ip IP address to send to. The port is always assumed to be 53.
          *  @param  query  The query
-         *  @return bool
+         *  @param  buffersize
+         *  @return whether it got sent
          */
-        bool send(const Ip &ip, const Query &query);
+        bool send(const Ip &ip, const Query &query, int32_t buffersize);
 
         /**
          *  Send a query to a certain nameserver
@@ -143,13 +144,13 @@ private:
          *  @param  buffersize  The buffersize
          *  @return bool
          */
-        bool open(int version, int buffersize);
+        bool open(int version, int32_t buffersize);
 
         /**
          *  Close the socket
          *  @return bool
          */
-        bool close();
+        void close();
 
         /**
          *  Helper method to set an integer socket option
@@ -170,6 +171,21 @@ private:
      */
     std::vector<Socket> _sockets;
 
+    struct BufferedResponse final
+    {
+        Ip ip;
+        std::basic_string<unsigned char> buffer;
+        Socket *socket;
+
+        BufferedResponse(const sockaddr *from, const unsigned char *buf, int size, Socket *socket) : ip(from), buffer(buf, size), socket(socket) {}
+    };
+
+    /**
+     *  All the buffered responses that came in
+     *  @var std::list
+     */
+    std::list<BufferedResponse> _responses;
+
     /**
      *  The next socket to use for sending a new query
      *  @var size_t
@@ -177,11 +193,10 @@ private:
     size_t _current = 0;
 
     /**
-     *  Size of the send and receive buffer. If set to zero, default
-     *  will be kept. This is limited by the system maximum (wmem_max and rmem_max)
-     *  @var size_t
+     *  Close all sockets
+     *  @todo: this method should disappear
      */
-    int32_t _buffersize = 0;
+    void close() override;
 
 public:
     /**
@@ -189,10 +204,9 @@ public:
      *  @param  loop        event loop
      *  @param  handler     object that will receive all incoming responses
      *  @param  socketcount number of UDP sockets to keep open
-     *  @param  buffersize  send & receive buffer size of each UDP socket
      *  @throws std::runtime_error
      */
-    Udp(Loop *loop, Handler *handler, size_t socketcount = 1, int buffersize = 0);
+    Udp(Loop *loop, Handler *handler, size_t socketcount = 1);
 
     /**
      *  No copying
@@ -208,17 +222,33 @@ public:
     /**
      *  Send a query to the socket
      *  Watch out: you need to be consistent in calling this with either ipv4 or ipv6 addresses
-     *  @param  ip      IP address of the target nameserver
-     *  @param  query   the query to send
-     *  @return bool
+     *  @param  ip          IP address of the target nameserver
+     *  @param  query       the query to send
+     *  @param  buffersize  strange parameter
+     *  @return Inbound     the inbound object over which the message is sent
+     *
+     *  @todo   buffersize is strange
      */
-    bool send(const Ip &ip, const Query &query);
+    Inbound *send(const Ip &ip, const Query &query, int32_t buffersize);
 
     /**
-     *  Close all sockets
-     *  @todo: this method should disappear
+     *  Deliver messages that have already been received and buffered to their appropriate processor
+     *  @param  size_t      max number of calls to userspace
+     *  @return size_t      number of processed answers
      */
-    void close();
+    size_t deliver(size_t maxcalls);
+
+    /**
+     *  Is the socket now readable?
+     *  @return bool
+     */
+    bool readable() const;
+
+    /**
+     *  Does the socket have an inbound buffer (meaning: is there a backlog of unprocessed messages?)
+     *  @return bool
+     */
+    bool buffered() const { return !_responses.empty(); }
 };
     
 /**

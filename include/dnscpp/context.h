@@ -46,10 +46,9 @@ public:
      *  you can run any queries.
      *  @param  loop        your event loop
      *  @param  defaults    should system settings be loaded
-     *  @param  buffersize  size of the send & receive buffers of UDP sockets. Use 0 for system default
      *  @param  socketcount number of UDP sockets to maintain
      */
-    Context(Loop *loop, bool defaults = true, int32_t buffersize = 0, size_t socketcount = 1) : Core(loop, defaults, buffersize, socketcount) {}
+    Context(Loop *loop, bool defaults = true, size_t socketcount = 1) : Core(loop, defaults, socketcount) {}
 
     /**
      *  Constructor
@@ -60,7 +59,7 @@ public:
      * 
      *  @deprecated
      */
-    Context(Loop *loop, const ResolvConf &settings, int32_t buffersize = 0, size_t socketcount = 1) : Core(loop, settings, buffersize, socketcount) {}
+    Context(Loop *loop, const ResolvConf &settings, size_t socketcount = 1) : Core(loop, settings, socketcount) {}
     
     /**
      *  No copying
@@ -89,7 +88,7 @@ public:
     void nameserver(const Ip &ip)
     {
         // add to the member in the base class
-        _nameservers.emplace_back(static_cast<Core*>(this), ip, &_udp);
+        _nameservers.emplace_back(ip);
     }
     
     /**
@@ -120,6 +119,16 @@ public:
     {
         // update member
         _attempts = attempts;
+    }
+
+    /**
+     *  Set the send & receive buffer size of each individual UDP socket
+     *  @param value  the value to set
+     */
+    void buffersize(int32_t value)
+    {
+        // update member
+        _buffersize = value;
     }
 
     /**

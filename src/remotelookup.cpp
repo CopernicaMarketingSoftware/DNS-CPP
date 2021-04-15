@@ -96,8 +96,15 @@ Handler *RemoteLookup::cleanup()
     // forget the tcp connection
     _connection.reset();
     
-    // unsubscribe from the nameservers
-    for (auto &nameserver : _core->nameservers()) nameserver.unsubscribe(this, _query.id());
+    // unsubscribe from the UDP sockets
+    for (const auto &subscription : _subscriptions)
+    {
+        // this is a pair
+        subscription.first->unsubscribe(this, subscription.second, _query.id());
+    }
+    
+    // we have no subscriptions left
+    _subscriptions.clear();
 
     // expose the handler
     return handler;
@@ -155,10 +162,14 @@ bool RemoteLookup::execute(double now)
         if (target != i++) continue;
 
         // send a datagram to this server
-        nameserver.datagram(_query);
+        // @todo check for nullptr
+        auto *inbound = _core->datagram(nameserver, _query);
         
-        // in the first iteration we have not yet subscribed
-        if (_count < nscount) nameserver.subscribe(this, _query.id());
+        // subscribe to the answers that might come in from now onwards
+        inbound->subscribe(this, nameserver, _query.id());
+        
+        // store this subscription, so that we can unsubscribe on success
+        _subscriptions.emplace(std::make_pair(inbound, nameserver));
         
         // one more message has been sent
         _count += 1; _last = now;
@@ -209,7 +220,7 @@ void RemoteLookup::report(const Response &response)
  *  @param  response    the received response
  *  @return bool        was the response processed?
  */
-bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
+bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
 {
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
@@ -222,7 +233,9 @@ bool RemoteLookup::onReceived(Nameserver *nameserver, const Response &response)
     if (!response.truncated()) { report(response); return true; }
 
     // switch to tcp mode to retry the query to get a non-truncated response
-    _connection.reset(new Connection(_core->loop(), nameserver->ip(), _query, response, this));
+    _connection.reset(new Connection(_core->loop(), ip, _query, response, this));
+    
+    // @todo we can unsubscribe from all inbound udp sockets because we're no longer interested in those responses
     
     // remember the start-time of the connection to reset the timeout-period
     _last = Now();

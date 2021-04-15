@@ -28,7 +28,10 @@ namespace DNS {
  *  @param  socketcount number of UDP sockets to maintain
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults, int32_t buffersize, size_t socketcount) : _loop(loop), _udp(loop, this, socketcount, buffersize)
+Core::Core(Loop *loop, bool defaults, size_t socketcount) :
+    _loop(loop),
+    _ipv4(loop, this, socketcount),
+    _ipv6(loop, this, socketcount)
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -37,7 +40,7 @@ Core::Core(Loop *loop, bool defaults, int32_t buffersize, size_t socketcount) : 
     ResolvConf settings;
     
     // copy the nameservers
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i), &_udp);
+    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
     
     // take over some of the settings
     _timeout = settings.timeout();
@@ -56,10 +59,13 @@ Core::Core(Loop *loop, bool defaults, int32_t buffersize, size_t socketcount) : 
  *  @param  buffersize  send & receive buffer size of each UDP socket
  *  @param  socketcount number of UDP sockets to maintain
  */
-Core::Core(Loop *loop, const ResolvConf &settings, int32_t buffersize, size_t socketcount) : _loop(loop), _udp(loop, this, socketcount, buffersize)
+Core::Core(Loop *loop, const ResolvConf &settings, size_t socketcount) :
+    _loop(loop),
+    _ipv4(loop, this, socketcount),
+    _ipv6(loop, this, socketcount)
 {
     // construct the nameservers
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i), &_udp);
+    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
 
     // take over some of the settings
     _timeout = settings.timeout();
@@ -79,35 +85,6 @@ Core::~Core()
     
     // stop the timer
     _loop->cancel(_timer, this);
-}
-
-/**
- *  Method that is called when a response is received
- *  @param  time        receive-time
- *  @param  address     the address of the nameserver from which it is received
- *  @param  response    the received response
- *  @param  size        size of the response
- */
-void Core::onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size)
-{
-    // parse the IP
-    const Ip ip(addr);
-
-    // find the nameserver that sent this response
-    for (auto &nameserver : _nameservers)
-    {
-        // continue to the next nameserver if the response was not from this nameserver
-        if (nameserver.ip() != ip) continue;
-
-        // we found the nameserver that sent this response
-        nameserver.receive(response, size);
-
-        // we need to process this queue
-        reschedule(now);
-
-        // we can jump out of the loop now
-        break;
-    }
 }
 
 /**
@@ -151,12 +128,8 @@ Operation *Core::add(Lookup *lookup)
  */
 double Core::delay(double now)
 {
-    // check if there are any nameservers with 
-    for (auto &nameserver : _nameservers)
-    {
-        // is there an unprocessed queue, than we have to expire asap
-        if (nameserver.busy()) return 0.0;
-    }
+    // if there is an unprocessed inbound queue, we have to expire asap
+    if (_ipv4.buffered() || _ipv6.buffered()) return 0.0;
     
     // if there is nothing scheduled
     if (_lookups.empty() && _ready.empty()) return -1.0;
@@ -190,6 +163,23 @@ void Core::reschedule(double now)
     // check when the next operation should run
     _timer = seconds < 0 ? nullptr : _loop->timer(seconds, this);
     _immediate = seconds == 0.0;
+}
+
+/**
+ *  Method that is called when a UDP socket has a buffer that it wants to deliver
+ *  @param  udp         the socket with a buffer
+ */
+void Core::onBuffered(Udp *udp)
+{
+    // if we already had an immediate timer we do not have to set it
+    if (_timer != nullptr && _immediate) return;
+
+    // if the timer is already running we have to reset it
+    if (_timer != nullptr) _loop->cancel(_timer, this);
+
+    // check when the next operation should run
+    _timer = _loop->timer(0.0, this);
+    _immediate = true;
 }
 
 /**
@@ -258,6 +248,7 @@ void Core::expire()
     size_t calls = 0;
     
     // first we are going to check the nameservers if they have some data to process
+    /* @todo we keep this code here in case we are going to implement multiple udp sockets, so that we can use it as inspiration
     for (auto &nameserver : _nameservers)
     {
         // because processing a response may lead to user-space destructing everything,
@@ -278,7 +269,29 @@ void Core::expire()
         
         // is it meaningful to proceed
         if (calls > _maxcalls) break;        
-    }
+    }*/
+
+    // first we check the udp sockets to see if they have data availeble
+    // @todo we repeat code for ipv4 and ipv6, this can probably be done in a more elegant way
+    size_t count = _ipv4.deliver(_maxcalls - calls);
+
+    // something was processed, is the side-effect that userspace destucted `this`?
+    if (count > 0 && !watcher.valid()) return;
+
+    // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
+    calls += count;
+
+    // first we check the udp sockets to see if they have data availeble
+    count = _ipv6.deliver(_maxcalls - calls);
+
+    // something was processed, is the side-effect that userspace destucted `this`?
+    if (count > 0 && !watcher.valid()) return;
+
+    // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
+    calls += count;
+
+    // start other operations now that some earlier operations are completed
+    proceed(now, count);
     
     // there was no data to process, so we are going to run jobs
     while (calls < _maxcalls && !_lookups.empty())
@@ -312,14 +325,30 @@ void Core::expire()
         _ready.pop_front();
     }
 
-    // if nothing is inflight we can close the socket
-    if (_lookups.empty() && _ready.empty()) _udp.close();
-
     // if there are more slots for scheduled operations, we start them now
+    // @todo    this is wrong because _lookups.size() does not hold the number of active lookups (this
+    //          is a queue-datastructure that might also hold already finished lookups that will be
+    //          harvested when they hit the front of the queue, but that should not count for the capacity)
     if (_capacity > _lookups.size()) proceed(now, _capacity - _lookups.size());
     
     // reset the timer
     reschedule(now);
+}
+
+/**
+ *  Send a message over a UDP socket
+ *  @param  ip              target IP
+ *  @param  query           the query to send
+ *  @return Inbound         the object that receives the answer
+ */
+Inbound *Core::datagram(const Ip &ip, const Query &query)
+{
+    // check the version number of ip
+    switch (ip.version()) {
+    case 4:     return _ipv4.send(ip, query, _buffersize);
+    case 6:     return _ipv6.send(ip, query, _buffersize);
+    default:    return nullptr;
+    }
 }
 
 /**

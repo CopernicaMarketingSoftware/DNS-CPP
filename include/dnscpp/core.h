@@ -18,12 +18,14 @@
 /**
  *  Dependencies
  */
-#include "nameserver.h"
+#include "udp.h"
 #include "resolvconf.h"
 #include "hosts.h"
 #include "bits.h"
 #include "now.h"
 #include "lookup.h"
+#include "processor.h"
+#include "timer.h"
 #include <list>
 #include <deque>
 #include <memory>
@@ -51,16 +53,17 @@ protected:
     Loop *_loop;
 
     /**
-     *  UDP socket
+     *  UDP socket (we need two for ipv4 and ipv6 traffic)
      *  @var Udp
      */
-    Udp _udp;
+    Udp _ipv4;
+    Udp _ipv6;
 
     /**
      *  The IP addresses of the servers that can be accessed
-     *  @var std::list<Nameserver>
+     *  @var std::vector<Ip>
      */
-    std::list<Nameserver> _nameservers;
+    std::vector<Ip> _nameservers;
     
     /**
      *  The contents of the /etc/hosts file
@@ -139,7 +142,14 @@ protected:
      *  @var size_t
      */
     size_t _capacity = 100;
-    
+
+    /**
+     *  Size of the send and receive buffer. If set to zero, default
+     *  will be kept. This is limited by the system maximum (wmem_max and rmem_max)
+     *  @var int32_t
+     */
+    int32_t _buffersize = 0;
+
     /**
      *  The max number of calls to be made to userspace in one iteration
      *  @var size_t
@@ -184,22 +194,20 @@ protected:
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
      *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
-     *  @param  buffersize  send & receive buffer size of each UDP socket
      *  @param  socketcount number of UDP sockets to maintain
      *  @throws std::runtime_error
      */
-    Core(Loop *loop, bool defaults, int32_t buffersize, size_t socketcount);
+    Core(Loop *loop, bool defaults, size_t socketcount);
 
     /**
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
      *  @param  settings    settings from the resolv.conf file
-     *  @param  buffersize  send & receive buffer size of each UDP socket
      *  @param  socketcount number of UDP sockets to maintain
      * 
      *  @deprecated
      */
-    Core(Loop *loop, const ResolvConf &settings, int32_t buffersize, size_t socketcount);
+    Core(Loop *loop, const ResolvConf &settings, size_t socketcount);
     
     /**
      *  Destructor
@@ -207,13 +215,17 @@ protected:
     virtual ~Core();
 
     /**
-     *  Method that is called when a response is received
-     *  @param  time        receive-time
-     *  @param  address     the address of the nameserver from which it is received
-     *  @param  response    the received response
-     *  @param  size        size of the response
+     *  Method that is called when a UDP socket has a buffer that it wants to deliver
+     *  @param  udp         the socket with a buffer
      */
-    virtual void onReceived(time_t now, const struct sockaddr *addr, const unsigned char *response, size_t size) override;
+    void onBuffered(Udp *udp) override;
+
+    /**
+     *  Method that is called when a UDP socket has a buffer that it wants to deliver
+     *  @param  now         current time
+     */
+    void reschedule(double now);
+
 
 public:
     /**
@@ -272,20 +284,18 @@ public:
     bool exists(const char *hostname) const { return _hosts.lookup(hostname) != nullptr; }
 
     /**
-     *  Reschedule the timer
-     *  @param  now         current time
+     *  Send a message over a UDP socket
+     *  @param  ip              target IP
+     *  @param  query           the query to send
+     *  @return Inbound         the object that receives the answer
      */
-    void reschedule(double now);
+    Inbound *datagram(const Ip &ip, const Query &query);
 
     /**
      *  Expose the nameservers
-     *  @return std::list<Nameserver>
+     *  @return std::list<Ip>
      */
-    std::list<Nameserver> &nameservers()
-    {
-        // expose the member
-        return _nameservers;
-    }
+    const std::vector<Ip> &nameservers() const { return _nameservers; }
 };
 
 /**

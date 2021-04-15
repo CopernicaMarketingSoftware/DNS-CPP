@@ -16,6 +16,8 @@
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/core.h"
 #include "../include/dnscpp/now.h"
+#include "../include/dnscpp/watcher.h"
+#include "../include/dnscpp/response.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdexcept>
@@ -44,13 +46,11 @@ Udp::Socket::~Socket() { close(); }
  *  @param  loop        event loop
  *  @param  handler     object that will receive all incoming responses
  *  @param  socketcount number of UDP sockets to keep open
- *  @param  buffersize  send & receive buffer size of each UDP socket
  *  @throws std::runtime_error
  */
-Udp::Udp(Loop *loop, Handler *handler, size_t socketcount, int buffersize) :
+Udp::Udp(Loop *loop, Handler *handler, size_t socketcount) :
     _loop(loop),
-    _handler(handler),
-    _buffersize(buffersize)
+    _handler(handler)
 {
     // we can't have zero sockets
     socketcount = std::max((size_t)1, socketcount);
@@ -77,7 +77,7 @@ int Udp::Socket::setintopt(int optname, int32_t optval)
  *  @param  buffersize
  *  @return bool
  */
-bool Udp::Socket::open(int version, int buffersize)
+bool Udp::Socket::open(int version, int32_t buffersize)
 {
     // if already open
     if (fd >= 0) return true;
@@ -106,24 +106,20 @@ bool Udp::Socket::open(int version, int buffersize)
 
 /**
  *  Close the socket
- *  @return bool
  */
-bool Udp::Socket::close()
+void Udp::Socket::close()
 {
     // if already closed
-    if (!valid()) return false;
+    if (!valid()) return;
 
-    // tell the event loop that we no longer are interested in notifications
+    // tell the event loop that we are no longer are interested in notifications
     parent->_loop->remove(identifier, fd, this);
-    
+
     // close the socket
     ::close(fd);
     
     // remember that socket is closed
     fd = -1; identifier = nullptr;
-    
-    // done
-    return true;
 }
 
 /**
@@ -142,9 +138,6 @@ void Udp::Socket::notify()
     // structure will hold the source address (we use an ipv6 struct because that is also big enough for ipv4)
     struct sockaddr_in6 from; socklen_t fromlen = sizeof(from);
 
-    // get current time
-    Now now;
-
     // we want to get as much messages at onces as possible, but not run forever
     // @todo use scatter-gather io to optimize this further
     for (size_t messages = 0; messages < 1024; ++messages)
@@ -155,18 +148,95 @@ void Udp::Socket::notify()
         // if there were no bytes, leap out
         if (bytes <= 0) break;
 
-        // pass to the handler
-        parent->_handler->onReceived(now, (struct sockaddr *)&from, buffer, bytes);
-    } 
+        // avoid exceptions (in case the ip cannot be parsed)
+        try
+        {
+            // @todo inbound messages that do not come from port 53 can be ignored
+
+            // remember the response for now
+            // @todo make this more efficient (without all the string-copying)
+            parent->_responses.emplace_back(reinterpret_cast<const sockaddr*>(&from), buffer, bytes, this);
+        }
+        catch (...)
+        {
+            // ip address could not be parsed
+        }
+    }
+
+    // reschedule the processing of messages
+    parent->_handler->onBuffered(parent);
+}
+
+/**
+ *  Deliver messages that have already been received and buffered to their appropriate processor
+ *  @param  size_t      max number of calls to userspace
+ *  @return size_t      number of processed answers
+ */
+size_t Udp::deliver(size_t maxcalls)
+{
+    // if there is nothing to process
+    if (_responses.empty()) return 0;
+
+    // result variable
+    size_t result = 0;
+
+    // we are going to make a call to userspace, so we keep monitoring if `this` is not destructed
+    Watcher watcher(this);
+
+    // look for a response
+    while (result < maxcalls && watcher.valid() && !_responses.empty())
+    {
+        // avoid exceptions (parsing the response could fail)
+        try
+        {
+            // note that the _handler->onReceived() triggers a call to user-space that might destruct 'this',
+            // which also causes _responses to be destructed. To avoid silly crashes we copy the oldest message
+            // to the local stack in a one-item-big list
+            decltype(_responses) oneitem;
+
+            // move the first item from the _responses to the one-item list
+            oneitem.splice(oneitem.begin(), _responses, _responses.begin(), std::next(_responses.begin()));
+
+            // get the first element
+            const auto &front = oneitem.front();
+
+            // parse the response
+            Response response(front.buffer.data(), front.buffer.size());
+
+            // filter on the response, the beginning is simply the handler at nullptr
+            auto begin = _processors.lower_bound(std::make_tuple(response.id(), front.ip, nullptr));
+
+            // iterate over those elements, notifying each handler
+            for (auto iter = begin; iter != _processors.end(); ++iter)
+            {
+                // if this element is not applicable any more, we're going to leap out (we're done)
+                if (std::get<0>(*iter) != response.id() || std::get<1>(*iter) != front.ip) break;
+
+                // call the onreceived for the element
+                if (std::get<2>(*iter)->onReceived(front.ip, response)) result += 1;
+
+                // the message was processed, we no longer need other handlers
+                break;
+            }
+        }
+        catch (const std::runtime_error &error)
+        {
+            // parsing the response failed, or the callback handler threw an exception
+        }
+    }
+
+    // something was processed
+    return result;
 }
 
 /**
  *  Send a query to a nameserver (+open the socket when needed)
  *  @param  ip      IP address of the nameserver
  *  @param  query   the query to send
- *  @return bool
+ *  @param  buffersize
+ *  @return inbound
  */
-bool Udp::send(const Ip &ip, const Query &query)
+Inbound *Udp::send(const Ip &ip, const Query &query, int32_t buffersize)
 {
     // choose a socket
     Socket &socket = _sockets[_current];
@@ -174,19 +244,20 @@ bool Udp::send(const Ip &ip, const Query &query)
     if (_current == _sockets.size()) _current = 0;
 
     // send it via this socket
-    return socket.send(ip, query);
+    return socket.send(ip, query, buffersize) ? this : nullptr;
 }
 
 /**
  *  Send a query over this socket
- *  @param  ip IP address to send to. The port is always assumed to be 53.
- *  @param  query  The query
- *  @return bool
+ *  @param  ip          IP address of the nameserver
+ *  @param  query       the query to send
+ *  @param  buffersize
+ *  @return Inbound     the object that will receive the inbound response
  */
-bool Udp::Socket::send(const Ip &ip, const Query &query)
+bool Udp::Socket::send(const Ip &ip, const Query &query, int32_t buffersize)
 {
     // if the socket is not yet open we need to open it
-    if (!open(ip.version(), parent->_buffersize)) return false;
+    if (!open(ip.version(), buffersize)) return false;
 
     // should we bind in the ipv4 or ipv6 fashion?
     if (ip.version() == 6)
@@ -204,7 +275,7 @@ bool Udp::Socket::send(const Ip &ip, const Query &query)
         memcpy(&info.sin6_addr, (const struct in6_addr *)ip, sizeof(struct in6_addr));
         
         // pass on to other method
-        return send((struct sockaddr *)&info, sizeof(struct sockaddr_in6), query);
+        if (!send((struct sockaddr *)&info, sizeof(struct sockaddr_in6), query)) return false;
     }
     else
     {
@@ -219,8 +290,11 @@ bool Udp::Socket::send(const Ip &ip, const Query &query)
         memcpy(&info.sin_addr, (const struct in_addr *)ip, sizeof(struct in_addr));
 
         // pass on to other method
-        return send((const sockaddr *)&info, sizeof(struct sockaddr_in), query);
+        if (!send((const sockaddr *)&info, sizeof(struct sockaddr_in), query)) return false;
     }
+
+    // everything went OK!
+    return true;
 }
 
 /**
