@@ -14,9 +14,10 @@ namespace DNS {
 /**
  *  Constructor does nothing but store a pointer to a Udp object.
  *  Sockets are opened lazily
- *  @param handler
+ *  @param  loop        the event loop
+ *  @param  handler     object that is notified in case of events
  */
-Udp::Udp(Handler *handler) : _handler(handler) {}
+Udp::Udp(Loop *loop, Handler *handler) : _loop(loop), _handler(handler) {}
 
 /**
  *  Closes the file descriptor
@@ -63,7 +64,7 @@ bool Udp::open(int version, int32_t buffersize)
     }
 
     // we want to be notified when the socket receives data
-    _identifier = _handler->loop()->add(_fd, 1, this);
+    _identifier = _loop->add(_fd, 1, this);
 
     // done
     return true;
@@ -78,13 +79,16 @@ void Udp::close()
     if (!valid()) return;
 
     // tell the event loop that we are no longer are interested in notifications
-    _handler->loop()->remove(_identifier, _fd, this);
+    _loop->remove(_identifier, _fd, this);
 
     // close the socket
     ::close(_fd);
 
     // remember that socket is closed
     _fd = -1; _identifier = nullptr;
+    
+    // notify our parent
+    _handler->onClosed(this);
 }
 
 
@@ -194,7 +198,7 @@ void Udp::notify()
     }
 
     // reschedule the processing of messages
-    _handler->onBuffered();
+    _handler->onBuffered(this);
 }
 
 /**

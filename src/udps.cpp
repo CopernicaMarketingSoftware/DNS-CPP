@@ -36,15 +36,16 @@ namespace DNS {
  *  @param  socketcount number of UDP sockets to keep open
  *  @throws std::runtime_error
  */
-Udps::Udps(Loop *loop, Handler *handler, size_t socketcount) :
-    _loop(loop),
-    _handler(handler)
+Udps::Udps(Loop *loop, Handler *handler, size_t socketcount) : _handler(handler)
 {
     // we can't have zero sockets
     socketcount = std::max((size_t)1, socketcount);
 
+    // trick to avoid a compiler warning
+    Udp::Handler *udphandler = this;
+
     // create sockets
-    for (size_t i = 0; i != socketcount; ++i) _sockets.emplace_back(static_cast<Udp::Handler*>(this));
+    for (size_t i = 0; i != socketcount; ++i) _sockets.emplace_back(loop, udphandler);
 
     // set the first socket to use
     _current = _sockets.begin();
