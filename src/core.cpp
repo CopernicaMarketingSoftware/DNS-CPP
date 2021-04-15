@@ -246,26 +246,19 @@ void Core::expire()
     size_t calls = 0;
     
     // first we check the udp sockets to see if they have data availeble
-    // @todo we repeat code for ipv4 and ipv6, this can probably be done in a more elegant way
-    size_t count = _ipv4.deliver(_maxcalls - calls);
+    calls += _ipv4.deliver(std::max(0, _maxcalls - calls));
 
     // something was processed, is the side-effect that userspace destucted `this`?
-    if (count > 0 && !watcher.valid()) return;
+    if (!watcher.valid()) return;
 
-    // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
-    calls += count;
-
-    // first we check the udp sockets to see if they have data availeble
-    count = _ipv6.deliver(_maxcalls - calls);
+    // check the ipv6 sockets too
+    calls += _ipv6.deliver(std::max(0, _maxcalls - calls));
 
     // something was processed, is the side-effect that userspace destucted `this`?
-    if (count > 0 && !watcher.valid()) return;
-
-    // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
-    calls += count;
+    if (!watcher.valid()) return;
 
     // start other operations now that some earlier operations are completed
-    proceed(now, count);
+    proceed(now, calls);
     
     // there was no data to process, so we are going to run jobs
     while (calls < _maxcalls && !_lookups.empty())
