@@ -16,6 +16,7 @@
  *  Dependencies
  */
 #include "tcp.h"
+#include "../include/dnscpp/monitor.h"
 
 /**
  *  Begin of namespace

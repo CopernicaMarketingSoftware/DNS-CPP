@@ -5,7 +5,7 @@
  *  configuration options of the resolver.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -18,6 +18,7 @@
  */
 #include <vector>
 #include <resolv.h>
+#include "ip.h"
 
 /**
  *  Begin of namespace

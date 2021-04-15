@@ -17,6 +17,7 @@
 #include "../include/dnscpp/core.h"
 #include "../include/dnscpp/now.h"
 #include "../include/dnscpp/watcher.h"
+#include "../include/dnscpp/response.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdexcept>

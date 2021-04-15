@@ -6,7 +6,7 @@
  *  to the nameserver.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -19,6 +19,7 @@
  */
 #include "query.h"
 #include "operation.h"
+#include "message.h"
 
 /**
  *  Begin of namespace

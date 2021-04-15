@@ -163,13 +163,13 @@ bool RemoteLookup::execute(double now)
 
         // send a datagram to this server
         // @todo check for nullptr
-        auto *inbound = nameserver.datagram(_query);
+        auto *inbound = _core->datagram(nameserver, _query);
         
         // subscribe to the answers that might come in from now onwards
-        inbound->subscribe(this, nameserver.ip(), _query.id());
+        inbound->subscribe(this, nameserver, _query.id());
         
         // store this subscription, so that we can unsubscribe on success
-        _subscriptions.emplace(std::make_pair(inbound, nameserver.ip()));
+        _subscriptions.emplace(std::make_pair(inbound, nameserver));
         
         // one more message has been sent
         _count += 1; _last = now;
