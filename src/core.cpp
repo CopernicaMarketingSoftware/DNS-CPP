@@ -316,6 +316,9 @@ void Core::expire()
     }
 
     // if there are more slots for scheduled operations, we start them now
+    // @todo    this is wrong because _lookups.size() does not hold the number of active lookups (this
+    //          is a queue-datastructure that might also hold already finished lookups that will be
+    //          harvested when they hit the front of the queue, but that should not count for the capacity)
     if (_capacity > _lookups.size()) proceed(now, _capacity - _lookups.size());
     
     // reset the timer
