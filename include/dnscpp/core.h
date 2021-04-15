@@ -54,11 +54,11 @@ protected:
     Loop *_loop;
 
     /**
-     *  UDP socket
-     *  @todo this is now a single socket, but what if we have to mix ipv4 and ipv6?
+     *  UDP socket (we need two for ipv4 and ipv6 traffic)
      *  @var Udp
      */
-    Udp _udp;
+    Udp _ipv4;
+    Udp _ipv6;
 
     /**
      *  The IP addresses of the servers that can be accessed
