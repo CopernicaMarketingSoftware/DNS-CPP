@@ -21,6 +21,17 @@
 namespace DNS {
 
 /**
+ *  Set the send & receive buffer size of each individual UDP socket
+ *  @param value  the value to set
+ */
+void Context::buffersize(int32_t value)
+{
+    // pass to the actual sockets
+    _ipv4.buffersize(value);
+    _ipv6.buffersize(value);
+}
+
+/**
  *  Set the capacity: number of operations to run at the same time
  *  @param  value       the new value
  */

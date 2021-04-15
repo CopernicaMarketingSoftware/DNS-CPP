@@ -137,12 +137,9 @@ public:
      *  Watch out: you need to be consistent in calling this with either ipv4 or ipv6 addresses
      *  @param  ip          IP address of the target nameserver
      *  @param  query       the query to send
-     *  @param  buffersize  strange parameter
      *  @return Inbound     the inbound object over which the message is sent
-     *
-     *  @todo   buffersize is strange
      */
-    Inbound *send(const Ip &ip, const Query &query, int32_t buffersize);
+    Inbound *send(const Ip &ip, const Query &query);
 
     /**
      *  Deliver messages that have already been received and buffered to their appropriate processor
@@ -156,6 +153,16 @@ public:
      *  @return bool
      */
     bool readable() const;
+
+    /**
+     *  The inbound buffersize for new sockets
+     *  @param  size        the new buffer size
+     */
+    void buffersize(size_t size)
+    {
+        // pass on
+        for (auto &socket: _sockets) socket.buffersize(size);
+    }
 
     /**
      *  Does one of the sockets have an inbound buffer (meaning: is there a backlog of unprocessed messages?)

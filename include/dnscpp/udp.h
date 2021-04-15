@@ -65,6 +65,12 @@ private:
     int _fd = -1;
 
     /**
+     *  Buffersize for inbound sockets
+     *  @var size_t
+     */
+    size_t _buffersize;
+
+    /**
      *  All the buffered responses that came in
      *  @var std::list
      */
@@ -100,10 +106,9 @@ private:
     /**
      *  Open the socket
      *  @param  version     IPv4 or IPv6. You must ensure this stays consistent over multiple requests (@todo)
-     *  @param  buffersize  The buffersize
      *  @return bool
      */
-    bool open(int version, int32_t buffersize);
+    bool open(int version);
 
 public:
     /**
@@ -123,16 +128,21 @@ public:
      *  Send a query over this socket
      *  @param  ip IP address to send to. The port is always assumed to be 53.
      *  @param  query  The query
-     *  @param  buffersize
      *  @return this, or nullptr if something went wrong
      */
-    Inbound *send(const Ip &ip, const Query &query, int32_t buffersize);
+    Inbound *send(const Ip &ip, const Query &query);
 
     /**
      *  Close the socket
      *  @return bool
      */
     void close() override;
+
+    /**
+     *  Install a new buffersize
+     *  @param  size        size of the new buffer
+     */
+    void buffersize(size_t size) { _buffersize = size; }
 
     /**
      *  Invoke callback handlers for buffered raw responses

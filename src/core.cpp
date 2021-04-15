@@ -343,8 +343,8 @@ Inbound *Core::datagram(const Ip &ip, const Query &query)
 {
     // check the version number of ip
     switch (ip.version()) {
-    case 4:     return _ipv4.send(ip, query, _buffersize);
-    case 6:     return _ipv6.send(ip, query, _buffersize);
+    case 4:     return _ipv4.send(ip, query);
+    case 6:     return _ipv6.send(ip, query);
     default:    return nullptr;
     }
 }
