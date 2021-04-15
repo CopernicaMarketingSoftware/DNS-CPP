@@ -65,7 +65,16 @@ size_t Udps::deliver(size_t maxcalls)
     Watcher watcher(this);
 
     // deliver from all sockets
-    for (auto &socket : _sockets) result += socket.deliver(&watcher, maxcalls);
+    for (auto &socket : _sockets)
+    {
+        // tally up the numbers
+        result += socket.deliver(&watcher, maxcalls);
+
+        // It's possible that an onReceived handler will destruct the Context and consequently
+        // this object too. In that case we have to be careful not to read/write any member
+        // variables any longer.
+        if (!watcher.valid()) break;
+    }
 
     // return the number of buffered responses that were processed
     return result;
