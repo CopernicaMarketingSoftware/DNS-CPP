@@ -46,20 +46,17 @@ public:
      *  you can run any queries.
      *  @param  loop        your event loop
      *  @param  defaults    should system settings be loaded
-     *  @param  socketcount number of UDP sockets to maintain
      */
-    Context(Loop *loop, bool defaults = true, size_t socketcount = 1) : Core(loop, defaults, socketcount) {}
+    Context(Loop *loop, bool defaults = true) : Core(loop, defaults) {}
 
     /**
      *  Constructor
      *  @param  loop        your event loop
      *  @param  settings    settings parsed from the /etc/resolv.conf file
-     *  @param  buffersize  size of the send & receive buffers of UDP sockets. Use 0 for system default
-     *  @param  socketcount number of UDP sockets to maintain
      * 
      *  @deprecated
      */
-    Context(Loop *loop, const ResolvConf &settings, size_t socketcount = 1) : Core(loop, settings, socketcount) {}
+    Context(Loop *loop, const ResolvConf &settings) : Core(loop, settings) {}
     
     /**
      *  No copying
@@ -89,6 +86,23 @@ public:
     {
         // add to the member in the base class
         _nameservers.emplace_back(ip);
+    }
+    
+    /**
+     *  Number of sockets to use
+     *  This is normally 1 which is enough for most applications. However,
+     *  for applications that send many UDP requests (new requests are sent
+     *  before the previous ones are completed, this number could be set higher
+     *  to ensure that the load is spread out over multiple sockets that are 
+     *  closed and opened every now and then to ensure that port numbers are
+     *  refreshed. You can only use this to _increment_ the number of sockets.
+     *  @param  count       number of sockets
+     */
+    void sockets(size_t count)
+    {
+        // pass on
+        _ipv4.sockets(count);
+        _ipv6.sockets(count);
     }
     
     /**

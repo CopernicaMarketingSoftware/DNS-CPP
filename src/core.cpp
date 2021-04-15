@@ -25,13 +25,12 @@ namespace DNS {
  *  @param  loop        your event loop
  *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
  *  @param  buffersize  send & receive buffer size of each UDP socket
- *  @param  socketcount number of UDP sockets to maintain
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults, size_t socketcount) :
+Core::Core(Loop *loop, bool defaults) :
     _loop(loop),
-    _ipv4(loop, this, socketcount),
-    _ipv6(loop, this, socketcount)
+    _ipv4(loop, this),
+    _ipv6(loop, this)
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -57,12 +56,11 @@ Core::Core(Loop *loop, bool defaults, size_t socketcount) :
  *  @param  loop        your event loop
  *  @param  settings    settings from the resolv.conf file
  *  @param  buffersize  send & receive buffer size of each UDP socket
- *  @param  socketcount number of UDP sockets to maintain
  */
-Core::Core(Loop *loop, const ResolvConf &settings, size_t socketcount) :
+Core::Core(Loop *loop, const ResolvConf &settings) :
     _loop(loop),
-    _ipv4(loop, this, socketcount),
-    _ipv6(loop, this, socketcount)
+    _ipv4(loop, this),
+    _ipv6(loop, this)
 {
     // construct the nameservers
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
