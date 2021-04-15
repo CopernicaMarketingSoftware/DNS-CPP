@@ -53,6 +53,7 @@ protected:
 
     /**
      *  UDP socket
+     *  @todo this is now a single socket, but what if we have to mix ipv4 and ipv6?
      *  @var Udp
      */
     Udp _udp;

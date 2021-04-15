@@ -23,7 +23,7 @@
 #include <sys/socket.h>
 #include "monitor.h"
 #include "watchable.h"
-#include "processors.h"
+#include "inbound.h"
 #include <list>
 #include <string>
 
@@ -45,7 +45,7 @@ class Processor;
 /**
  *  Class definition
  */
-class Udp : private Monitor, private Watchable, private Processors
+class Udp : private Monitor, private Watchable, private Inbound
 {
 public:
     /**
@@ -160,25 +160,14 @@ public:
     /**
      *  Send a query to the socket
      *  Watch out: you need to be consistent in calling this with either ipv4 or ipv6 addresses
-     *  @param  processor   the object that is sending (and that will be notified of all future responses)
      *  @param  ip          IP address of the target nameserver
      *  @param  query       the query to send
      *  @param  buffersize  strange parameter
-     *  @return Processors  the collection of processors
+     *  @return Inbound     the inbound object over which the message is sent
      * 
      *  @todo   buffersize is strange
      */
-    Processors *send(Processor *processor, const Ip &ip, const Query &query, int buffersize);
-
-    /**
-     *  Unsubscribe from the socket
-     *  @param  processor   the object that is sending (and that will be notified of all future responses)
-     *  @param  ip          IP address of the target nameserver
-     *  @param  query       the query ID that was sent
-     *
-     *  @todo should be in special class
-     */
-    void unsubscribe(Processor *processor, const Ip &ip, uint16_t query);
+    Inbound *send(const Ip &ip, const Query &query, int buffersize);
 
     /**
      *  Deliver messages that have already been received and buffered to their appropriate processor
