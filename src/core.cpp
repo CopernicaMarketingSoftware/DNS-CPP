@@ -26,7 +26,7 @@ namespace DNS {
  *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(loop, this)
+Core::Core(Loop *loop, bool defaults) : _loop(loop), _ipv4(loop, this), _ipv6(loop, this)
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -52,7 +52,7 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(loop, this)
  *  @param  loop        your event loop
  *  @param  settings    settings from the resolv.conf file
  */
-Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _udp(loop, this)
+Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _ipv4(loop, this), _ipv6(loop, this)
 {
     // construct the nameservers
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
@@ -119,7 +119,7 @@ Operation *Core::add(Lookup *lookup)
 double Core::delay(double now)
 {
     // if there is an unprocessed inbound queue, we have to expire asap
-    if (_udp.buffered()) return 0.0;
+    if (_ipv4.buffered() || _ipv6.buffered()) return 0.0;
     
     // if there is nothing scheduled
     if (_lookups.empty() && _ready.empty()) return -1.0;
@@ -262,7 +262,17 @@ void Core::expire()
     }*/
     
     // first we check the udp sockets to see if they have data availeble
-    size_t count = _udp.deliver(_maxcalls - calls);
+    // @todo we repeat code for ipv4 and ipv6, this can probably be done in a more elegant way
+    size_t count = _ipv4.deliver(_maxcalls - calls);
+
+    // something was processed, is the side-effect that userspace destucted `this`?
+    if (count > 0 && !watcher.valid()) return;
+    
+    // update bookkeeping (this is not entirely correct, maybe there was no call to userspace)
+    calls += count;
+
+    // first we check the udp sockets to see if they have data availeble
+    count = _ipv6.deliver(_maxcalls - calls);
 
     // something was processed, is the side-effect that userspace destucted `this`?
     if (count > 0 && !watcher.valid()) return;
@@ -310,6 +320,22 @@ void Core::expire()
     
     // reset the timer
     reschedule(now);
+}
+
+/**
+ *  Send a message over a UDP socket
+ *  @param  ip              target IP
+ *  @param  query           the query to send
+ *  @return Inbound         the object that receives the answer
+ */
+Inbound *Core::datagram(const Ip &ip, const Query &query)
+{
+    // check the version number of ip
+    switch (ip.version()) {
+    case 4:     return _ipv4.send(ip, query, _buffersize);
+    case 6:     return _ipv6.send(ip, query, _buffersize);
+    default:    return nullptr;
+    }
 }
 
 /**
