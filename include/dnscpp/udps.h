@@ -249,7 +249,10 @@ public:
      */
     bool buffered() const
     {
+        // if there's a buffered response in one of the sockets then we consider ourselves buffered
         for (const auto &sock : _sockets) if (!sock.responses.empty()) return true;
+
+        // otherwise we're not buffered
         return false;
     }
 };
