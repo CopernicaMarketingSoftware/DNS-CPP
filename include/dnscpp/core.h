@@ -194,20 +194,18 @@ protected:
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
      *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
-     *  @param  socketcount number of UDP sockets to maintain
      *  @throws std::runtime_error
      */
-    Core(Loop *loop, bool defaults, size_t socketcount);
+    Core(Loop *loop, bool defaults);
 
     /**
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
      *  @param  settings    settings from the resolv.conf file
-     *  @param  socketcount number of UDP sockets to maintain
      * 
      *  @deprecated
      */
-    Core(Loop *loop, const ResolvConf &settings, size_t socketcount);
+    Core(Loop *loop, const ResolvConf &settings);
     
     /**
      *  Destructor

@@ -63,6 +63,12 @@ public:
 
 private:
     /**
+     *  The main event loop
+     *  @var Loop
+     */
+    Loop *_loop;
+
+    /**
      *  The object that is interested in handling responses
      *  @var Handler*
      */
@@ -102,10 +108,9 @@ public:
      *  Constructor
      *  @param  loop        event loop
      *  @param  handler     object that will receive all incoming responses
-     *  @param  socketcount number of UDP sockets to keep open
      *  @throws std::runtime_error
      */
-    Udps(Loop *loop, Handler *handler, size_t socketcount = 1);
+    Udps(Loop *loop, Handler *handler);
 
     /**
      *  No copying
@@ -117,6 +122,15 @@ public:
      *  Destructor
      */
     virtual ~Udps() = default;
+
+    /**
+     *  Update the number of sockets
+     *  Watch out: it is only possible to _increase_ the number of sockets
+     *  This is useful to spread out the load over multiple sockets (especially for programs with   
+     *  many DNS lookups, where new lookups are started before previous lookups are completed)
+     *  @param  value       new max value
+     */
+    void sockets(size_t count);
 
     /**
      *  Send a query to the socket

@@ -33,22 +33,34 @@ namespace DNS {
  *  Constructor
  *  @param  loop        event loop
  *  @param  handler     object that will receive all incoming responses
- *  @param  socketcount number of UDP sockets to keep open
  *  @throws std::runtime_error
  */
-Udps::Udps(Loop *loop, Handler *handler, size_t socketcount) : _handler(handler)
+Udps::Udps(Loop *loop, Handler *handler) : _loop(loop), _handler(handler)
 {
-    // we can't have zero sockets
-    socketcount = std::max((size_t)1, socketcount);
-
     // trick to avoid a compiler warning
     Udp::Handler *udphandler = this;
 
     // create sockets
-    for (size_t i = 0; i != socketcount; ++i) _sockets.emplace_back(loop, udphandler);
+    _sockets.emplace_back(loop, udphandler);
 
     // set the first socket to use
     _current = _sockets.begin();
+}
+
+/**
+ *  Update the number of sockets
+ *  Watch out: it is only possible to _increase_ the number of sockets
+ *  This is useful to spread out the load over multiple sockets (especially for programs with   
+ *  many DNS lookups, where new lookups are started before previous lookups are completed)
+ *  @param  value       new max value
+ */
+void Udps::sockets(size_t count)
+{
+    // trick to avoid a compiler warning
+    Udp::Handler *udphandler = this;
+    
+    // create more sockets (note that we can only grow)
+    for (size_t i = _sockets.size(); i < count; ++i) _sockets.emplace_back(_loop, udphandler);
 }
 
 /**
