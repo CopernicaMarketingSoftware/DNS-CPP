@@ -74,10 +74,10 @@ private:
     std::unique_ptr<Connection> _connection;
     
     /**
-     *  Objects in which we're expecting an answer
+     *  Objects to which we're subscribed for inbound messages
      *  @var std::set
      */
-    std::set<std::pair<Processors*,Ip>> _subscriptions;
+    std::set<std::pair<Inbound*,Ip>> _subscriptions;
 
 
     /**

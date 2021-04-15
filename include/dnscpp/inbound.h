@@ -1,9 +1,13 @@
 /**
- *  Processors.h
+ *  Inbound.h
  * 
  *  Base class for the UDP socket that contains just the functionality
  *  of remembering which processors are connected to a UDP socket.
  *  Or: which lookups are still interested in a response.
+ * 
+ *  We have this base-class/derived-class architecture to have a limited
+ *  interface for the UDP socket: some classes inside DNS-CPP only need
+ *  access to the unsubscribe mechanism, and not to the full socket.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2021 Copernica BV
@@ -34,10 +38,8 @@ class Processor;
 
 /**
  *  Class definition
- * 
- *  @todo this is a stupid name, because the public interface is only used to unsubscribe, maybe Listener is a better name?
  */
-class Processors
+class Inbound
 {
 protected:
     /**
@@ -50,34 +52,41 @@ protected:
     /**
      *  Constructor
      */
-    Processors() = default;
+    Inbound() = default;
+    
+    /**
+     *  No copying
+     *  @param  that
+     */
+    Inbound(const Inbound &that) = delete;
     
     /**
      *  Destructor
      */
-    virtual ~Processors() = default;
+    virtual ~Inbound() = default;
     
     /**
      *  Method that is called when the object is empty
      */
     virtual void close() = 0;
 
+
+public:
     /**
-     *  Add a processor
+     *  Subscribe for responses from a certain query-ID received from a certain IP
      *  @param  processor       the object that no longer is active
      *  @param  ip              the IP to which it was listening to
      *  @param  id              the query ID in which it was interested
      */
     void subscribe(Processor *processor, const Ip &ip, uint16_t id);
 
-public:
     /**
-     *  Remove a processor from the set
+     *  Unsubscribe (counter-part of the subscribe method above)
      *  @param  processor       the object that no longer is active
      *  @param  ip              the IP to which it was listening to
      *  @param  id              the query ID in which it was interested
      */
-    void remove(Processor *processor, const Ip &ip, uint16_t id);
+    void unsubscribe(Processor *processor, const Ip &ip, uint16_t id);
 };
     
 /**

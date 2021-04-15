@@ -37,16 +37,13 @@ Nameserver::~Nameserver() {}
 
 /**
  *  Send a datagram to the nameserver
- *  The processor is automatically added to the list of processors, you must
- *  explicitly remove yourself when you're done
- *  @param  processor   the sending object that will be notified of all future responses
  *  @param  query       the query to send
- *  @return Processors* collection of processers that is receiving responses
+ *  @return Inbound*    object over which the message was sent
  */
-Processors *Nameserver::datagram(Processor *processor, const Query &query)
+Inbound *Nameserver::datagram(const Query &query)
 {
     // send the message
-    return _udp->send(processor, _ip, query, _core->buffersize());
+    return _udp->send(_ip, query, _core->buffersize());
 }
 
 /**

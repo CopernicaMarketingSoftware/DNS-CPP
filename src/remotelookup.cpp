@@ -100,7 +100,7 @@ Handler *RemoteLookup::cleanup()
     for (const auto &subscription : _subscriptions)
     {
         // this is a pair
-        subscription.first->remove(this, subscription.second, _query.id());
+        subscription.first->unsubscribe(this, subscription.second, _query.id());
     }
     
     // we have no subscriptions left
@@ -162,10 +162,14 @@ bool RemoteLookup::execute(double now)
         if (target != i++) continue;
 
         // send a datagram to this server
-        auto *processors = nameserver.datagram(this, _query);
+        // @todo check for nullptr
+        auto *inbound = nameserver.datagram(_query);
+        
+        // subscribe to the answers that might come in from now onwards
+        inbound->subscribe(this, nameserver.ip(), _query.id());
         
         // store this subscription, so that we can unsubscribe on success
-        _subscriptions.emplace(std::make_pair(processors, nameserver.ip()));
+        _subscriptions.emplace(std::make_pair(inbound, nameserver.ip()));
         
         // one more message has been sent
         _count += 1; _last = now;

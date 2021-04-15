@@ -251,13 +251,12 @@ size_t Udp::deliver(size_t maxcalls)
 
 /**
  *  Send a query to a nameserver (+open the socket when needed)
- *  @param  processor   the object that will be notified of responses
  *  @param  ip          IP address of the nameserver
  *  @param  query       the query to send
  *  @param  buffersize
- *  @return Processors  the object from which the user can unsubscribe
+ *  @return Inbound     the object that will receive the inbound response
  */
-Processors *Udp::send(Processor *processor, const Ip &ip, const Query &query, int buffersize)
+Inbound *Udp::send(const Ip &ip, const Query &query, int buffersize)
 {
     // if the socket is not yet open we need to open it
     if (_fd < 0 && !open(ip.version(), buffersize)) return nullptr;
@@ -295,9 +294,6 @@ Processors *Udp::send(Processor *processor, const Ip &ip, const Query &query, in
         // pass on to other method
         if (!send((const sockaddr *)&info, sizeof(struct sockaddr_in), query)) return nullptr;
     }
-    
-    // subscribe this processor, it will be notified when we receive a response for this query
-    subscribe(processor, ip, query.id());
     
     // expose the object with subscriptions
     return this;
