@@ -18,13 +18,15 @@
 /**
  *  Dependencies
  */
-#include "nameserver.h"
 #include "resolvconf.h"
 #include "hosts.h"
 #include "bits.h"
 #include "now.h"
 #include "lookup.h"
 #include "processor.h"
+#include "timer.h"
+#include "watchable.h"
+#include "../include/dnscpp/udp.h"
 #include <list>
 #include <deque>
 #include <memory>
@@ -60,9 +62,9 @@ protected:
 
     /**
      *  The IP addresses of the servers that can be accessed
-     *  @var std::list<Nameserver>
+     *  @var std::vector<Ip>
      */
-    std::list<Nameserver> _nameservers;
+    std::vector<Ip> _nameservers;
     
     /**
      *  The contents of the /etc/hosts file
@@ -287,14 +289,18 @@ public:
     bool exists(const char *hostname) const { return _hosts.lookup(hostname) != nullptr; }
 
     /**
-     *  Expose the nameservers
-     *  @return std::list<Nameserver>
+     *  Send a message over a UDP socket
+     *  @param  ip              target IP
+     *  @param  query           the query to send
+     *  @return Inbound         the object that receives the answer
      */
-    std::list<Nameserver> &nameservers()
-    {
-        // expose the member
-        return _nameservers;
-    }
+    Inbound *datagram(const Ip &ip, const Query &query);
+
+    /**
+     *  Expose the nameservers
+     *  @return std::list<Ip>
+     */
+    const std::vector<Ip> &nameservers() const { return _nameservers; }
 };
 
 /**

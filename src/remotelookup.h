@@ -16,13 +16,14 @@
  *  Dependencies
  */
 #include <memory>
-#include "../include/dnscpp/nameserver.h"
+#include <set>
 #include "../include/dnscpp/timer.h"
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/lookup.h"
 #include "../include/dnscpp/request.h"
 #include "../include/dnscpp/bits.h"
 #include "../include/dnscpp/now.h"
+#include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/processor.h"
 #include "connection.h"
 
@@ -36,6 +37,7 @@ namespace DNS {
  */
 class Core;
 class Handler;
+class Inbound;
 
 /**
  *  Class definition

@@ -85,7 +85,7 @@ public:
     void nameserver(const Ip &ip)
     {
         // add to the member in the base class
-        _nameservers.emplace_back(static_cast<Core*>(this), ip, &_udp);
+        _nameservers.emplace_back(ip);
     }
 
     /**

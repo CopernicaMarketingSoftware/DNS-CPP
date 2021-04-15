@@ -35,7 +35,7 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(loop, this)
     ResolvConf settings;
     
     // copy the nameservers
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i), &_udp);
+    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
     
     // take over some of the settings
     _timeout = settings.timeout();
@@ -55,7 +55,7 @@ Core::Core(Loop *loop, bool defaults) : _loop(loop), _udp(loop, this)
 Core::Core(Loop *loop, const ResolvConf &settings) : _loop(loop), _udp(loop, this)
 {
     // construct the nameservers
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(this, settings.nameserver(i), &_udp);
+    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
 
     // take over some of the settings
     _timeout = settings.timeout();
