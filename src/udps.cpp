@@ -111,13 +111,14 @@ Inbound *Udps::send(const Ip &ip, const Query &query, int32_t buffersize)
 }
 
 /**
- *  Close all sockets
- *  @todo: this method should disappear
+ *  Method that is called when an inbound socket is closed
+ *  @param  udp     the reporting object
  */
-void Udps::close()
+void Udps::onClosed(Udp *udp)
 {
-    // close all sockets
-    std::for_each(_sockets.begin(), _sockets.end(), std::mem_fun_ref(&Udp::close));
+    // @todo this method could be used to add more efficiency, for example
+    // to mark the just closed socket as the current one, and avoid that every
+    // send() call results in a loop over all sockets
 }
 
 /**
