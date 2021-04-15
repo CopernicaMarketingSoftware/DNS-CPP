@@ -175,7 +175,7 @@ int main(int argc, char **argv)
     DNS::LibEv myloop(loop);
 
     // create a dns context
-    DNS::Context context(&myloop, true, 2);
+    DNS::Context context(&myloop, true);
 
     context.buffersize(1024 * 1024); // size of the input buffer (high lowers risk of package loss)
     context.interval(3.0);           // number of seconds until the datagram is retried (possibly to next server) (this does not cancel previous requests)
