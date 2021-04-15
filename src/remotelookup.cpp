@@ -235,6 +235,8 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     // switch to tcp mode to retry the query to get a non-truncated response
     _connection.reset(new Connection(_core->loop(), ip, _query, response, this));
     
+    // @todo we can unsubscribe from all inbound udp sockets because we're no longer interested in those responses
+    
     // remember the start-time of the connection to reset the timeout-period
     _last = Now();
     
