@@ -60,7 +60,14 @@ void Udps::sockets(size_t count)
     Udp::Handler *udphandler = this;
     
     // create more sockets (note that we can only grow)
-    for (size_t i = _sockets.size(); i < count; ++i) _sockets.emplace_back(_loop, udphandler);
+    for (size_t i = _sockets.size(); i < count; ++i) 
+    {
+        // create a new socket
+        _sockets.emplace_back(_loop, udphandler);
+        
+        // give the socket the same settings as all other sockets
+        _sockets.back().buffersize(_sockets.front().buffersize());
+    }
 }
 
 /**

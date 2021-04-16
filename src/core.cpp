@@ -246,13 +246,13 @@ void Core::expire()
     size_t calls = 0;
     
     // first we check the udp sockets to see if they have data availeble
-    calls += _ipv4.deliver(std::max(0, _maxcalls - calls));
+    calls += _ipv4.deliver(std::max(0L, ssize_t(_maxcalls) - ssize_t(calls)));
 
     // something was processed, is the side-effect that userspace destucted `this`?
     if (!watcher.valid()) return;
 
     // check the ipv6 sockets too
-    calls += _ipv6.deliver(std::max(0, _maxcalls - calls));
+    calls += _ipv6.deliver(std::max(0L, ssize_t(_maxcalls) - ssize_t(calls)));
 
     // something was processed, is the side-effect that userspace destucted `this`?
     if (!watcher.valid()) return;
