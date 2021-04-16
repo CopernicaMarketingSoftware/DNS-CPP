@@ -287,6 +287,7 @@ public:
 
     /**
      *  Decrement the number of inflight requests
+     *  @param count  by what amount to decrease
      */
     void decrement(size_t count = 1) noexcept { assert(_inflight >= count); _inflight -= count; }
 
