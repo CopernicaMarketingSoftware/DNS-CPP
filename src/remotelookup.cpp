@@ -90,6 +90,9 @@ void RemoteLookup::unsubscribe()
         // this is a pair
         subscription.first->unsubscribe(this, subscription.second, _query.id());
     }
+
+    // forget that we're doing lookups
+    _core->decrement(_subscriptions.size());
     
     // we have no subscriptions left
     _subscriptions.clear();
@@ -179,7 +182,10 @@ bool RemoteLookup::execute(double now)
         
         // store this subscription, so that we can unsubscribe on success
         _subscriptions.emplace(std::make_pair(inbound, nameserver));
-        
+
+        // we're doing another request
+        _core->increment();
+
         // one more message has been sent
         _count += 1; _last = now;
         
