@@ -152,41 +152,28 @@ bool RemoteLookup::execute(double now)
     if (_connection) return true;
 
     // access to the nameservers + the number we have
-    auto &nameservers = _core->nameservers();
+    const auto &nameservers = _core->nameservers();
     size_t nscount = nameservers.size();
     
     // what if there are no nameservers?
     if (nscount == 0) return timeout();
 
     // which nameserver should we sent now?
-    size_t target = _core->rotate() ? (_count + _id) % nscount : _count % nscount;
+    const Ip &nameserver = nameservers[_core->rotate() ? (_count + _id) % nscount : _count % nscount];
     
-    // iterator for the next loop
-    size_t i = 0;
-
-    // send a datagram to each nameserver
-    for (auto &nameserver : nameservers)
+    // send a datagram to this server
+    if (auto *inbound = _core->datagram(nameserver, _query))
     {
-        // is this the target nameserver? (we use ++ postfix operator on purpose)
-        if (target != i++) continue;
-
-        // send a datagram to this server
-        // @todo check for nullptr
-        auto *inbound = _core->datagram(nameserver, _query);
-        
         // subscribe to the answers that might come in from now onwards
         inbound->subscribe(this, nameserver, _query.id());
-        
+
         // store this subscription, so that we can unsubscribe on success
         _subscriptions.emplace(std::make_pair(inbound, nameserver));
-        
-        // one more message has been sent
-        _count += 1; _last = now;
-        
-        // for now we do not yet send the next message
-        break;
     }
-    
+
+    // one more execution attempt has been made
+    _count += 1; _last = now;
+
     // we want to be rescheduled
     return true;
 }
