@@ -145,6 +145,12 @@ public:
     void buffersize(size_t size) { _buffersize = size; }
 
     /**
+     *  Expose the used buffersize
+     *  @return size_t
+     */
+    size_t buffersize() const { return _buffersize; }
+
+    /**
      *  Invoke callback handlers for buffered raw responses
      *  @param   watcher   to keep track if the parent object remains valid
      *  @param   maxcalls  the max number of callback handlers to invoke
