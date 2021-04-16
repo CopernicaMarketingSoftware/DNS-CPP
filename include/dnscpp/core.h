@@ -165,9 +165,8 @@ protected:
     /**
      *  Proceed with more operations
      *  @param  now
-     *  @param  count
      */
-    void proceed(double now, size_t count);
+    void proceed(double now);
     
     /**
      *  Process a lookup

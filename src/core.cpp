@@ -209,22 +209,19 @@ bool Core::process(const std::shared_ptr<Lookup> &lookup, double now)
  *  @param  now
  *  @param  count
  */
-void Core::proceed(double now, size_t count)
+void Core::proceed(double now)
 {
+    // make sure this is absolutely true or we'll end up iterating for a long time
+    assert(_inflight <= _capacity);
+
     // iterate
-    while (count > 0)
+    for (size_t i = 0, end = _capacity - _inflight; i < end && !_scheduled.empty(); ++i)
     {
-        // not possible if nothing is scheduled
-        if (_scheduled.empty()) return;
-        
-        // get the oldest scheduled operation (the process() always returns true)
+        // get the oldest scheduled operation (the process() always returns true @todo really?)
         if (!process(_scheduled.front(), now)) return;
         
         // this lookup is no longer scheduled
         _scheduled.pop_front();
-        
-        // one extra operation is scheduled
-        count -= 1;
     }
 }
 
@@ -242,42 +239,32 @@ void Core::expire()
     // get the current time
     Now now;
     
-    // number of calls made
-    size_t calls = 0;
+    // number of calls left
+    size_t callsleft = _maxcalls;
     
     // first we check the udp sockets to see if they have data availeble
-    calls += _ipv4.deliver(std::max(0L, ssize_t(_maxcalls) - ssize_t(calls)));
+    callsleft -= _ipv4.deliver(callsleft); if (!watcher.valid()) return;
+    callsleft -= _ipv6.deliver(callsleft); if (!watcher.valid()) return;
 
-    // something was processed, is the side-effect that userspace destucted `this`?
-    if (!watcher.valid()) return;
-
-    // check the ipv6 sockets too
-    calls += _ipv6.deliver(std::max(0L, ssize_t(_maxcalls) - ssize_t(calls)));
-
-    // something was processed, is the side-effect that userspace destucted `this`?
-    if (!watcher.valid()) return;
-
-    // start other operations now that some earlier operations are completed
-    proceed(now, calls);
-    
     // there was no data to process, so we are going to run jobs
-    while (calls < _maxcalls && !_lookups.empty())
+    while (callsleft && !_lookups.empty())
     {
         // get the oldest operation
-        if (!process(_lookups.front(), now)) break;
-        
+        if (_inflight < _capacity && !process(_lookups.front(), now)) break;
+
         // maybe the userspace call ended up in `this` being destructed
         if (!watcher.valid()) return;
         
         // log one extra call (this is not entirely correct, maybe there was no call to userspace)
-        calls += 1;
-        
+        callsleft -= 1;
+
         // forget this lookup because we ran it
+        // @todo what if there was no call to userspace?
         _lookups.pop_front();
     }
     
     // look at lookups that can no longer be repeated, but for which we're waiting for answer
-    while (calls < _maxcalls && !_ready.empty())
+    while (callsleft && !_ready.empty())
     {
         // get the oldest operation
         if (!process(_ready.front(), now)) break;
@@ -286,15 +273,15 @@ void Core::expire()
         if (!watcher.valid()) return;
 
         // log one extra call
-        calls += 1;
+        callsleft -= 1;
         
-        // forget this lookup because we are going to run it
+        // forget this lookup because we are going to run it (??? the destructor doesn't call userspace ???)
         _ready.pop_front();
     }
 
-    // if there are more slots for scheduled operations, we start them now
-    if (_capacity > _inflight) proceed(now, _capacity - _inflight);
-    
+    // execute more lookups if possible
+    proceed(now);
+
     // reset the timer
     reschedule(now);
 }
