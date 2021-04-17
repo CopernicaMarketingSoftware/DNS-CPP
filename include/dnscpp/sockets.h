@@ -78,7 +78,7 @@ private:
      *  Collection of all sockets
      *  @var std::list<Udp>
      */
-    std::list<Udp> _sockets;
+    std::list<Udp> _udps;
 
     /**
      *  The next socket to use for sending a new query
@@ -161,7 +161,7 @@ public:
     void buffersize(size_t size)
     {
         // pass on
-        for (auto &socket: _sockets) socket.buffersize(size);
+        for (auto &socket: _udps) socket.buffersize(size);
     }
 
     /**
@@ -171,7 +171,7 @@ public:
     bool buffered() const
     {
         // if there's a buffered response in one of the sockets then we consider ourselves buffered
-        for (const auto &sock : _sockets) if (sock.buffered()) return true;
+        for (const auto &sock : _udps) if (sock.buffered()) return true;
 
         // otherwise we're not buffered
         return false;

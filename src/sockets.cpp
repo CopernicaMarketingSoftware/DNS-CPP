@@ -40,11 +40,11 @@ Sockets::Sockets(Loop *loop, Handler *handler) : _loop(loop), _handler(handler)
     // trick to avoid a compiler warning
     Udp::Handler *udphandler = this;
 
-    // create sockets
-    _sockets.emplace_back(loop, udphandler);
+    // create a first UDP socket
+    _udps.emplace_back(loop, udphandler);
 
     // set the first socket to use
-    _current = _sockets.begin();
+    _current = _udps.begin();
 }
 
 /**
@@ -60,13 +60,13 @@ void Sockets::sockets(size_t count)
     Udp::Handler *udphandler = this;
     
     // create more sockets (note that we can only grow)
-    for (size_t i = _sockets.size(); i < count; ++i) 
+    for (size_t i = _udps.size(); i < count; ++i) 
     {
         // create a new socket
-        _sockets.emplace_back(_loop, udphandler);
+        _udps.emplace_back(_loop, udphandler);
         
         // give the socket the same settings as all other sockets
-        _sockets.back().buffersize(_sockets.front().buffersize());
+        _udps.back().buffersize(_udps.front().buffersize());
     }
 }
 
@@ -85,7 +85,7 @@ size_t Sockets::deliver(size_t maxcalls)
     Watcher watcher(this);
 
     // deliver from all sockets
-    for (auto &socket : _sockets)
+    for (auto &socket : _udps)
     {
         // tally up the numbers
         result += socket.deliver(&watcher, maxcalls);
@@ -109,7 +109,7 @@ size_t Sockets::deliver(size_t maxcalls)
 Inbound *Sockets::send(const Ip &ip, const Query &query)
 {
     // If there is a socket with no subscribers: use that one + mark it as current
-    for (auto iter = _sockets.begin(); iter != _sockets.end(); ++iter)
+    for (auto iter = _udps.begin(); iter != _udps.end(); ++iter)
     {
         // continue if this one has subs
         if (iter->subscriberCount()) continue;
