@@ -1,8 +1,8 @@
 /**
- *  Udp.h
+ *  Sockets.h
  *
- *  Internal class that implements a UDP socket over which messages
- *  can be sent to nameservers. You normally do not have to construct
+ *  Internal class that bundles all the socket over which messages
+ *  are sent to nameservers. You normally do not have to construct
  *  this class in user space, it is used internally by the Context class.
  *
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
@@ -45,7 +45,7 @@ class Processor;
 /**
  *  Class definition
  */
-class Udps : private Watchable, Udp::Handler
+class Sockets : private Watchable, Udp::Handler
 {
 public:
     /**
@@ -55,10 +55,10 @@ public:
     {
     public:
         /**
-         *  Method that is called when the udp socket has a buffer available
+         *  Method that is called when one of the sockets has a buffer of received messages
          *  @param  udp     the reporting socket
          */
-        virtual void onBuffered(Udps *udp) = 0;
+        virtual void onBuffered(Sockets *udp) = 0;
     };
 
 private:
@@ -110,18 +110,18 @@ public:
      *  @param  handler     object that will receive all incoming responses
      *  @throws std::runtime_error
      */
-    Udps(Loop *loop, Handler *handler);
+    Sockets(Loop *loop, Handler *handler);
 
     /**
      *  No copying
      *  @param  that
      */
-    Udps(const Udps &that) = delete;
+    Sockets(const Sockets &that) = delete;
         
     /**
      *  Destructor
      */
-    virtual ~Udps() = default;
+    virtual ~Sockets() = default;
 
     /**
      *  Update the number of sockets

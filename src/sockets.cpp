@@ -1,7 +1,7 @@
 /**
- *  Udp.cpp
+ *  Sockets.cpp
  * 
- *  Implementation file for the Udp class
+ *  Implementation file for the Sockets class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2020 - 2021 Copernica BV
@@ -10,7 +10,7 @@
 /**
  *  Dependencies
  */
-#include "../include/dnscpp/udps.h"
+#include "../include/dnscpp/sockets.h"
 #include "../include/dnscpp/loop.h"
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/query.h"
@@ -35,7 +35,7 @@ namespace DNS {
  *  @param  handler     object that will receive all incoming responses
  *  @throws std::runtime_error
  */
-Udps::Udps(Loop *loop, Handler *handler) : _loop(loop), _handler(handler)
+Sockets::Sockets(Loop *loop, Handler *handler) : _loop(loop), _handler(handler)
 {
     // trick to avoid a compiler warning
     Udp::Handler *udphandler = this;
@@ -54,7 +54,7 @@ Udps::Udps(Loop *loop, Handler *handler) : _loop(loop), _handler(handler)
  *  many DNS lookups, where new lookups are started before previous lookups are completed)
  *  @param  value       new max value
  */
-void Udps::sockets(size_t count)
+void Sockets::sockets(size_t count)
 {
     // trick to avoid a compiler warning
     Udp::Handler *udphandler = this;
@@ -76,7 +76,7 @@ void Udps::sockets(size_t count)
  *  @param   maxcalls  the max number of callback handlers to invoke
  *  @return  number of callback handlers invoked
  */
-size_t Udps::deliver(size_t maxcalls)
+size_t Sockets::deliver(size_t maxcalls)
 {
     // result variable
     size_t result = 0;
@@ -106,7 +106,7 @@ size_t Udps::deliver(size_t maxcalls)
  *  @param  query   the query to send
  *  @return inbound
  */
-Inbound *Udps::send(const Ip &ip, const Query &query)
+Inbound *Sockets::send(const Ip &ip, const Query &query)
 {
     // If there is a socket with no subscribers: use that one + mark it as current
     for (auto iter = _sockets.begin(); iter != _sockets.end(); ++iter)
@@ -132,7 +132,7 @@ Inbound *Udps::send(const Ip &ip, const Query &query)
  *  Method that is called when an inbound socket is closed
  *  @param  udp     the reporting object
  */
-void Udps::onClosed(Udp *udp)
+void Sockets::onClosed(Udp *udp)
 {
     // @todo this method could be used to add more efficiency, for example
     // to mark the just closed socket as the current one, and avoid that every

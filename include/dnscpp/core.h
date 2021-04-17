@@ -18,7 +18,7 @@
 /**
  *  Dependencies
  */
-#include "udps.h"
+#include "sockets.h"
 #include "resolvconf.h"
 #include "hosts.h"
 #include "bits.h"
@@ -44,7 +44,7 @@ class Loop;
 /**
  *  Class definition
  */
-class Core : private Timer, private Watchable, private Udps::Handler
+class Core : private Timer, private Watchable, private Sockets::Handler
 {
 protected:
     /**
@@ -54,11 +54,11 @@ protected:
     Loop *_loop;
 
     /**
-     *  UDP socket (we need two for ipv4 and ipv6 traffic)
-     *  @var Udp
+     *  Collection of sockets (we need two for ipv4 and ipv6 traffic)
+     *  @var Sockets
      */
-    Udps _ipv4;
-    Udps _ipv6;
+    Sockets _ipv4;
+    Sockets _ipv6;
 
     /**
      *  The IP addresses of the servers that can be accessed
@@ -213,9 +213,9 @@ protected:
 
     /**
      *  Method that is called when a UDP socket has a buffer that it wants to deliver
-     *  @param  udp         the socket with a buffer
+     *  @param  sockets     the sockets with a buffer
      */
-    void onBuffered(Udps *udp) override;
+    void onBuffered(Sockets *sockets) override;
 
     /**
      *  Method that is called when a UDP socket has a buffer that it wants to deliver
