@@ -86,7 +86,7 @@ private:
      *  Method that is called when a dgram response is received
      *  @param  ip          the ip from where the response came (nameserver ip)
      *  @param  response    the received response
-     *  @return bool        was the response processed?
+     *  @return bool        was the response processed, meaning: was it sent back to userspace?
      */
     virtual bool onReceived(const Ip &ip, const Response &response) override;
 
@@ -107,7 +107,7 @@ private:
     /**
      *  Execute the lookup
      *  @param  now         current time
-     *  @return bool        should the lookup be rescheduled?
+     *  @return bool        was there a call back to userspace?
      */
     virtual bool execute(double now) override;
 
@@ -119,7 +119,7 @@ private:
 
     /** 
      *  Time out the job because no appropriate response was received in time
-     *  @return bool
+     *  @return bool        was there a call to user space?
      */
     bool timeout();
 
@@ -147,8 +147,9 @@ private:
     /**
      *  Method to report the response
      *  @param  response
+     *  @return bool
      */
-    void report(const Response &response);
+    bool report(const Response &response);
 
     /**
      *  Cleanup the object
@@ -157,10 +158,23 @@ private:
     DNS::Handler *cleanup();
 
     /**
-     *  How many credits are left (meaning: how many datagrams do we still have to send?)
-     *  @return size_t      number of attempts
+     *  Is this lookup still scheduled: meaning that no requests has been sent yet
+     *  @return bool
      */
-    virtual size_t credits() const override;
+    virtual bool scheduled() const override;
+    
+    /**
+     *  Is this lookup already finished: meaning that a result has been reported back to userspace
+     *  @return bool
+     */
+    virtual bool finished() const override;
+    
+    /**
+     *  Is this lookup exhausted: meaning that it has sent its max number of requests, but still
+     *  has not received an appropriate answer, and is now waiting for its final timer to finish
+     *  @return bool
+     */
+    virtual bool exhausted() const override;
 
     /**
      *  Cancel the operation

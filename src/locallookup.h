@@ -37,29 +37,26 @@ private:
     const Hosts &_hosts;
     
     /**
-     *  Is the operation ready?
-     *  @var bool
-     */
-    bool _ready = false;
-
-    /**
      *  Method that is called when it is time to process this lookup
      *  @param  now     current time
-     *  @return bool    should it be rescheduled?
+     *  @return bool    was there a call to userspace?
      */
     virtual bool execute(double now) override
     {
         // do nothing if ready
-        if (_ready) return false;
+        if (_handler == nullptr) return false;
+
+        // remember the handler
+        auto *handler = _handler;
         
-        // pass to the hosts
-        _hosts.notify(Request(this), _handler, this);
+        // get rid of the handler to avoid that the result is reported
+        _handler = nullptr;
+
+        // pass to the hosts (this will trigger an immediate call to the handler)
+        _hosts.notify(Request(this), handler, this);
         
-        // remember that the operation is ready
-        _ready = true;
-        
-        // no need to reschedule
-        return false;
+        // done
+        return true;
     }
 
     /**
@@ -74,13 +71,34 @@ private:
     }
 
     /**
-     *  How many credits are left (meaning: how many datagrams do we still have to send?)
-     *  @return size_t      number of attempts
+     *  Is this lookup still scheduled: meaning that no requests has been sent yet
+     *  @return bool
      */
-    virtual size_t credits() const override
+    virtual bool scheduled() const override
     {
-        // local lookups do not send anything at all
-        return 0;
+        // because the handler is reset on completion, we can use it to see if the operation is still scheduled
+        return _handler != nullptr;
+    }
+    
+    /**
+     *  Is this lookup already finished: meaning that a result has been reported back to userspace
+     *  @return bool
+     */
+    virtual bool finished() const override
+    {
+        // handler is reset on completion
+        return _handler == nullptr;
+    }
+    
+    /**
+     *  Is this lookup exhausted: meaning that it has sent its max number of requests, but still
+     *  has not received an appropriate answer, and is now waiting for its final timer to finish
+     *  @return bool
+     */
+    virtual bool exhausted() const override
+    {
+        // handler is set on completion
+        return _handler == nullptr;
     }
     
     /**
@@ -133,7 +151,7 @@ public:
         // if the operation is destructed while it was still running, it means that the
         // operation was prematurely cancelled from user-space, let the handler know
         // @todo check if this is correct  / also implement the cancel() method
-        if (!_ready) _handler->onCancelled(this);
+        if (_handler != nullptr) _handler->onCancelled(this);
     }
 };
     

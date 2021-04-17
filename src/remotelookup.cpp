@@ -49,16 +49,40 @@ RemoteLookup::~RemoteLookup()
 }
 
 /**
- *  How many credits are left (meaning: how many datagrams do we still have to send?)
- *  @return size_t      number of attempts
+ *  Is this lookup still scheduled: meaning that no requests has been sent yet
+ *  @return bool
  */
-size_t RemoteLookup::credits() const
+bool RemoteLookup::scheduled() const
 {
-    // if we're tcp connected, we're not going to send more datagrams
-    if (_connection) return 0;
+    // if the operation is still busy, but has not sent out anything
+    return _handler != nullptr && _count == 0;
+}
+
+/**
+ *  Is this lookup already finished: meaning that a result has been reported back to userspace
+ *  @return bool
+ */
+bool RemoteLookup::finished() const
+{
+    // handler is reset on completion, so that can be used for checking
+    return _handler == nullptr;
+}
+
+/**
+ *  Is this lookup exhausted: meaning that it has sent its max number of requests, but still
+ *  has not received an appropriate answer, and is now waiting for its final timer to finish
+ *  @return bool
+ */
+bool RemoteLookup::exhausted() const
+{
+    // handler must still exist (result has not been reported)
+    if (_handler == nullptr) return false;
     
-    // number of attempts left
-    return _core->attempts() > _count ? _core->attempts() - _count : 0;
+    // if a tcp connection is in progress we are not going to send out more datagrams
+    if (_connection) return true;
+    
+    // if max number of datagrams has not yet been reached
+    return _count >= _core->attempts();
 }
 
 /**
@@ -124,21 +148,21 @@ Handler *RemoteLookup::cleanup()
 
 /** 
  *  Time out the job because no appropriate response was received in time
- *  @return bool        should the lookup be resheduled?
+ *  @return bool        wsa there a call to userspace?
  */
 bool RemoteLookup::timeout()
 {
     // before we report to userspace we cleanup the object
     cleanup()->onTimeout(this);
     
-    // done (we do not have to run again)
-    return false;
+    // done
+    return true;
 }
 
 /**
  *  Execute the lookup
  *  @param  now         current time
- *  @return bool        should the lookup be rescheduled?
+ *  @return bool        was a call to userspace made?
  */
 bool RemoteLookup::execute(double now)
 {
@@ -148,11 +172,11 @@ bool RemoteLookup::execute(double now)
     // when job times out
     if ((_connection || _count >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
 
-    // if we reached the max attempts we stop sending out more datagrams, but we keep active
-    if (_count >= _core->attempts()) return true;
+    // if we reached the max attempts we stop sending out more datagrams
+    if (_count >= _core->attempts()) return false;
     
     // if the operation is already using tcp we simply wait for that
-    if (_connection) return true;
+    if (_connection) return false;
 
     // access to the nameservers + the number we have
     auto &nameservers = _core->nameservers();
@@ -193,31 +217,32 @@ bool RemoteLookup::execute(double now)
         break;
     }
     
-    // we want to be rescheduled
-    return true;
+    // no call to user space
+    return false;
 }
 
 /**
  *  Method to report the response
  *  This method checks if there is an NXDOMAIN error, if that is the case
  *  it is turned into an empty response if the /etc/hosts file holds a record for the host
- *  @param  response
+ *  @param  response        the response to report
+ *  @return bool            was there a call to userspace?
  */
-void RemoteLookup::report(const Response &response)
+bool RemoteLookup::report(const Response &response)
 {
     // if the result has already been reported, we do nothing here
-    if (_handler == nullptr) return;
+    if (_handler == nullptr) return false;
     
     // for NXDOMAIN errors we need special treatment (maybe the hostname _does_ exists in 
     // /etc/hosts?) For all other type of results the message can be passed to userspace
-    if (response.rcode() != ns_r_nxdomain) return cleanup()->onReceived(this, response);
+    if (response.rcode() != ns_r_nxdomain) return cleanup()->onReceived(this, response), true;
 
     // extract the original question, to find out the host for which we were looking
     Question question(response);
     
     // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
     // file does have a record for this hostname, check this
-    if (!_core->exists(question.name())) return cleanup()->onReceived(this, response);
+    if (!_core->exists(question.name())) return cleanup()->onReceived(this, response), true;
     
     // get the original request (so that the response can match the request)
     Request request(this);
@@ -227,13 +252,16 @@ void RemoteLookup::report(const Response &response)
 
     // send the fake-response to user-space
     cleanup()->onReceived(this, Response(fake.data(), fake.size()));
+    
+    // done
+    return true;
 }
 
 /**
  *  Method that is called when a response is received
  *  @param  nameserver  the reporting nameserver
  *  @param  response    the received response
- *  @return bool        was the response processed?
+ *  @return bool        was the response processed / was there a call to user space?
  */
 bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
 {
@@ -245,7 +273,7 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     if (_connection) return false;
     
     // if the response was not truncated, we can report it to userspace
-    if (!response.truncated()) { report(response); return true; }
+    if (!response.truncated()) return report(response);
 
     // switch to tcp mode to retry the query to get a non-truncated response
     _connection.reset(new Connection(_core->loop(), ip, _query, response, this));
@@ -256,8 +284,8 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     // remember the start-time of the connection to reset the timeout-period
     _last = Now();
     
-    // done
-    return true;
+    // done (but without a call to userspace)
+    return false;
 }
 
 /**
