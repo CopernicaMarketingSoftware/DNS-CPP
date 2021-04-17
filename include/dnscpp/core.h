@@ -164,9 +164,10 @@ protected:
 
     /**
      *  Proceed with more operations
+     *  @param  watcher
      *  @param  now
      */
-    void proceed(double now);
+    void proceed(const Watcher &watcher, double now);
     
     /**
      *  Process a lookup

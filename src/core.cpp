@@ -210,16 +210,16 @@ bool Core::process(const std::shared_ptr<Lookup> &lookup, double now)
 
 /**
  *  Proceed with more operations
+ *  @param  watcher
  *  @param  now
- *  @param  count
  */
-void Core::proceed(double now)
+void Core::proceed(const Watcher &watcher, double now)
 {
     // make sure this is absolutely true or we'll end up iterating for a long time
     assert(_inflight <= _capacity);
 
     // iterate
-    while (_capacity > _inflight && !_scheduled.empty())
+    while (watcher.valid() && _capacity > _inflight && !_scheduled.empty())
     {
         // the lookup that will be started
         auto lookup = _scheduled.front();
@@ -231,7 +231,6 @@ void Core::proceed(double now)
         _scheduled.pop_front();
         
         // get the oldest scheduled operation (the process() always returns true @todo really?)
-        // @todo could this result in a destruct of `this`?
         if (!process(_scheduled.front(), now)) return;
     }
 }
@@ -295,7 +294,7 @@ void Core::expire()
     }
 
     // execute more lookups if possible
-    proceed(now);
+    proceed(watcher, now);
 
     // reset the timer
     reschedule(now);
