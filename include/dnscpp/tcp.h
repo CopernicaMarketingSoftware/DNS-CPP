@@ -18,6 +18,7 @@
  */
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <deque>
 #include "socket.h"
 #include "monitor.h"
 
@@ -103,9 +104,9 @@ private:
 
     /**
      *  Connectors that want to use this TCP socket for sending out a query
-     *  @var std::vector
+     *  @var std::deque
      */
-    std::vector<Connector *> _connectors;
+    std::deque<Connector *> _connectors;
     
     /**
      *  Helper function to make a connection
@@ -127,6 +128,11 @@ private:
      *  Upgrate the socket from a _connecting_ socket to a _connected_ socket
      */
     void upgrade();
+
+    /**
+     *  Mark the connection as failed
+     */
+    void fail();
 
     /**
      *  The error state of the socket -- this can be used to check whether the socket is 

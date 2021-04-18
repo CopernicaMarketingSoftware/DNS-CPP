@@ -13,6 +13,7 @@
 #include "../include/dnscpp/tcp.h"
 #include "../include/dnscpp/loop.h"
 #include "../include/dnscpp/query.h"
+#include "../include/dnscpp/watcher.h"
 #include "blocking.h"
 #include "connector.h"
 
