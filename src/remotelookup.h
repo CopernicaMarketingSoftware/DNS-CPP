@@ -209,7 +209,6 @@ public:
      *  Destructor
      */
     virtual ~RemoteLookup();
-
 };
 
 /**

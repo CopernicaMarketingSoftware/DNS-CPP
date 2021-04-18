@@ -191,6 +191,11 @@ void Core::onBuffered(Sockets *sockets)
  */
 bool Core::process(const std::shared_ptr<Lookup> &lookup, double now)
 {
+    // if this lookup was already finished (this just pops it off the queue), this happens because we only
+    // pop messages from the queues, and lookups in the middle might already be finished by the time the
+    // hit the front of the queue)
+    if (lookup->finished()) return true;
+    
     // if it is not yet time to run this lookup, we do nothing more
     if (lookup->delay(now) > 0.0) return false;
 
@@ -230,8 +235,8 @@ void Core::proceed(const Watcher &watcher, double now)
         // this lookup is no longer scheduled
         _scheduled.pop_front();
         
-        // get the oldest scheduled operation (the process() always returns true @todo really?)
-        if (!process(_scheduled.front(), now)) return;
+        // run it (the process() always returns true @todo really?)
+        if (!process(lookup, now)) return;
     }
 }
 
@@ -264,7 +269,7 @@ void Core::expire()
     {
         // get the oldest operation from the queue
         if (!process(_lookups.front(), now)) break;
-
+        
         // maybe the userspace call ended up in `this` being destructed
         if (!watcher.valid()) return;
         

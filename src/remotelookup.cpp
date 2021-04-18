@@ -200,7 +200,6 @@ bool RemoteLookup::execute(double now)
     // store this subscription, so that we can unsubscribe on success
     _subscriptions.emplace(std::make_pair(inbound, nameserver));
 
-        
     // no call to user space
     return false;
 }
