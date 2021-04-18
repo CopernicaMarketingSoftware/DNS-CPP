@@ -29,6 +29,7 @@
 #include <list>
 #include <deque>
 #include <memory>
+#include <cassert>
 
 /**
  *  Begin of namespace
@@ -148,7 +149,12 @@ protected:
      *  @var size_t
      */
     size_t _maxcalls = 5;
-    
+
+    /**
+     *  Number of lookups inflight
+     *  @var size_t
+     */
+    size_t _inflight = 0;
 
     /**
      *  Calculate the delay until the next job
@@ -159,9 +165,8 @@ protected:
     /**
      *  Proceed with more operations
      *  @param  now
-     *  @param  count
      */
-    void proceed(double now, size_t count);
+    void proceed(double now);
     
     /**
      *  Process a lookup
@@ -273,6 +278,17 @@ public:
      *  @return bool            does it exists in /etc/hosts?
      */
     bool exists(const char *hostname) const { return _hosts.lookup(hostname) != nullptr; }
+
+    /**
+     *  Increment the number of inflight requests
+     */
+    void increment() noexcept { ++_inflight; }
+
+    /**
+     *  Decrement the number of inflight requests
+     *  @param count  by what amount to decrease
+     */
+    void decrement(size_t count = 1) noexcept { assert(_inflight >= count); _inflight -= count; }
 
     /**
      *  Send a message over a UDP socket

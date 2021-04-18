@@ -90,6 +90,9 @@ void RemoteLookup::unsubscribe()
         // this is a pair
         subscription.first->unsubscribe(this, subscription.second, _query.id());
     }
+
+    // forget that we're doing lookups
+    _core->decrement(_subscriptions.size());
     
     // we have no subscriptions left
     _subscriptions.clear();
@@ -158,7 +161,7 @@ bool RemoteLookup::execute(double now)
     // what if there are no nameservers?
     if (nscount == 0) return timeout();
 
-    // which nameserver should we sent now?
+    // which nameserver should we use now?
     const Ip &nameserver = nameservers[_core->rotate() ? (_count + _id) % nscount : _count % nscount];
     
     // send a datagram to this server
@@ -169,6 +172,9 @@ bool RemoteLookup::execute(double now)
 
         // store this subscription, so that we can unsubscribe on success
         _subscriptions.emplace(std::make_pair(inbound, nameserver));
+
+        // we're doing another request
+        _core->increment();
     }
 
     // one more execution attempt has been made
