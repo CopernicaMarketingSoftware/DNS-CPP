@@ -77,6 +77,7 @@ protected:
      *  @param  size    size of the buffer
      */
     void add(const sockaddr *addr, const unsigned char *buffer, size_t size);
+    void add(const Ip &addr, const unsigned char *buffer, size_t size);
 
 public:
     /**

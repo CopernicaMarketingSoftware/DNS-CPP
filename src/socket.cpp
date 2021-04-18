@@ -47,6 +47,21 @@ void Socket::add(const sockaddr *addr, const unsigned char *buffer, size_t size)
 }
 
 /**
+ *  Add a message for delayed processing
+ *  @param  addr    the address from which the message was received
+ *  @param  buffer  the response buffer
+ *  @param  size    size of the buffer
+ */
+void Socket::add(const Ip &addr, const unsigned char *buffer, size_t size)
+{
+    // add to the list
+    _responses.emplace_back(addr, std::basic_string<unsigned char>(buffer, size));
+
+    // reschedule the processing of messages
+    _handler->onBuffered(this);
+}
+
+/**
  *  Invoke callback handlers for buffered raw responses
  *  @param      watcher   The watcher to keep track if the parent object remains valid
  *  @param      maxcalls  The max number of callback handlers to invoke

@@ -240,6 +240,12 @@ void Tcp::upgrade()
     // if the connection failed
     if (!_connected) return fail();
     
+    // allocate the receive buffer 
+    _buffer = (unsigned char *)malloc(_capacity = 4096);
+    
+    // if this fails, we treat it as a failed connection
+    if (_buffer == nullptr) return fail();
+    
     // we no longer monitor for writability, but for readability instead
     _loop->update(_identifier, _fd, 1, this);
     
@@ -282,11 +288,8 @@ void Tcp::notify()
     // if the socket is not yet connected, it might be connected right now
     if (!_connected) return upgrade();
     
-    // structure will hold the source address (we use an ipv6 struct because that is also big enough for ipv4)
-    struct sockaddr_in6 from; socklen_t fromlen = sizeof(from);
-
     // receive data from the socket
-    auto result = ::recvfrom(_fd, _buffer + _filled, expected(), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
+    auto result = ::recv(_fd, _buffer + _filled, expected(), MSG_DONTWAIT);
     
     // do nothing if the operation is blocking
     if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
@@ -304,7 +307,7 @@ void Tcp::notify()
     if (expected() > 0) return;
     
     // all data has been received, buffer the response for now
-    add((const sockaddr *)&from, _buffer + 2, _filled - 2);
+    add(_ip, _buffer + 2, _filled - 2);
     
     // for the next response we empty the buffer again
     _filled = 0;
@@ -324,8 +327,11 @@ size_t Tcp::deliver(size_t maxcalls)
     // number of calls made
     size_t calls = 0;
     
+    // is the object still busy connecting?
+    bool connecting = !_connected && _identifier != nullptr;
+    
     // inform them all
-    while (calls < maxcalls && !_connectors.empty())
+    while (calls < maxcalls && !_connectors.empty() && !connecting)
     {
         // get the oldest connector
         auto *connector = _connectors.front();
