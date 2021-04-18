@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <unistd.h>
 #include <poll.h>
+#include "connector.h"
 
 /**
  *  Begin of namespace
@@ -84,20 +85,60 @@ size_t Sockets::deliver(size_t maxcalls)
     // we are going to make a call to userspace, so we keep monitoring if `this` is not destructed
     Watcher watcher(this);
 
-    // deliver from all sockets
+    // deliver the buffer from all udp sockets
     for (auto &socket : _udps)
     {
-        // tally up the numbers
-        result += socket.deliver(&watcher, maxcalls);
+        // pass the buffered responses to the lookup objects
+        result += socket.deliver(maxcalls);
+        
+        // update number of calls
+        maxcalls -= result;
 
-        // It's possible that an onReceived handler will destruct the Context and consequently
-        // this object too. In that case we have to be careful not to read/write any member
-        // variables any longer.
-        if (!watcher.valid()) break;
+        // the call to userspace may have destructed this object
+        if (!watcher.valid()) return result;
+        
+        // leap out if we have made all the calls back to userspace
+        if (maxcalls == 0) return result;
     }
+    
+    // if there are no more tcp connections, we're done
+    if (_tcps.empty()) return result;
+    
+    // when responses from tcp sockets are delivered, it is possible that at the same
+    // time those sockets are removed from the underlying array (by the onUnused() method),
+    // to ensure that we can use a simple iterator, we make a copy of the sockets
+    auto sockets = _tcps;
+    
+    // deliver the buffer from all tcp sockets
+    for (auto &socket : sockets)
+    {
+        // pass the buffered responses to the lookup objects
+        result += socket->deliver(maxcalls);
+        
+        // update number of calls
+        maxcalls -= result;
 
+        // the call to userspace may have destructed this object
+        if (!watcher.valid()) return result;
+        
+        // leap out if we have made all the calls back to userspace
+        if (maxcalls == 0) return result;
+    }
+    
     // return the number of buffered responses that were processed
     return result;
+}
+
+/**
+ *  Method that is called when a TCP socket becomes unused
+ *  @param  socket      the reporting socket
+ */
+void Sockets::onUnused(Tcp *socket)
+{
+    // when a tcp socket is no longer in use (nobody is expecting any answers from it) we close it right away
+    _tcps.erase(std::remove_if(_tcps.begin(), _tcps.end(), [socket](const std::shared_ptr<Tcp> &tcp) -> bool {
+        return socket == tcp.get();
+    }), _tcps.end());
 }
 
 /**
@@ -106,37 +147,75 @@ size_t Sockets::deliver(size_t maxcalls)
  *  @param  query   the query to send
  *  @return inbound
  */
-Inbound *Sockets::send(const Ip &ip, const Query &query)
+Inbound *Sockets::datagram(const Ip &ip, const Query &query)
 {
-    // If there is a socket with no subscribers: use that one + mark it as current
+    // We have a simple algorithm to spread out the load over different sockets, so that we 
+    // sometimes switch port-numbers for outgoing queries, which makes the system safer: when
+    // all the sockets are in use (expect one or more responses), we use one socket for all
+    // subsequent queries to allow the other sockets to process all their responses, and then
+    // be closed to cycle their port number. But we first check if there is already an unused
+    // sockets, because in that case we can use that for sending out a query with a fresh port
     for (auto iter = _udps.begin(); iter != _udps.end(); ++iter)
     {
-        // continue if this one has subs
-        if (iter->subscriberCount()) continue;
+        // continue if this one has subscribers / is already in use
+        if (iter->subscribers() > 0) continue;
 
         // OK: send the query with this one
         Inbound *inbound = iter->send(ip, query);
 
-        // mark it as current
+        // mark it as current so that we use this socket for subsequent queries in case all
+        // the sockets are in use by now
         _current = iter;
 
         // done
         return inbound;
     }
 
-    // If all the sockets already have subscribers: use the current
+    // this is the situation that all sockets have subscribers and we start using a fixed
+    // socket to allow the others to catch up
     return _current->send(ip, query);
 }
 
 /**
- *  Method that is called when an inbound socket is closed
- *  @param  udp     the reporting object
+ *  Connect to a certain IP
+ *  @param  ip          IP address of the target nameservers
+ *  @param  connector   the object interested in the connection
+ *  @return bool
  */
-void Sockets::onClosed(Udp *udp)
+bool Sockets::connect(const Ip &ip, Connector *connector)
 {
-    // @todo this method could be used to add more efficiency, for example
-    // to mark the just closed socket as the current one, and avoid that every
-    // send() call results in a loop over all sockets
+    // check if we already have a connection to this ip
+    for (auto &tcp : _tcps)
+    {
+        // is this the one?
+        if (tcp->ip() != ip) continue;
+        
+        // subscribe to the connection, so that it will be notified when ready
+        if (tcp->subscribe(connector)) return true;
+    }
+    
+    // avoid exceptions to bubble up
+    try
+    {
+        // get the socket-handler
+        Socket::Handler *handler = this;
+        
+        // create a brand new connection
+        auto tcp = std::make_shared<Tcp>(_loop, ip, handler);
+        
+        // add this to the list
+        _tcps.push_back(tcp);
+        
+        // subscribe to the connection, so that it will be notified when ready (this
+        // always returns true because we just created the object and it cannot yet
+        // be in a failed state)
+        return tcp->subscribe(connector);
+    }
+    catch (...)
+    {
+        // failure
+        return false;
+    }
 }
 
 /**

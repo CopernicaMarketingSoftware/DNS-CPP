@@ -310,11 +310,28 @@ Inbound *Core::datagram(const Ip &ip, const Query &query)
 {
     // check the version number of ip
     switch (ip.version()) {
-    case 4:     return _ipv4.send(ip, query);
-    case 6:     return _ipv6.send(ip, query);
+    case 4:     return _ipv4.datagram(ip, query);
+    case 6:     return _ipv6.datagram(ip, query);
     default:    return nullptr;
     }
 }
+
+/**
+ *  Connect with TCP to a socket
+ *  This is an async operation, the connection will later be passed to the connector
+ *  @param  ip          IP address of the target nameservers
+ *  @param  connector   the object interested in the connection
+ *  @return bool
+ */
+bool Core::connect(const Ip &ip, Connector *connector)
+{
+    // check the version number of ip
+    switch (ip.version()) {
+    case 4:     return _ipv4.connect(ip, connector);
+    case 6:     return _ipv6.connect(ip, connector);
+    default:    return false;
+    }
+}    
 
 /**
  *  End of namespace

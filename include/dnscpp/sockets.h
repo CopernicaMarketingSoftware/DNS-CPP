@@ -21,9 +21,11 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <memory>
 #include "monitor.h"
 #include "watchable.h"
 #include "udp.h"
+#include "tcp.h"
 #include <list>
 #include <string>
 
@@ -41,11 +43,12 @@ class Loop;
 class Ip;
 class Response;
 class Processor;
+class Connector;
 
 /**
  *  Class definition
  */
-class Sockets : private Watchable, Udp::Handler
+class Sockets : private Watchable, private Tcp::Handler
 {
 public:
     /**
@@ -60,7 +63,7 @@ public:
          */
         virtual void onBuffered(Sockets *udp) = 0;
     };
-
+    
 private:
     /**
      *  The main event loop
@@ -75,34 +78,40 @@ private:
     Handler *_handler;
 
     /**
-     *  Collection of all sockets
+     *  Collection of all UDP sockets
      *  @var std::list<Udp>
      */
     std::list<Udp> _udps;
 
     /**
-     *  The next socket to use for sending a new query
+     *  The next UDP socket to use for sending a new query
      *  @var size_t
      */
     std::list<Udp>::iterator _current;
 
     /**
-     *  This method is called when a UDP socket has an inbound buffer that requires processing
-     *  @param  udp     the reporting object
+     *  Collection of TCP sockets
+     *  @var std::vector
      */
-    virtual void onBuffered(Udp *udp) override 
+    std::vector<std::shared_ptr<Tcp>> _tcps;
+
+    /**
+     *  This method is called when a socket has an inbound buffer that requires processing
+     *  @param  socket  the reporting object
+     */
+    virtual void onBuffered(Socket *socket) override 
     { 
         // pass on to the handler
         _handler->onBuffered(this); 
     }
-    
-    /**
-     *  Method that is called when an inbound socket is closed
-     *  @param  udp     the reporting object
-     */
-    virtual void onClosed(Udp *udp) override;
-    
 
+    /**
+     *  Method that is to be called when the socket is no longer in use (there are no more subscribers)
+     *  @param  socket
+     */
+    virtual void onUnused(Tcp *tcp) override;
+    
+    
 public:
     /**
      *  Constructor
@@ -139,7 +148,16 @@ public:
      *  @param  query       the query to send
      *  @return Inbound     the inbound object over which the message is sent
      */
-    Inbound *send(const Ip &ip, const Query &query);
+    Inbound *datagram(const Ip &ip, const Query &query);
+
+    /**
+     *  Connect with TCP to a socket
+     *  This is an async operation, the connection will later be passed to the connector
+     *  @param  ip          IP address of the target nameservers
+     *  @param  connector   the object interested in the connection
+     *  @return bool
+     */
+    bool connect(const Ip &ip, Connector *connector);
 
     /**
      *  Deliver messages that have already been received and buffered to their appropriate processor
@@ -152,7 +170,7 @@ public:
      *  Is the socket now readable?
      *  @return bool
      */
-    bool readable() const;
+    bool readable2() const;
 
     /**
      *  The inbound buffersize for new sockets

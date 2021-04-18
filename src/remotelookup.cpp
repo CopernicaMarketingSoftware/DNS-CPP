@@ -11,7 +11,6 @@
  *  Dependencies
  */
 #include "remotelookup.h"
-#include "connection.h"
 #include "../include/dnscpp/core.h"
 #include "../include/dnscpp/response.h"
 #include "../include/dnscpp/answer.h"
@@ -78,8 +77,8 @@ bool RemoteLookup::exhausted() const
     // handler must still exist (result has not been reported)
     if (_handler == nullptr) return false;
     
-    // if a tcp connection is in progress we are not going to send out more datagrams
-    if (_connection) return true;
+    // if a tcp connection is in progress to solve a truncated response we are not going to send out more datagrams
+    if (_truncated) return true;
     
     // if max number of datagrams has not yet been reached
     return _count >= _core->attempts();
@@ -97,7 +96,7 @@ double RemoteLookup::delay(double now) const
     if (_count == 0 || _handler == nullptr) return 0.0;
     
     // if already doing a tcp lookup, or when all attemps have passed, we wait until the expire-time
-    if (_connection || _count >= _core->attempts()) return std::max(0.0, _last + _core->timeout() - now);
+    if (_truncated || _count >= _core->attempts()) return std::max(0.0, _last + _core->timeout() - now);
     
     // wait until we can send a next datagram
     return std::max(_last + _core->interval() - now, 0.0);
@@ -115,9 +114,6 @@ void RemoteLookup::unsubscribe()
         subscription.first->unsubscribe(this, subscription.second, _query.id());
     }
 
-    // forget that we're doing lookups
-    _core->decrement(_subscriptions.size());
-    
     // we have no subscriptions left
     _subscriptions.clear();
 }    
@@ -135,9 +131,6 @@ Handler *RemoteLookup::cleanup()
     
     // forget the handler
     _handler = nullptr;
-    
-    // forget the tcp connection
-    _connection.reset();
     
     // unsubscribe from all inbound sockets
     unsubscribe();
@@ -170,13 +163,13 @@ bool RemoteLookup::execute(double now)
     if (_handler == nullptr) return false;
     
     // when job times out
-    if ((_connection || _count >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
+    if ((_truncated || _count >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
 
     // if we reached the max attempts we stop sending out more datagrams
     if (_count >= _core->attempts()) return false;
     
     // if the operation is already using tcp we simply wait for that
-    if (_connection) return false;
+    if (_truncated) return false;
 
     // access to the nameservers + the number we have
     auto &nameservers = _core->nameservers();
@@ -188,35 +181,26 @@ bool RemoteLookup::execute(double now)
     // which nameserver should we sent now?
     size_t target = _core->rotate() ? (_count + _id) % nscount : _count % nscount;
     
-    // iterator for the next loop
-    size_t i = 0;
-
     // send a datagram to each nameserver
-    for (auto &nameserver : nameservers)
-    {
-        // is this the target nameserver? (we use ++ postfix operator on purpose)
-        if (target != i++) continue;
+    auto &nameserver = nameservers[target];
 
-        // send a datagram to this server
-        // @todo check for nullptr
-        auto *inbound = _core->datagram(nameserver, _query);
-        
-        // subscribe to the answers that might come in from now onwards
-        inbound->subscribe(this, nameserver, _query.id());
-        
-        // store this subscription, so that we can unsubscribe on success
-        _subscriptions.emplace(std::make_pair(inbound, nameserver));
+    // send a datagram to this server
+    auto *inbound = _core->datagram(nameserver, _query);
 
-        // we're doing another request
-        _core->increment();
-
-        // one more message has been sent
-        _count += 1; _last = now;
-        
-        // for now we do not yet send the next message
-        break;
-    }
+    // one more message has been sent
+    _count += 1; _last = now;
     
+    // if the datagram was not _really_ sent (unlikely), we will treat it just as if it WAS sent,
+    // so that the problem will be picked up when the timer expires
+    if (inbound == nullptr) return false;
+    
+    // subscribe to the answers that might come in from now onwards
+    inbound->subscribe(this, nameserver, _query.id());
+    
+    // store this subscription, so that we can unsubscribe on success
+    _subscriptions.emplace(std::make_pair(inbound, nameserver));
+
+        
     // no call to user space
     return false;
 }
@@ -269,55 +253,57 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     // @todo should we check for more? like whether the response is indeed a response
     if (!_query.matches(response)) return false;
     
-    // if we're already busy with a tcp connection we ignore further dgram responses
-    if (_connection) return false;
-    
-    // if the response was not truncated, we can report it to userspace
-    if (!response.truncated()) return report(response);
+    // if the response was not truncated, we can report it to userspace, we do this also
+    // when the response came from a TCP lookup and was still truncated (_truncated is used as a boolean to indicate tcp)
+    if (!response.truncated() || _truncated) return report(response);
 
-    // switch to tcp mode to retry the query to get a non-truncated response
-    _connection.reset(new Connection(_core->loop(), ip, _query, response, this));
-    
     // we can unsubscribe from all inbound udp sockets because we're no longer interested in those responses
     unsubscribe();
     
+    // try to connect to a TCP socket
+    if (!_core->connect(ip, this)) return report(response);
+    
+    // because we switched to tcp mode, we remember the truncated response in case tcp fails too,
+    // we then at least have _something_ to report
+    _truncated.reset(new Response(response));
+
     // remember the start-time of the connection to reset the timeout-period
     _last = Now();
     
-    // done (but without a call to userspace)
+    // done (return false because there was no call to userspace yet)
     return false;
 }
 
 /**
- *  Called when the response has been received
- *  @param  connection
- *  @param  response
+ *  Called when a TCP connection has been set up (in case an earlier UDP response was truncated)
+ *  @param  ip          ip to which a connection was set up
+ *  @param  tcp         the actual TCP connection
+ *  @return bool        was a call to userspace done?
  */
-void RemoteLookup::onReceived(Connection *connection, const Response &response)
+bool RemoteLookup::onConnected(const Ip &ip, Tcp *tcp)
 {
-    // if the operation was already cancelled
-    if (_handler == nullptr) return;
-
-    // ignore responses that do not match with the query
-    // @todo should we check for more? like whether the response is indeed a response
-    if (!_query.matches(response)) return;
-
-    // we have a response, hand it over to user space
-    report(response);
+    // send the query
+    auto *inbound = tcp->send(_query);
+        
+    // subscribe to the answers that might come in from now onwards
+    inbound->subscribe(this, ip, _query.id());
+        
+    // store this subscription, so that we can unsubscribe on success
+    _subscriptions.emplace(std::make_pair(inbound, ip));
+    
+    // no call to userspace yet
+    return false;
 }
 
 /**
- *  Called when the connection could not be used
- *  @param  connector   the reporting connection
- *  @param  response    the original answer (the original truncated one)
+ *  Called when a TCP connection could not be set up
+ *  @param  ip          ip to which a connection was set up
+ *  @return bool        was a call to userspace done?
  */
-void RemoteLookup::onFailure(Connection *connection, const Response &truncated)
+bool RemoteLookup::onFailure(const Ip &ip)
 {
-    // if the operation was already cancelled
-    if (_handler == nullptr) return;
-    
-    // we failed to get the regular response, so we send back the truncated response
-    cleanup()->onReceived(this, truncated);
+    // tcp failed, in this case we want to send the truncated response instead
+    return report(*_truncated);
 }
 
 /**

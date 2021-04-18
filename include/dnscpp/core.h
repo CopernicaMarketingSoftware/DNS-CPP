@@ -56,6 +56,8 @@ protected:
     /**
      *  Collection of sockets (we need two for ipv4 and ipv6 traffic)
      *  @var Sockets
+     * 
+     *  @todo this is stupid
      */
     Sockets _ipv4;
     Sockets _ipv6;
@@ -281,23 +283,21 @@ public:
     bool exists(const char *hostname) const { return _hosts.lookup(hostname) != nullptr; }
 
     /**
-     *  Increment the number of inflight requests
-     */
-    void increment() noexcept { ++_inflight; }
-
-    /**
-     *  Decrement the number of inflight requests
-     *  @param count  by what amount to decrease
-     */
-    void decrement(size_t count = 1) noexcept { assert(_inflight >= count); _inflight -= count; }
-
-    /**
      *  Send a message over a UDP socket
      *  @param  ip              target IP
      *  @param  query           the query to send
      *  @return Inbound         the object that receives the answer
      */
     Inbound *datagram(const Ip &ip, const Query &query);
+
+    /**
+     *  Connect with TCP to a socket
+     *  This is an async operation, the connection will later be passed to the connector
+     *  @param  ip          IP address of the target nameservers
+     *  @param  connector   the object interested in the connection
+     *  @return bool
+     */
+    bool connect(const Ip &ip, Connector *connector);
 
     /**
      *  Expose the nameservers
