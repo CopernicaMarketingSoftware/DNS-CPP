@@ -144,13 +144,13 @@ protected:
      *  Max number of operations to run at the same time
      *  @var size_t
      */
-    size_t _capacity = 100;
+    size_t _capacity = 1024;
 
     /**
      *  The max number of calls to be made to userspace in one iteration
      *  @var size_t
      */
-    size_t _maxcalls = 5;
+    size_t _maxcalls = 64;
 
     /**
      *  Number of lookups inflight
