@@ -44,7 +44,7 @@ private:
     virtual bool execute(double now) override
     {
         // do nothing if ready
-        if (_handler == nullptr) return false;
+        if (finished()) return false;
 
         // remember the handler
         auto *handler = _handler;
