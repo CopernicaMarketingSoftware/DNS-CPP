@@ -62,9 +62,6 @@ Tcp::~Tcp()
 
     // close the socket
     ::close(_fd);
-    
-    // forget the buffer
-    free(_buffer);
 }
 
 /**
@@ -183,7 +180,7 @@ uint16_t Tcp::responsesize() const
     uint16_t result;
 
     // get the first two bytes from the buffer
-    memcpy(&result, _buffer, 2);
+    memcpy(&result, _buffer.data(), 2);
     
     // put the bytes in the right order
     return ntohs(result);
@@ -212,18 +209,8 @@ bool Tcp::reallocate()
     // preferred buffer size
     size_t preferred = responsesize() + 2;
     
-    // do nothing if the buffer is already good enough
-    if (_capacity >= preferred) return true;
-    
-    // reallocate the buffer
-    auto *newbuffer = (unsigned char *)realloc(_buffer, preferred);
-
-    // leap out on failure
-    if (newbuffer == nullptr) return false;
-
-    // the buffer is bigger now
-    _buffer = newbuffer;
-    _capacity = preferred;
+    // reallocate the buffer (but do not shrink)
+    _buffer.resize(std::max(_buffer.size(), preferred));
     
     // report result
     return true;
@@ -240,11 +227,8 @@ void Tcp::upgrade()
     // if the connection failed
     if (!_connected) return fail();
     
-    // allocate the receive buffer 
-    _buffer = (unsigned char *)malloc(_capacity = 4096);
-    
-    // if this fails, we treat it as a failed connection
-    if (_buffer == nullptr) return fail();
+    // already allocate enough data for the first two bytes (holding the size of a response)
+    _buffer.resize(2);
     
     // we no longer monitor for writability, but for readability instead
     _loop->update(_identifier, _fd, 1, this);
@@ -289,7 +273,7 @@ void Tcp::notify()
     if (!_connected) return upgrade();
     
     // receive data from the socket
-    auto result = ::recv(_fd, _buffer + _filled, expected(), MSG_DONTWAIT);
+    auto result = ::recv(_fd, _buffer.data() + _filled, expected(), MSG_DONTWAIT);
     
     // do nothing if the operation is blocking
     if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
@@ -307,7 +291,7 @@ void Tcp::notify()
     if (expected() > 0) return;
     
     // all data has been received, buffer the response for now
-    add(_ip, _buffer + 2, _filled - 2);
+    add(_ip, _buffer.data() + 2, _filled - 2);
     
     // for the next response we empty the buffer again
     _filled = 0;

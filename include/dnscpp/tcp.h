@@ -76,16 +76,10 @@ private:
      *  The buffer that is being filled right now (first two bytes contain the size)
      *  @var unsigned char *
      */
-    unsigned char *_buffer = nullptr;
+    std::vector<unsigned char> _buffer;
     
     /**
-     *  Capacity of the buffer (how much memory is allocated)
-     *  @var size_t
-     */
-    size_t _capacity = 0;
-    
-    /**
-     *  Size of the buffer (how much of the capacity is filled?)
+     *  How far is the _buffer now filled?
      *  @var size_t
      */
     size_t _filled = 0;
@@ -219,4 +213,3 @@ public:
  *  End of namespace
  */
 }
-
