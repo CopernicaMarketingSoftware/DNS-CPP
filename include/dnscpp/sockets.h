@@ -195,7 +195,7 @@ public:
         return false;
     }
 };
-    
+
 /**
  *  End of namespace
  */
