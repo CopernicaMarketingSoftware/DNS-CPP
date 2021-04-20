@@ -287,10 +287,13 @@ void Tcp::notify()
         _buffer.resize(_size);
     }
 
+    // calculate offset into the buffer
+    size_t offset = _transferred - sizeof(uint16_t);
+
     // This is the second state of the Tcp state machine. At this point we know we have
     // received at least two bytes of the frame, and so we know we have resized the
     // buffer accordingly. All that's left to do is to await the full response content
-    if (updatetransferred(::recv(_fd, _buffer.data() + _transferred - sizeof(uint16_t), _buffer.size() - _transferred + sizeof(uint16_t), MSG_DONTWAIT))) return;
+    if (updatetransferred(::recv(_fd, _buffer.data() + offset, _buffer.size() - offset, MSG_DONTWAIT))) return;
 
     // continue waiting if we have not yet received everything there is
     if (expected() > 0) return;
