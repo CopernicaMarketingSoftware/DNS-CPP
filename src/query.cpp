@@ -194,12 +194,9 @@ bool Query::edns(bool dnssec)
     
     // the type of the pseudo-record is "opt"
     put16(TYPE_OPT);
-    
-    // we advertise that we support 1200 bytes for our response buffer size, 
-    // this is the same buffer size as libresolv seems to use. Their ratio
-    // is that this limits the risk that dgram message get fragmented,
-    // which makes the system vulnerable for injection
-    put16(1200);
+
+    // tell the server that we support larger UDP packets
+    put16(EDNSPacketSize);
     
     // extended rcode (0 because the normal rcode is good enough) and the 
     // edns version (also 0 because that is the mose up-to-date version)

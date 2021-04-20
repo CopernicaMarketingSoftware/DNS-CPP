@@ -175,49 +175,17 @@ Inbound *Tcp::send(const Query &query)
 }
 
 /**
- *  Size of the response -- this method only works if we have already received the frist two bytes
- *  @return uint16_t
- */
-uint16_t Tcp::responsesize() const
-{
-    // result variable
-    uint16_t result;
-
-    // get the first two bytes from the buffer
-    memcpy(&result, _buffer.data(), 2);
-    
-    // put the bytes in the right order
-    return ntohs(result);
-}
-
-/**
  *  Number of bytes that we expect in the next read operation
  *  @return size_t
  */
 size_t Tcp::expected() const
 {
     // if we have not yet received the first two bytes, we expect those first
-    switch (_filled) {
-    case 0:     return 2;
-    case 1:     return 1;
-    default:    return responsesize() - (_filled - 2);
+    switch (_transferred) {
+    case 0:     return sizeof(uint16_t);
+    case 1:     return sizeof(uint16_t) - 1;
+    default:    return _size - (_transferred - sizeof(uint16_t));
     }
-}
-
-/**
- *  Reallocate the buffer if it turns out that our buffer is too small for the expected response
- *  @return bool
- */
-bool Tcp::reallocate()
-{
-    // preferred buffer size
-    size_t preferred = responsesize() + 2;
-    
-    // reallocate the buffer (but do not shrink)
-    _buffer.resize(std::max(_buffer.size(), preferred));
-    
-    // report result
-    return true;
 }
 
 /**
@@ -230,10 +198,7 @@ void Tcp::upgrade()
     
     // if the connection failed
     if (!_connected) return fail();
-    
-    // already allocate enough data for the first two bytes (holding the size of a response)
-    _buffer.resize(2);
-    
+
     // we no longer monitor for writability, but for readability instead
     _loop->update(_identifier, _fd, 1, this);
     
@@ -269,6 +234,26 @@ void Tcp::fail()
 }
 
 /**
+ *  Check return value of a recv syscall
+ *  @param  bytes  The bytes transferred
+ *  @return true if we should leap out (an error occurred), false if not
+ */
+bool Tcp::updatetransferred(ssize_t result)
+{
+    // the operation would block, but don't leap out
+    if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return false;
+
+    // if there is a failure we leap out as well
+    if (result <= 0) return fail(), true;
+
+    // update the number of transferred bytes
+    _transferred += result;
+
+    // don't leap out
+    return false;
+}
+
+/**
  *  Method that is called when the socket becomes active (readable in our case)
  */
 void Tcp::notify()
@@ -279,30 +264,45 @@ void Tcp::notify()
     
     // if the socket is not yet connected, it might be connected right now
     if (!_connected) return upgrade();
-    
-    // receive data from the socket
-    auto result = ::recv(_fd, _buffer.data() + _filled, expected(), MSG_DONTWAIT);
-    
-    // do nothing if the operation is blocking
-    if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
-    
-    // if there is a failure we leap out
-    if (result <= 0) return fail();
-    
-    // update the number of bytes received
-    _filled += result;
-    
-    // after we've received the first two bytes, we can reallocate the buffer so that it is of sufficient size
-    if (_filled == 2 && !reallocate()) return fail();
-    
+
+    // We can be in two receive states: the first state is that we're waiting for the
+    // size of the buffer. The second state is that we are waiting for the response content itself.
+    // To determine in what state we're in, we can check how many bytes have been transferred.
+    // If that's less than 2 then we're still waiting for the response size.
+    if (_transferred < sizeof(uint16_t))
+    {
+        const auto result = ::recv(_fd, (uint8_t*)&_size + _transferred, sizeof(uint16_t) - _transferred, MSG_DONTWAIT);
+
+        // if there is a failure we leap out
+        if (updatetransferred(result)) return;
+
+        // if we still haven't received the two bytes we should leap out here
+        else if (_transferred < sizeof(uint16_t)) return;
+
+        // OK: the size of the rest of the frame was received, we know how much to allocate
+        // update the size
+        _size = ntohs(_size);
+
+        // size the buffer accordingly
+        _buffer.resize(_size);
+    }
+
+    // calculate offset into the buffer
+    size_t offset = _transferred - sizeof(uint16_t);
+
+    // This is the second state of the Tcp state machine. At this point we know we have
+    // received at least two bytes of the frame, and so we know we have resized the
+    // buffer accordingly. All that's left to do is to await the full response content
+    if (updatetransferred(::recv(_fd, _buffer.data() + offset, _buffer.size() - offset, MSG_DONTWAIT))) return;
+
     // continue waiting if we have not yet received everything there is
     if (expected() > 0) return;
-    
-    // all data has been received, buffer the response for now
-    add(_ip, _buffer.data() + 2, _filled - 2);
+
+    // all data has been received, we can move the response content into a deferred list to be processed later
+    add(_ip, move(_buffer));
     
     // for the next response we empty the buffer again
-    _filled = 0;
+    _transferred = 0;
 }
 
 /**

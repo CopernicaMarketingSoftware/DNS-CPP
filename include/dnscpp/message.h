@@ -168,7 +168,7 @@ public:
      *  Is the message truncated? In that case it is better to use tcp
      *  @return bool
      */
-    bool truncated() const { return flag(ns_f_tc); }
+    bool truncated() const { /*if (rand() % 2 == 0) return true; else*/ return flag(ns_f_tc); }
     
     /**
      *  Is recursion desired (false for responses)

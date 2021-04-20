@@ -87,10 +87,20 @@ private:
      */
     virtual void onResolved(const DNS::Operation *operation, const DNS::Response &response) override
     {
+        // if we got zero MX records then we still want to consider it a failure
+        const uint16_t answercount = response.records(ns_s_an);
+        if (answercount == 0) return onFailure(operation, ns_r_refused);
+
+        // OK: this was a success, print the original domain to stdout
+        assert(response.records(ns_s_qd) == 1);
+        DNS::Question question(response, 0);
+        assert(question.type() == ns_t_mx);
+        std::cout << question.name() << '\n';
+
         // update counter
         _success += 1;
 
-        // show what is going on
+        // show what is going on on stderr
         show(operation);
     }
 
@@ -164,7 +174,11 @@ int main(int argc, char **argv)
 {
     if (argc < 2)
     {
-        std::cerr << "give me a big list of domains, one per line, in a file\n";
+        std::cerr <<
+            "Give me a big list of domains, one per line, in a file.\n"
+            "For each domain an MX lookup is done. If more than one MX record is returned,\n"
+            "the original domain name is printed to stdout.\n\n"
+            "Every 100 lookups a status overview is printed to stderr\n";
         return EXIT_FAILURE;
     }
 
@@ -180,7 +194,7 @@ int main(int argc, char **argv)
     context.buffersize(1024 * 1024); // size of the input buffer (high lowers risk of package loss)
     context.interval(3.0);           // number of seconds until the datagram is retried (possibly to next server) (this does not cancel previous requests)
     context.attempts(10);            // number of attempts until failure / number of datagrams to send at most
-    context.capacity(1024);          // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss)
+    context.capacity(128);           // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss)
     context.timeout(3.0);            // time to wait for a response after the _last_ attempt
     context.sockets(4);              // number of sockets
 
