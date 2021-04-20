@@ -185,11 +185,12 @@ void Core::onBuffered(Sockets *sockets)
 
 /**
  *  Process a lookup, which means that the next action for the lookup should be taken (like repeating a datagram or timing out)
+ *  @param  watcher     object to monitor if `this` was destructed
  *  @param  lookup      the lookup to process
  *  @param  now         current time
  *  @return bool        was this lookup indeed processable (false if processed too early)
  */
-bool Core::process(const std::shared_ptr<Lookup> &lookup, double now)
+bool Core::process(const Watcher &watcher, const std::shared_ptr<Lookup> &lookup, double now)
 {
     // if this lookup was already finished (this just pops it off the queue), this happens because we only
     // pop messages from the queues, and lookups in the middle might already be finished by the time the
@@ -200,8 +201,13 @@ bool Core::process(const std::shared_ptr<Lookup> &lookup, double now)
     if (lookup->delay(now) > 0.0) return false;
 
     // run the lookup (if this succeeds a call to userspace was made, which means the operation is done)
-    // @todo watch out this could destruct 'this'
-    if (lookup->execute(now)) _inflight -= 1;
+    bool success = lookup->execute(now);
+    
+    // if user-space destructed `this` there is nothing else to do
+    if (success && !watcher.valid()) return true;
+    
+    // update counter if call was completed
+    if (success) _inflight -= 1;
 
     // if no more attempts are expected, we put it in a special list
     else if (lookup->exhausted()) _ready.push_back(lookup);
@@ -236,7 +242,7 @@ void Core::proceed(const Watcher &watcher, double now)
         _scheduled.pop_front();
         
         // run it (the process() always returns true @todo really?)
-        if (!process(lookup, now)) return;
+        if (!process(watcher, lookup, now)) return;
     }
 }
 
@@ -268,7 +274,7 @@ void Core::expire()
     while (callsleft > 0 && !_lookups.empty())
     {
         // get the oldest operation from the queue
-        if (!process(_lookups.front(), now)) break;
+        if (!process(watcher, _lookups.front(), now)) break;
         
         // maybe the userspace call ended up in `this` being destructed
         if (!watcher.valid()) return;
@@ -286,7 +292,7 @@ void Core::expire()
     while (callsleft > 0 && !_ready.empty())
     {
         // get the oldest operation
-        if (!process(_ready.front(), now)) break;
+        if (!process(watcher, _ready.front(), now)) break;
 
         // maybe the userspace call ended up in `this` being destructed
         if (!watcher.valid()) return;

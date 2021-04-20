@@ -37,14 +37,15 @@ private:
     const Hosts &_hosts;
     
     /**
-     *  Method that is called when it is time to process this lookup
-     *  @param  now     current time
-     *  @return bool    was there a call to userspace?
+     *  Execute the lookup. Returns true when a user-space call was made, and false when further
+     *  processing is required.
+     *  @param  now         current time
+     *  @return bool        was there a call back to userspace?
      */
     virtual bool execute(double now) override
     {
         // do nothing if ready
-        if (finished()) return false;
+        assert(!finished());
 
         // remember the handler
         auto *handler = _handler;

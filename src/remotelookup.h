@@ -107,7 +107,8 @@ private:
     virtual bool onFailure(const Ip &ip) override;
 
     /**
-     *  Execute the lookup
+     *  Execute the lookup. Returns true when a user-space call was made, and false when further
+     *  processing is required.
      *  @param  now         current time
      *  @return bool        was there a call back to userspace?
      */

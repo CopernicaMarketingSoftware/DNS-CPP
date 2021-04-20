@@ -153,15 +153,13 @@ bool RemoteLookup::timeout()
 }
 
 /**
- *  Execute the lookup
+ *  Execute the lookup. Returns true when a user-space call was made, and false when further
+ *  processing is required.
  *  @param  now         current time
- *  @return bool        was a call to userspace made?
+ *  @return bool        was there a call back to userspace?
  */
 bool RemoteLookup::execute(double now)
 {
-    // if the result has already been reported to user-space, we do not have to do anything
-    if (_handler == nullptr) return false;
-    
     // when job times out
     if ((_truncated || _count >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
 
