@@ -87,10 +87,20 @@ private:
      */
     virtual void onResolved(const DNS::Operation *operation, const DNS::Response &response) override
     {
+        // if we got zero MX records then we still want to consider it a failure
+        const uint16_t answercount = response.records(ns_s_an);
+        if (answercount == 0) return onFailure(operation, ns_r_refused);
+
+        // OK: this was a success, print the original domain to stdout
+        assert(response.records(ns_s_qd) == 1);
+        DNS::Question question(response, 0);
+        assert(question.type() == ns_t_mx);
+        std::cout << question.name() << '\n';
+
         // update counter
         _success += 1;
 
-        // show what is going on
+        // show what is going on on stderr
         show(operation);
     }
 
@@ -164,7 +174,11 @@ int main(int argc, char **argv)
 {
     if (argc < 2)
     {
-        std::cerr << "give me a big list of domains, one per line, in a file\n";
+        std::cerr <<
+            "Give me a big list of domains, one per line, in a file.\n"
+            "For each domain an MX lookup is done. If more than one MX record is returned,\n"
+            "the original domain name is printed to stdout.\n\n"
+            "Every 100 lookups a status overview is printed to stderr\n";
         return EXIT_FAILURE;
     }
 
