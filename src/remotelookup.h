@@ -25,7 +25,7 @@
 #include "../include/dnscpp/now.h"
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/processor.h"
-#include "connection.h"
+#include "connector.h"
 
 /**
  *  Begin of namespace
@@ -42,7 +42,7 @@ class Inbound;
 /**
  *  Class definition
  */
-class RemoteLookup : public Lookup, private Connection::Handler, private Processor
+class RemoteLookup : public Lookup, private Processor, private Connector
 {
 private:
     /**
@@ -70,10 +70,11 @@ private:
     size_t _id;
     
     /**
-     *  If we got a truncated response, we start a tcp connection to get the full response
-     *  @var Connection
+     *  If we move to TCP modus because of truncation, we remember the truncated
+     *  response in case the TCP attempt fails so that we can at least report something
+     *  @var std::unique_ptr<Response>
      */
-    std::unique_ptr<Connection> _connection;
+    std::unique_ptr<Response> _truncated;
     
     /**
      *  Objects to which we're subscribed for inbound messages
@@ -86,28 +87,30 @@ private:
      *  Method that is called when a dgram response is received
      *  @param  ip          the ip from where the response came (nameserver ip)
      *  @param  response    the received response
-     *  @return bool        was the response processed?
+     *  @return bool        was the response processed, meaning: was it sent back to userspace?
      */
     virtual bool onReceived(const Ip &ip, const Response &response) override;
 
     /**
-     *  Called when the response has been received over tcp
-     *  @param  connection  the reporting connection
-     *  @param  response    the received answer
+     *  Called when a TCP connection has been set up (in case an earlier UDP response was truncated)
+     *  @param  ip          ip to which a connection was set up
+     *  @param  tcp         the actual TCP connection
+     *  @return bool        was there a call to userspace?
      */
-    virtual void onReceived(Connection *connection, const Response &response) override;
+    virtual bool onConnected(const Ip &ip, Tcp *tcp) override;
     
     /**
-     *  Called when the connection could not be used
-     *  @param  connector   the reporting connection
-     *  @param  response    the original answer (the original truncated one)
+     *  Called when a TCP connection could not be set up
+     *  @param  ip          ip to which a connection was set up
+     *  @return bool        was there a call to userspace?
      */
-    virtual void onFailure(Connection *connection, const Response &truncated) override;
+    virtual bool onFailure(const Ip &ip) override;
 
     /**
-     *  Execute the lookup
+     *  Execute the lookup. Returns true when a user-space call was made, and false when further
+     *  processing is required.
      *  @param  now         current time
-     *  @return bool        should the lookup be rescheduled?
+     *  @return bool        was there a call back to userspace?
      */
     virtual bool execute(double now) override;
 
@@ -119,7 +122,7 @@ private:
 
     /** 
      *  Time out the job because no appropriate response was received in time
-     *  @return bool
+     *  @return bool        was there a call to user space?
      */
     bool timeout();
 
@@ -147,8 +150,9 @@ private:
     /**
      *  Method to report the response
      *  @param  response
+     *  @return bool
      */
-    void report(const Response &response);
+    bool report(const Response &response);
 
     /**
      *  Cleanup the object
@@ -157,10 +161,23 @@ private:
     DNS::Handler *cleanup();
 
     /**
-     *  How many credits are left (meaning: how many datagrams do we still have to send?)
-     *  @return size_t      number of attempts
+     *  Is this lookup still scheduled: meaning that no requests has been sent yet
+     *  @return bool
      */
-    virtual size_t credits() const override;
+    virtual bool scheduled() const override;
+    
+    /**
+     *  Is this lookup already finished: meaning that a result has been reported back to userspace
+     *  @return bool
+     */
+    virtual bool finished() const override;
+    
+    /**
+     *  Is this lookup exhausted: meaning that it has sent its max number of requests, but still
+     *  has not received an appropriate answer, and is now waiting for its final timer to finish
+     *  @return bool
+     */
+    virtual bool exhausted() const override;
 
     /**
      *  Cancel the operation
@@ -193,7 +210,6 @@ public:
      *  Destructor
      */
     virtual ~RemoteLookup();
-
 };
 
 /**

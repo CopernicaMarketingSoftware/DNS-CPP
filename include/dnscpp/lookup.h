@@ -54,10 +54,23 @@ public:
     virtual ~Lookup() = default;
     
     /**
-     *  How many credits are left (meaning: how many datagrams do we still have to send?)
-     *  @return size_t      number of attempts
+     *  Is this lookup still scheduled: meaning that no requests has been sent yet
+     *  @return bool
      */
-    virtual size_t credits() const = 0;
+    virtual bool scheduled() const = 0;
+    
+    /**
+     *  Is this lookup already finished: meaning that a result has been reported back to userspace
+     *  @return bool
+     */
+    virtual bool finished() const = 0;
+    
+    /**
+     *  Is this lookup exhausted: meaning that it has sent its max number of requests, but still
+     *  has not received an appropriate answer, and is now waiting for its final timer to finish
+     *  @return bool
+     */
+    virtual bool exhausted() const = 0;
     
     /**
      *  How long should we wait until the next runtime?
@@ -67,9 +80,19 @@ public:
     virtual double delay(double now) const = 0;
     
     /**
-     *  Execute the lookup
+     *  Execute the next step in the lookup (for example to send out an extra datagram, or to report
+     *  a timeout back to userspace). This method returns true when indeed a call to userspace was
+     *  done during this call to execute(), and false if further processing is required.
+     * 
+     *  Note that a lookup can also finish via other execution paths too (for example in a method
+     *  that processes responses to UDP lookups). So you can not solely rely on the return value of
+     *  this method to find out if a lookup was finished, and you might need to call the finished()
+     *  method too to find this out. 
+     * 
+     *  Watch out: this method should NOT be called when a lookup is already finished!!
+     * 
      *  @param  now         current time
-     *  @return bool        should the lookup be rescheduled?
+     *  @return bool        was a result reported to userspace?
      */
     virtual bool execute(double now) = 0;
 };

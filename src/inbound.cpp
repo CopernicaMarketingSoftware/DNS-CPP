@@ -40,8 +40,8 @@ void Inbound::unsubscribe(Processor *processor, const Ip &ip, uint16_t id)
     // remove from the set
     _processors.erase(std::make_tuple(id, ip, processor));
     
-    // if no other processors are left
-    if (_processors.empty()) close();
+    // if there are no more subscribers we reset the object
+    if (_processors.empty()) reset();
 }
     
 /**

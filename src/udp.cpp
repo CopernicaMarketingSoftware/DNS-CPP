@@ -17,13 +17,12 @@ namespace DNS {
  *  @param  loop        the event loop
  *  @param  handler     object that is notified in case of events
  */
-Udp::Udp(Loop *loop, Handler *handler) : _loop(loop), _handler(handler) {}
+Udp::Udp(Loop *loop, Socket::Handler *handler) : Socket(handler), _loop(loop) {}
 
 /**
  *  Closes the file descriptor
  */
 Udp::~Udp() { close(); }
-
 
 /**
  *  Helper method to set a socket option
@@ -84,11 +83,18 @@ void Udp::close()
 
     // remember that socket is closed
     _fd = -1; _identifier = nullptr;
-    
-    // notify our parent
-    _handler->onClosed(this);
 }
 
+/**
+ *  Method that is called when there are no more subscribers, and that 
+ *  is implemented in the derived classes. Watch out: this method can be called
+ *  in the middle of loop through sockets so the implementation must be careful.
+ */
+void Udp::reset()
+{
+    // we simply close the socket, it will be reopenen when we need it for the next datagram
+    close();
+}
 
 /**
  *  Send a query over this socket
@@ -178,82 +184,12 @@ void Udp::notify()
 
         // if there were no bytes, leap out
         if (bytes <= 0) break;
-
-        // avoid exceptions (in case the ip cannot be parsed)
-        try
-        {
-            // @todo inbound messages that do not come from port 53 can be ignored
-
-            // remember the response for now
-            // @todo make this more efficient (without all the string-copying)
-            _responses.emplace_back(reinterpret_cast<const sockaddr*>(&from), std::basic_string<unsigned char>(buffer, bytes));
-        }
-        catch (...)
-        {
-            // ip address could not be parsed
-        }
+        
+        // add to the buffer
+        add((const sockaddr *)&from, buffer, bytes);
     }
-
-    // reschedule the processing of messages
-    _handler->onBuffered(this);
 }
 
-/**
- *  Invoke callback handlers for buffered raw responses
- *  @param      watcher   The watcher to keep track if the parent object remains valid
- *  @param[in]  maxcalls  The max number of callback handlers to invoke
- *  @return     number of callback handlers invoked
- */
-size_t Udp::deliver(Watcher *watcher, size_t maxcalls)
-{
-    // the number of callback handlers invoked
-    size_t result = 0;
-
-    // look for a response
-    while (result < maxcalls && watcher->valid() && !_responses.empty())
-    {
-        // avoid exceptions (parsing the response could fail)
-        try
-        {
-            // note that the _handler->onReceived() triggers a call to user-space that might destruct 'this',
-            // which also causes responses to be destructed. To avoid silly crashes we copy the oldest message
-            // to the local stack in a one-item-big list
-            decltype(_responses) oneitem;
-
-            // move the first item from the responses to the one-item list
-            oneitem.splice(oneitem.begin(), _responses, _responses.begin(), std::next(_responses.begin()));
-
-            // get the first element
-            const auto &front = oneitem.front();
-
-            // parse the response
-            Response response(front.second.data(), front.second.size());
-
-            // filter on the response, the beginning is simply the handler at nullptr
-            auto begin = _processors.lower_bound(std::make_tuple(response.id(), front.first, nullptr));
-
-            // iterate over those elements, notifying each handler
-            for (auto iter = begin; iter != _processors.end(); ++iter)
-            {
-                // if this element is not applicable any more, we're going to leap out (we're done)
-                if (std::get<0>(*iter) != response.id() || std::get<1>(*iter) != front.first) break;
-
-                // call the onreceived for the element
-                if (std::get<2>(*iter)->onReceived(front.first, response)) result += 1;
-
-                // the message was processed, we no longer need other handlers
-                break;
-            }
-        }
-        catch (const std::runtime_error &error)
-        {
-            // parsing the response failed, or the callback handler threw an exception
-        }
-    }
-
-    // done
-    return result;
-}
 
 /**
  *  End namespace
