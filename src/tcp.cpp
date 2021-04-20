@@ -236,17 +236,17 @@ void Tcp::fail()
 /**
  *  Check return value of a recv syscall
  *  @param  bytes  The bytes transferred
- *  @return true if we should leap out (an error occurred or we'd block), false if not
+ *  @return true if we should leap out (an error occurred), false if not
  */
 bool Tcp::updatetransferred(ssize_t result)
 {
-    // do nothing if the operation is blocking
+    // the operation would block, but don't leap out
     if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return false;
 
-    // if there is a failure we leap out
+    // if there is a failure we leap out as well
     if (result <= 0) return fail(), true;
 
-    // to transferred
+    // update the number of transferred bytes
     _transferred += result;
 
     // don't leap out
@@ -276,19 +276,21 @@ void Tcp::notify()
         // if there is a failure we leap out
         if (updatetransferred(result)) return;
 
-        // if the size of the rest of the frame was received, we know how much to allocate
-        if (_transferred == sizeof(uint16_t))
-        {
-            // update the size
-            _size = htons(_size);
+        // if we still haven't received the two bytes we should leap out here
+        else if (_transferred < sizeof(uint16_t)) return;
 
-            // size the buffer accordingly
-            _buffer.resize(_size);
-        }
+        // OK: the size of the rest of the frame was received, we know how much to allocate
+        // update the size
+        _size = htons(_size);
+
+        // size the buffer accordingly
+        _buffer.resize(_size);
     }
 
-    // if there is a failure we leap out
-    else if (updatetransferred(::recv(_fd, _buffer.data() + _transferred - sizeof(uint16_t), _buffer.size() - _transferred + sizeof(uint16_t), MSG_DONTWAIT))) return;
+    // This is the second state of the Tcp state machine. At this point we know we have
+    // received at least two bytes of the frame, and so we know we have resized the
+    // buffer accordingly. All that's left to do is to await the full response content
+    if (updatetransferred(::recv(_fd, _buffer.data() + _transferred - sizeof(uint16_t), _buffer.size() - _transferred + sizeof(uint16_t), MSG_DONTWAIT))) return;
 
     // continue waiting if we have not yet received everything there is
     if (expected() > 0) return;
