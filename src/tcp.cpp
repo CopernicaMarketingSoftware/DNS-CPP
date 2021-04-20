@@ -184,7 +184,7 @@ size_t Tcp::expected() const
     switch (_transferred) {
     case 0:     return sizeof(uint16_t);
     case 1:     return sizeof(uint16_t) - 1;
-    default:    return _size - _transferred - sizeof(uint16_t);
+    default:    return _size - (_transferred - sizeof(uint16_t));
     }
 }
 
