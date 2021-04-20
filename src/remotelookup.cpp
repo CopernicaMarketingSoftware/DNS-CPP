@@ -260,8 +260,11 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     // try to connect to a TCP socket
     if (!_core->connect(ip, this)) return report(response);
     
-    // because we switched to tcp mode, we remember the truncated response in case tcp fails too,
-    // we then at least have _something_ to report
+    // We remember the truncated response in case tcp fails too, so that we at least have _something_ to 
+    // report in case TCP is unavailable. Note that the default user-space onReceived() handler turns truncated 
+    // responses into onFailure()-calls, so in most user space applications a truncation-plus-failed-tcp 
+    // ends up as a SERVFAIL anyway. However, user space programs that want to distinguish a SERVFAIL-rcode 
+    // from a truncation error can still write their own onReceived() method because of this:
     _truncated.reset(new Response(response));
 
     // remember the start-time of the connection to reset the timeout-period
