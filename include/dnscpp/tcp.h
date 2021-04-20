@@ -71,19 +71,25 @@ private:
      *  @var int
      */
     int _fd;
-    
+
     /**
-     *  The buffer that is being filled right now (first two bytes contain the size)
-     *  @var unsigned char *
+     *  Size of the buffer to fill
+     *  @var uint16_t
+     */
+    uint16_t _size;
+
+    /**
+     *  The response that is being filled right now
+     *  @var vector
      */
     std::vector<unsigned char> _buffer;
     
     /**
-     *  How far is the _buffer now filled?
+     *  How many bytes of the frame were transferred?
      *  @var size_t
      */
-    size_t _filled = 0;
-    
+    size_t _transferred = 0;
+
     /**
      *  Identifier user for monitoring the filedescriptor in the event loop
      *  @var void *
@@ -140,18 +146,6 @@ private:
      */
     virtual void notify() override;
 
-    /**
-     *  Reallocate the buffer if it turns out that our buffer is too small for the expected response
-     *  @return bool
-     */
-    bool reallocate();
-
-    /**
-     *  Size of the response -- this method only works if we have already received the frist two bytes
-     *  @return uint16_t
-     */
-    uint16_t responsesize() const;
-    
     /**
      *  Number of bytes that we expect in the next read operation
      *  @return size_t

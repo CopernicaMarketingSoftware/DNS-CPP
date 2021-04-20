@@ -180,7 +180,7 @@ int main(int argc, char **argv)
     context.buffersize(1024 * 1024); // size of the input buffer (high lowers risk of package loss)
     context.interval(3.0);           // number of seconds until the datagram is retried (possibly to next server) (this does not cancel previous requests)
     context.attempts(10);            // number of attempts until failure / number of datagrams to send at most
-    context.capacity(1024);          // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss)
+    context.capacity(128);           // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss)
     context.timeout(3.0);            // time to wait for a response after the _last_ attempt
     context.sockets(4);              // number of sockets
 

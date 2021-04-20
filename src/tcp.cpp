@@ -175,49 +175,17 @@ Inbound *Tcp::send(const Query &query)
 }
 
 /**
- *  Size of the response -- this method only works if we have already received the frist two bytes
- *  @return uint16_t
- */
-uint16_t Tcp::responsesize() const
-{
-    // result variable
-    uint16_t result;
-
-    // get the first two bytes from the buffer
-    memcpy(&result, _buffer.data(), 2);
-    
-    // put the bytes in the right order
-    return ntohs(result);
-}
-
-/**
  *  Number of bytes that we expect in the next read operation
  *  @return size_t
  */
 size_t Tcp::expected() const
 {
     // if we have not yet received the first two bytes, we expect those first
-    switch (_filled) {
-    case 0:     return 2;
-    case 1:     return 1;
-    default:    return responsesize() - (_filled - 2);
+    switch (_transferred) {
+    case 0:     return sizeof(uint16_t);
+    case 1:     return sizeof(uint16_t) - 1;
+    default:    return _size - _transferred - sizeof(uint16_t);
     }
-}
-
-/**
- *  Reallocate the buffer if it turns out that our buffer is too small for the expected response
- *  @return bool
- */
-bool Tcp::reallocate()
-{
-    // preferred buffer size
-    size_t preferred = responsesize() + 2;
-    
-    // reallocate the buffer (but do not shrink)
-    _buffer.resize(std::max(_buffer.size(), preferred));
-    
-    // report result
-    return true;
 }
 
 /**
@@ -230,10 +198,7 @@ void Tcp::upgrade()
     
     // if the connection failed
     if (!_connected) return fail();
-    
-    // already allocate enough data for the first two bytes (holding the size of a response)
-    _buffer.resize(2);
-    
+
     // we no longer monitor for writability, but for readability instead
     _loop->update(_identifier, _fd, 1, this);
     
@@ -279,30 +244,46 @@ void Tcp::notify()
     
     // if the socket is not yet connected, it might be connected right now
     if (!_connected) return upgrade();
-    
-    // receive data from the socket
-    auto result = ::recv(_fd, _buffer.data() + _filled, expected(), MSG_DONTWAIT);
-    
-    // do nothing if the operation is blocking
-    if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
-    
-    // if there is a failure we leap out
-    if (result <= 0) return fail();
-    
-    // update the number of bytes received
-    _filled += result;
-    
-    // after we've received the first two bytes, we can reallocate the buffer so that it is of sufficient size
-    if (_filled == 2 && !reallocate()) return fail();
-    
+
+    if (_transferred < sizeof(uint16_t))
+    {
+        const auto result = ::recv(_fd, (uint8_t*)&_size + _transferred, sizeof(uint16_t) - _transferred, MSG_DONTWAIT);
+
+        // do nothing if the operation is blocking
+        if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
+
+        // if there is a failure we leap out
+        if (result <= 0) return fail();
+
+        _transferred += result;
+
+        if (_transferred == sizeof(uint16_t))
+        {
+            _size = htons(_size);
+            _buffer.resize(_size);
+        }
+    }
+    else
+    {
+        const auto result = ::recv(_fd, _buffer.data() + _transferred - sizeof(uint16_t), _buffer.size() - _transferred + sizeof(uint16_t), MSG_DONTWAIT);
+
+        _transferred += result;
+
+        // do nothing if the operation is blocking
+        if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
+
+        // if there is a failure we leap out
+        if (result <= 0) return fail();
+    }
+
     // continue waiting if we have not yet received everything there is
     if (expected() > 0) return;
-    
+
     // all data has been received, buffer the response for now
-    add(_ip, _buffer.data() + 2, _filled - 2);
+    add(_ip, move(_buffer));
     
     // for the next response we empty the buffer again
-    _filled = 0;
+    _transferred = 0;
 }
 
 /**

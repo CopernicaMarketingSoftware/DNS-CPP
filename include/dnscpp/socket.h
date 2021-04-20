@@ -56,7 +56,7 @@ private:
      *  All the buffered responses that came in
      *  @var std::list
      */
-    std::list<std::pair<Ip,std::basic_string<unsigned char>>> _responses;
+    std::list<std::pair<Ip,std::vector<unsigned char>>> _responses;
 
 protected:
     /**
@@ -74,10 +74,9 @@ protected:
      *  Add a message for delayed processing
      *  @param  addr    the address from which the message was received
      *  @param  buffer  the response buffer
-     *  @param  size    size of the buffer
      */
-    void add(const sockaddr *addr, const unsigned char *buffer, size_t size);
-    void add(const Ip &addr, const unsigned char *buffer, size_t size);
+    void add(const sockaddr *addr, std::vector<unsigned char> &&buffer);
+    void add(const Ip &addr, std::vector<unsigned char> &&buffer);
 
 public:
     /**

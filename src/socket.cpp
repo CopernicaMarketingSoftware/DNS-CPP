@@ -24,9 +24,8 @@ namespace DNS {
  *  Add a message for delayed processing
  *  @param  addr    the address from which the message was received
  *  @param  buffer  the response buffer
- *  @param  size    size of the buffer
  */
-void Socket::add(const sockaddr *addr, const unsigned char *buffer, size_t size)
+void Socket::add(const sockaddr *addr, std::vector<unsigned char> &&buffer)
 {
     // avoid exceptions (in case the ip cannot be parsed)
     try
@@ -34,8 +33,7 @@ void Socket::add(const sockaddr *addr, const unsigned char *buffer, size_t size)
         // @todo inbound messages that do not come from port 53 can be ignored
 
         // remember the response for now
-        // @todo make this more efficient (without all the string-copying)
-        _responses.emplace_back(addr, std::basic_string<unsigned char>(buffer, size));
+        _responses.emplace_back(addr, move(buffer));
     }
     catch (...)
     {
@@ -50,12 +48,11 @@ void Socket::add(const sockaddr *addr, const unsigned char *buffer, size_t size)
  *  Add a message for delayed processing
  *  @param  addr    the address from which the message was received
  *  @param  buffer  the response buffer
- *  @param  size    size of the buffer
  */
-void Socket::add(const Ip &addr, const unsigned char *buffer, size_t size)
+void Socket::add(const Ip &addr, std::vector<unsigned char> &&buffer)
 {
     // add to the list
-    _responses.emplace_back(addr, std::basic_string<unsigned char>(buffer, size));
+    _responses.emplace_back(addr, move(buffer));
 
     // reschedule the processing of messages
     _handler->onBuffered(this);

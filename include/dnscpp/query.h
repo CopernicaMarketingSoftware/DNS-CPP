@@ -24,6 +24,12 @@
  */
 namespace DNS {
 
+// we advertise that we support 1200 bytes for our response buffer size,
+// this is the same buffer size as libresolv seems to use. Their ratio
+// is that this limits the risk that dgram message get fragmented,
+// which makes the system vulnerable for injection
+constexpr size_t EDNSPacketSize = 1200;
+
 /**
  *  Forward declarations
  */

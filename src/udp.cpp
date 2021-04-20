@@ -5,6 +5,7 @@
 #include "../include/dnscpp/processor.h"
 #include "../include/dnscpp/query.h"
 #include <unistd.h>
+#include <cassert>
 
 /**
  *  Begin namespace
@@ -168,25 +169,29 @@ void Udp::notify()
     // do nothing if there is no socket (how is that possible!?)
     if (!valid()) return;
 
-    // the buffer to receive the response in
-    // @todo use a macro
-    unsigned char buffer[65536];
-
     // structure will hold the source address (we use an ipv6 struct because that is also big enough for ipv4)
     struct sockaddr_in6 from; socklen_t fromlen = sizeof(from);
 
-    // we want to get as much messages at onces as possible, but not run forever
-    // @todo use scatter-gather io to optimize this further
-    for (size_t messages = 0; messages < 1024; ++messages)
+    // the buffer to receive the response in
+    std::vector<unsigned char> buffer;
+
+    // read all messages until depleted
+    while (true)
     {
-        // reveive the message (the DONTWAIT option is needed because this is a blocking socket, but we dont want to block now)
-        auto bytes = recvfrom(_fd, buffer, sizeof(buffer), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
+        // make the buffer large enough
+        buffer.resize(EDNSPacketSize);
+
+        // receive the message (the DONTWAIT option is needed because this is a blocking socket, but we dont want to block now)
+        auto bytes = recvfrom(_fd, buffer.data(), buffer.size(), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
 
         // if there were no bytes, leap out
         if (bytes <= 0) break;
-        
+
+        // shrink to fit
+        buffer.resize(bytes);
+
         // add to the buffer
-        add((const sockaddr *)&from, buffer, bytes);
+        add((const sockaddr *)&from, move(buffer));
     }
 }
 
