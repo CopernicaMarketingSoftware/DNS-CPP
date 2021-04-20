@@ -151,6 +151,13 @@ private:
      *  @return size_t
      */
     size_t expected() const;
+
+    /**
+     *  Check return value of a recv syscall
+     *  @param  bytes  The bytes transferred
+     *  @return true if we should leap out (an error occurred or we'd block), false if not
+     */
+    bool updatetransferred(ssize_t bytes);
     
     /**
      *  Method that is called when there are no more subscribers, and that 

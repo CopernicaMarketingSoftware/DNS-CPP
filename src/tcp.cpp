@@ -234,6 +234,26 @@ void Tcp::fail()
 }
 
 /**
+ *  Check return value of a recv syscall
+ *  @param  bytes  The bytes transferred
+ *  @return true if we should leap out (an error occurred or we'd block), false if not
+ */
+bool Tcp::updatetransferred(ssize_t result)
+{
+    // do nothing if the operation is blocking
+    if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return false;
+
+    // if there is a failure we leap out
+    if (result <= 0) return fail(), true;
+
+    // to transferred
+    _transferred += result;
+
+    // don't leap out
+    return false;
+}
+
+/**
  *  Method that is called when the socket becomes active (readable in our case)
  */
 void Tcp::notify()
@@ -245,41 +265,35 @@ void Tcp::notify()
     // if the socket is not yet connected, it might be connected right now
     if (!_connected) return upgrade();
 
+    // We can be in two receive states: the first state is that we're waiting for the
+    // size of the buffer. The second state is that we are waiting for the response content itself.
+    // To determine in what state we're in, we can check how many bytes have been transferred.
+    // If that's less than 2 then we're still waiting for the response size.
     if (_transferred < sizeof(uint16_t))
     {
         const auto result = ::recv(_fd, (uint8_t*)&_size + _transferred, sizeof(uint16_t) - _transferred, MSG_DONTWAIT);
 
-        // do nothing if the operation is blocking
-        if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
-
         // if there is a failure we leap out
-        if (result <= 0) return fail();
+        if (updatetransferred(result)) return;
 
-        _transferred += result;
-
+        // if the size of the rest of the frame was received, we know how much to allocate
         if (_transferred == sizeof(uint16_t))
         {
+            // update the size
             _size = htons(_size);
+
+            // size the buffer accordingly
             _buffer.resize(_size);
         }
     }
-    else
-    {
-        const auto result = ::recv(_fd, _buffer.data() + _transferred - sizeof(uint16_t), _buffer.size() - _transferred + sizeof(uint16_t), MSG_DONTWAIT);
 
-        _transferred += result;
-
-        // do nothing if the operation is blocking
-        if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
-
-        // if there is a failure we leap out
-        if (result <= 0) return fail();
-    }
+    // if there is a failure we leap out
+    else if (updatetransferred(::recv(_fd, _buffer.data() + _transferred - sizeof(uint16_t), _buffer.size() - _transferred + sizeof(uint16_t), MSG_DONTWAIT))) return;
 
     // continue waiting if we have not yet received everything there is
     if (expected() > 0) return;
 
-    // all data has been received, buffer the response for now
+    // all data has been received, we can move the response content into a deferred list to be processed later
     add(_ip, move(_buffer));
     
     // for the next response we empty the buffer again
