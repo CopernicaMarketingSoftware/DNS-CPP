@@ -281,7 +281,7 @@ void Tcp::notify()
 
         // OK: the size of the rest of the frame was received, we know how much to allocate
         // update the size
-        _size = htons(_size);
+        _size = ntohs(_size);
 
         // size the buffer accordingly
         _buffer.resize(_size);
