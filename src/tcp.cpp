@@ -151,6 +151,10 @@ int Tcp::error() const
  */
 Inbound *Tcp::send(const Query &query)
 {
+    // @todo see https://tools.ietf.org/html/rfc7766#section-7
+    // We MUST avoid having duplicate ID's that are active on the same connection,
+    // for example by delaying queries with identical ids until earlier queries are ready
+    
     // make the socket blocking
     Blocking blocking(_fd);
     
@@ -269,6 +273,10 @@ void Tcp::fail()
  */
 void Tcp::notify()
 {
+    // @todo see https://tools.ietf.org/html/rfc7766#section-6.2.4
+    // if we lose the connection while we have not yet received all responses, 
+    // we SHOULD retry the TCP requests
+    
     // if the socket is not yet connected, it might be connected right now
     if (!_connected) return upgrade();
     
