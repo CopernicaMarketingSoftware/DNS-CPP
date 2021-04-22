@@ -13,7 +13,9 @@ target_sources(dnscpp PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/remotelookup.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/resolvconf.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/rrsig.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/socket.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/sockets.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/tcp.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/udp.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/udps.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/watchable.cpp
 )
