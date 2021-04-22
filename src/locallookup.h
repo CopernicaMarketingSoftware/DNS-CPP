@@ -101,14 +101,17 @@ private:
         // handler is set on completion
         return _handler == nullptr;
     }
-    
+
     /**
-     *  Cancel the lookup
+     *  Cancel the operation
      */
     virtual void cancel() override
     {
         // if already reported back to user-space
         if (_handler == nullptr) return;
+        
+        // notify the core object so that it can schedule more things
+        _core->cancel(this);
         
         // remember the handler
         auto *handler = _handler;
@@ -126,13 +129,14 @@ public:
      *  Constructor
      *  To keep the behavior of lookups consistent with the behavior of remote lookups, we set
      *  a timer so that userspace will be informed in a later tick of the event loop
+     *  @param  core
      *  @param  hosts
      *  @param  domain
      *  @param  type
      *  @param  handler
      */
-    LocalLookup(const Hosts &hosts, const char *domain, int type, Handler *handler) :
-        Lookup(handler, ns_o_query, domain, type, false), _hosts(hosts) {}
+    LocalLookup(Core *core, const Hosts &hosts, const char *domain, int type, Handler *handler) :
+        Lookup(core, handler, ns_o_query, domain, type, false), _hosts(hosts) {}
 
     /**
      *  Constructor
@@ -141,19 +145,13 @@ public:
      *  @param  ip
      *  @param  handler
      */
-    LocalLookup(const Hosts &hosts, const Ip &ip, Handler *handler) : LocalLookup(hosts, Reverse(ip), TYPE_PTR, handler) {}
+    LocalLookup(Core *core, const Hosts &hosts, const Ip &ip, Handler *handler) : LocalLookup(core, hosts, Reverse(ip), TYPE_PTR, handler) {}
 
     /**
      *  Destructor
      *  This is a self-destructing class
      */
-    virtual ~LocalLookup()
-    {
-        // if the operation is destructed while it was still running, it means that the
-        // operation was prematurely cancelled from user-space, let the handler know
-        // @todo check if this is correct  / also implement the cancel() method
-        if (_handler != nullptr) _handler->onCancelled(this);
-    }
+    virtual ~LocalLookup() = default;
 };
     
 /**

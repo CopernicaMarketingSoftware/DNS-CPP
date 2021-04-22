@@ -234,15 +234,18 @@ void Core::proceed(const Watcher &watcher, double now)
     {
         // the lookup that will be started
         auto lookup = _scheduled.front();
-        
-        // this is now in progress
-        _inflight += 1;
 
         // this lookup is no longer scheduled
         _scheduled.pop_front();
         
-        // run it (the process() always returns true @todo really?)
-        if (!process(watcher, lookup, now)) return;
+        // it is possible that scheduled operations are already cancelled
+        if (lookup->finished()) continue;
+        
+        // this is now in progress
+        _inflight += 1;
+        
+        // run it, the process() always returns true
+        process(watcher, lookup, now);
     }
 }
 
@@ -342,7 +345,27 @@ bool Core::connect(const Ip &ip, Connector *connector)
     case 6:     return _ipv6.connect(ip, connector);
     default:    return false;
     }
-}    
+}
+
+/**
+ *  Mark a lookup as cancelled and start more queues lookups
+ *  @param  lookup
+ */
+void Core::cancel(const Lookup *lookup)
+{
+    // if the operation was still in the _scheduled buffer it was not yet included in the _inflight counter
+    // note that we cannot rely on lookup::scheduled() because we sometimes increment _inflight while a lookup still thinks that it is scheduled
+    // @todo this is a bit ugly
+    if (std::find_if(_scheduled.begin(), _scheduled.end(), [lookup](const std::shared_ptr<Lookup> &scheduled) -> bool {
+        return scheduled.get() == lookup;
+    }) != _scheduled.end()) return;
+    
+    // one operation less active
+    _inflight -= 1;
+    
+    // there is room for more operations, set a timer for the event loop to start up those lookups
+    reschedule(Now());
+}
 
 /**
  *  End of namespace

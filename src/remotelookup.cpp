@@ -4,7 +4,7 @@
  *  Implementation file for the RemoteLookup class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2021 Copernica BV
  */
 
 /**
@@ -32,7 +32,7 @@ namespace DNS {
  *  @param  handler     user space object
  */
 RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
-    Lookup(handler, ns_o_query, domain, type, bits), _core(core), _id(rand()) {}
+    Lookup(core, handler, ns_o_query, domain, type, bits), _id(rand()) {}
 
 /**
  *  Destructor
@@ -314,7 +314,10 @@ void RemoteLookup::cancel()
     // do nothing if already cancelled
     if (_handler == nullptr) return;
     
-    // cleanup, and remove to userspace
+    // notify the core so that it can schedule more lookups
+    _core->cancel(this);
+    
+    // cleanup, and report to userspace
     cleanup()->onCancelled(this);
 }
 
