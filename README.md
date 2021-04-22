@@ -2,6 +2,38 @@
 
 This is a C++ library for asynchronous DNS lookups.
 
+## Building the library
+
+Prepare a build directory:
+
+```bash
+mkdir build
+cd build
+```
+
+Configure CMake:
+
+```bash
+cmake ..
+```
+
+This configures a static library to be built. If instead you want a shared library, use
+
+```bash
+cmake .. -DBUILD_SHARED_LIBS=ON
+```
+
+Build it:
+
+```bash
+cmake --build .
+```
+
+Install it:
+
+```bash
+cmake --build . --target install
+```
 
 ## Set up an event loop integration
 
@@ -12,7 +44,7 @@ that DNS-CPP can interact with it and that your event loop has an API that
 DNS-CPP can work with. This wrapper class should extend from
 the abstract class `DNS::Loop`.
 
-```
+```cpp
 class MyEventLoop : public DNS::Loop
 {
     // @todo add your own implementation for all methods of DNS::Loop
@@ -36,7 +68,7 @@ it does not read /etc/resolv.conf, this is something that you must do
 explicitly.
 
 
-```
+```cpp
 int main()
 {
     // our own specific event loop (this could be libevent, libev, libuv,
@@ -65,7 +97,7 @@ and that the result of a query is not immediately returned. Instead you need
 to pass in a handler object. This handler object will be notified when the
 DNS lookup is complete (or when it has failed).
 
-```
+```cpp
 class MyHandler : public DNS::Handler
 {
     // @todo a lot of other code specific for your application
@@ -87,7 +119,7 @@ libc resolver. For example, it reuses the record-types that are defined
 in arpa/nameser.h. To start a query, you can simply call the Context::query()
 method:
 
-```
+```cpp
 // we need a handler that will process the result
 MyHandler handler;
 
@@ -107,7 +139,7 @@ However, we also built a collection of helper classes to achieve the same.
 For example, the DNS::Record class can be used to extract the records
 from a response:
 
-```
+```cpp
 // our own handler method
 virtual void onReceived(const DNS::Response &response) override
 {

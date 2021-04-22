@@ -1,0 +1,21 @@
+target_sources(dnscpp PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/context.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/core.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dnskey.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/extractor.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/handler.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/hosts.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/inbound.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/ip.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/message.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/operation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/query.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/remotelookup.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/resolvconf.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rrsig.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/socket.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/sockets.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/tcp.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/udp.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/watchable.cpp
+)
