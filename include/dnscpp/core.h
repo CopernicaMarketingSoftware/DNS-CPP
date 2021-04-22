@@ -26,6 +26,7 @@
 #include "lookup.h"
 #include "processor.h"
 #include "timer.h"
+#include "intrusivequeue.h"
 #include <list>
 #include <deque>
 #include <memory>
@@ -80,17 +81,17 @@ protected:
      *  not have to use a slow (priority) queue.
      *  @var std::deque<std::shared_ptr<Lookup>>
      */
-    std::deque<std::shared_ptr<Lookup>> _lookups;
+    std::deque<std::shared_ptr<Lookup>> _scheduled;
     
     /**
      *  To avoid that external DNS servers, or our own response-buffer, is flooded
      *  with data, there is a limit on the number of operations that can run. If
-     *  there are more operations than we can handle, this buffer is used for 
+     *  there are more operations than we can handle, this buffer is used for
      *  overflow (is not supposed to happen often!)
      *  @var std::deque<std::shared_ptr<Lookup>>
      */
-    std::deque<std::shared_ptr<Lookup>> _scheduled;
-    
+    IntrusiveQueue<Lookup> _lookups;
+
     /**
      *  Lookups for which the max number of attempts have been reached (no further
      *  messages will be sent) and that are waiting for response or expiration
@@ -153,12 +154,6 @@ protected:
     size_t _maxcalls = 64;
 
     /**
-     *  Number of lookups inflight
-     *  @var size_t
-     */
-    size_t _inflight = 0;
-
-    /**
      *  Calculate the delay until the next job
      *  @return double      the delay in seconds (or < 0 if there is no need to run a timer)
      */
@@ -190,7 +185,7 @@ protected:
      *  @param  lookup
      *  @return Operation
      */
-    Operation *add(Lookup *lookup);
+    Operation *add(std::shared_ptr<Lookup> lookup);
     
     /**
      *  Protected constructor, only the derived class may construct it
@@ -225,7 +220,6 @@ protected:
      *  @param  now         current time
      */
     void reschedule(double now);
-
 
 public:
     /**
@@ -299,6 +293,12 @@ public:
      *  @return bool
      */
     bool connect(const Ip &ip, Connector *connector);
+
+    /**
+     *  An inflight lookup is done
+     *  @param      lookup  The lookup
+     */
+    void done(std::shared_ptr<Lookup> lookup);
 
     /**
      *  Expose the nameservers

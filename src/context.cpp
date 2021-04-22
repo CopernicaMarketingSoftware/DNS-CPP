@@ -52,14 +52,14 @@ void Context::capacity(size_t value)
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler)
 {
     // for A and AAAA lookups we also check the /etc/hosts file
-    if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(_hosts, domain, type, handler));
-    if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return add(new LocalLookup(_hosts, domain, type, handler));
+    if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(std::make_shared<LocalLookup>(_hosts, domain, type, handler));
+    if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return add(std::make_shared<LocalLookup>(_hosts, domain, type, handler));
     
     // the request can throw (for example when the domain is invalid
     try
     {
         // we are going to create a self-destructing request
-        return add(new RemoteLookup(this, domain, type, bits, handler));
+        return add(std::make_shared<RemoteLookup>(static_cast<Core*>(this), domain, type, bits, handler));
     }
     catch (...)
     {
@@ -78,7 +78,7 @@ Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DN
 Operation *Context::query(const Ip &ip, const Bits &bits, DNS::Handler *handler)
 {
     // if the /etc/hosts file already holds a record
-    if (_hosts.lookup(ip)) return add(new LocalLookup(_hosts, ip, handler));
+    if (_hosts.lookup(ip)) return add(std::make_shared<LocalLookup>(_hosts, ip, handler));
 
     // pass on to the regular query method
     return query(Reverse(ip), TYPE_PTR, bits, handler);

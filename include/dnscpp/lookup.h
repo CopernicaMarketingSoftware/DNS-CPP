@@ -17,6 +17,7 @@
  *  Dependencies
  */
 #include "operation.h"
+#include "intrusivequeueitem.h"
 
 /**
  *  Begin of namespace
@@ -31,7 +32,7 @@ namespace DNS {
 /**
  *  Class definition
  */
-class Lookup : public Operation
+class Lookup : public Operation, public IntrusiveQueueItem<Lookup>
 {
 protected:
     /**
@@ -71,7 +72,14 @@ public:
      *  @return bool
      */
     virtual bool exhausted() const = 0;
-    
+
+    /**
+     *  Is this lookup expired: meaning did the lookup took too long
+     *  @param  double      current time
+     *  @return bool        true if it timed out
+     */
+    virtual bool expired(double now) const noexcept = 0;
+
     /**
      *  How long should we wait until the next runtime?
      *  @param  double      current time
@@ -95,6 +103,11 @@ public:
      *  @return bool        was a result reported to userspace?
      */
     virtual bool execute(double now) = 0;
+
+    /**
+     *  This lookup is done. Either it exhausted all of its attempts or it has a result. Invoke the callback handler
+     */
+    virtual void finalize() = 0;
 };
     
 /**

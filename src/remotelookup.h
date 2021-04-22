@@ -42,7 +42,7 @@ class Inbound;
 /**
  *  Class definition
  */
-class RemoteLookup : public Lookup, private Processor, private Connector
+class RemoteLookup : public Lookup, public std::enable_shared_from_this<RemoteLookup>, private Processor, private Connector
 {
 private:
     /**
@@ -68,13 +68,20 @@ private:
      *  @var size_t
      */
     size_t _id;
-    
+
+    /**
+     *  Was this lookup cancelled from userspace
+     */
+    bool _cancelled = false;
+
     /**
      *  If we move to TCP modus because of truncation, we remember the truncated
      *  response in case the TCP attempt fails so that we can at least report something
      *  @var std::unique_ptr<Response>
      */
     std::unique_ptr<Response> _truncated;
+
+    std::unique_ptr<Response> _response;
     
     /**
      *  Objects to which we're subscribed for inbound messages
@@ -114,11 +121,13 @@ private:
      */
     virtual bool execute(double now) override;
 
+    virtual void finalize() override;
+
     /**
-     *  When does the job expire?
+     *  Is the lookup expired?
      *  @return double
      */
-    double expires() const;
+    bool expired(double now) const noexcept override;
 
     /** 
      *  Time out the job because no appropriate response was received in time
@@ -150,9 +159,9 @@ private:
     /**
      *  Method to report the response
      *  @param  response
-     *  @return bool
+     *  @return void
      */
-    bool report(const Response &response);
+    void report(const Response &response);
 
     /**
      *  Cleanup the object

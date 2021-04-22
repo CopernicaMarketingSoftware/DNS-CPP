@@ -90,37 +90,25 @@ Core::~Core()
  *  @param  lookup
  *  @return Operation
  */
-Operation *Core::add(Lookup *lookup)
+Operation *Core::add(std::shared_ptr<Lookup> lookup)
 {
-    // add to the operations
-    if (_inflight < _capacity)
-    {
-        // put at the beginning of the list (because we want to run it immediately)
-        _lookups.emplace_front(lookup);
-        
-        // we consider this lookup to be active (although we still have to make the first execute() call)
-        _inflight += 1;
+    // we are lazy
+    _scheduled.emplace_back(lookup);
 
-        // if we already have a timer the expires immediately
-        if (_timer && _immediate) return lookup;
-    
-        // stop existing timer
-        if (_timer) _loop->cancel(_timer, this);
-        
-        // reschedule the timer
-        _timer = _loop->timer(0.0, this);
-        
-        // this is an immediate-timer
-        _immediate = true;
-    }
-    else
-    {
-        // we already have too many operations in progress, delay it
-        _scheduled.emplace_back(lookup);
-    }
+    // if we already have a timer the expires immediately
+    if (_timer && _immediate) return lookup.get();
+
+    // stop existing timer
+    if (_timer) _loop->cancel(_timer, this);
+
+    // reschedule the timer
+    _timer = _loop->timer(0.0, this);
+
+    // this is an immediate-timer
+    _immediate = true;
     
     // expose the operation
-    return lookup;
+    return lookup.get();
 }
 
 /**
@@ -167,6 +155,16 @@ void Core::reschedule(double now)
 }
 
 /**
+ *  An inflight lookup is done, or it was cancelled from user-space
+ *  @param      lookup  The lookup
+ */
+void Core::done(std::shared_ptr<Lookup> lookup)
+{
+    _lookups.pop(*lookup);
+    _ready.push_back(move(lookup));
+}
+
+/**
  *  Method that is called when a UDP socket has a buffer that it wants to deliver
  *  @param  sockets     the sockets with a buffer
  */
@@ -184,70 +182,8 @@ void Core::onBuffered(Sockets *sockets)
 }
 
 /**
- *  Process a lookup, which means that the next action for the lookup should be taken (like repeating a datagram or timing out)
- *  @param  watcher     object to monitor if `this` was destructed
- *  @param  lookup      the lookup to process
- *  @param  now         current time
- *  @return bool        was this lookup indeed processable (false if processed too early)
- */
-bool Core::process(const Watcher &watcher, const std::shared_ptr<Lookup> &lookup, double now)
-{
-    // if this lookup was already finished (this just pops it off the queue), this happens because we only
-    // pop messages from the queues, and lookups in the middle might already be finished by the time the
-    // hit the front of the queue)
-    if (lookup->finished()) return true;
-    
-    // if it is not yet time to run this lookup, we do nothing more
-    if (lookup->delay(now) > 0.0) return false;
-
-    // run the lookup (if this succeeds a call to userspace was made, which means the operation is done)
-    bool success = lookup->execute(now);
-    
-    // if user-space destructed `this` there is nothing else to do
-    if (success && !watcher.valid()) return true;
-    
-    // update counter if call was completed
-    if (success) _inflight -= 1;
-
-    // if no more attempts are expected, we put it in a special list
-    else if (lookup->exhausted()) _ready.push_back(lookup);
-    
-    // remember the lookup for the next attempt
-    else _lookups.push_back(lookup);
-    
-    // done
-    return true;
-}
-
-/**
- *  Proceed with more operations
- *  @param  watcher
- *  @param  now
- */
-void Core::proceed(const Watcher &watcher, double now)
-{
-    // make sure this is absolutely true or we'll end up iterating for a long time
-    assert(_inflight <= _capacity);
-
-    // iterate
-    while (watcher.valid() && _capacity > _inflight && !_scheduled.empty())
-    {
-        // the lookup that will be started
-        auto lookup = _scheduled.front();
-        
-        // this is now in progress
-        _inflight += 1;
-
-        // this lookup is no longer scheduled
-        _scheduled.pop_front();
-        
-        // run it (the process() always returns true @todo really?)
-        if (!process(watcher, lookup, now)) return;
-    }
-}
-
-/**
  *  Method that is called when the timer expires
+ *  This is the "main" function of DNS-CPP
  */
 void Core::expire()
 {
@@ -259,53 +195,53 @@ void Core::expire()
     
     // get the current time
     Now now;
-    
-    // first we check the udp sockets to see if they have data availeble
-    size_t ipv4calls = _ipv4.deliver(_maxcalls); if (!watcher.valid()) return;
-    size_t ipv6calls = _ipv6.deliver(_maxcalls - ipv4calls); if (!watcher.valid()) return;
-    
-    // if there were calls to userspace, we must update our bookkeeping
-    _inflight -= (ipv4calls + ipv6calls);
 
-    // number of calls to userspace left
-    size_t callsleft = _maxcalls - ipv4calls - ipv6calls;
+    // first we check the udp sockets to see if they have data available
+    // this moves lookups from _lookups to _ready
+    _ipv4.deliver(std::numeric_limits<size_t>::max());
+    _ipv6.deliver(std::numeric_limits<size_t>::max());
 
-    // there was no data to process, so we are going to run jobs
-    while (callsleft > 0 && !_lookups.empty())
+    // invoke ready lookups
+    for (const auto &lookup : _ready)
     {
-        // get the oldest operation from the queue
-        if (!process(watcher, _lookups.front(), now)) break;
-        
-        // maybe the userspace call ended up in `this` being destructed
+        try
+        {
+            lookup->finalize();
+        }
+        catch (...)
+        {
+            // @todo: report/log this somehow?
+        }
         if (!watcher.valid()) return;
-        
-        // log one extra call 
-        // @todo this is not entirely correct, maybe there was no call to userspace
-        callsleft -= 1;
-
-        // forget this lookup because we ran it
-        // @todo what if there was no call to userspace?
-        _lookups.pop_front();
-    }
-    
-    // look at lookups that can no longer be repeated, but for which we're waiting for answer
-    while (callsleft > 0 && !_ready.empty())
-    {
-        // get the oldest operation
-        if (!process(watcher, _ready.front(), now)) break;
-
-        // maybe the userspace call ended up in `this` being destructed
-        if (!watcher.valid()) return;
-
-        // log one extra call
-        callsleft -= 1;
-        
-        // forget this lookup because we are going to run it
-        _ready.pop_front();
     }
 
-    // execute more lookups if possible
-    proceed(watcher, now);
+    // all callback handlers have been invoked
+    _ready.clear();
+
+    // remove timed-out lookups at the front of the _lookups queue
+    while (!_lookups.empty() && _lookups.front()->expired(now)) _scheduled.emplace_back(_lookups.pop());
+
+    // enqueue more awaiting lookups
+    while (_lookups.size() < _capacity && !_scheduled.empty())
+    {
+        // take it from the front of the queue
+        auto lookup = _scheduled.front();
+
+        // we're going to move this lookup somewhere in all possible cases
+        _scheduled.pop_front();
+
+        // if it's completely finished, we can forget about it (maybe it was prematurely cancelled)
+        if (lookup->finished()) continue;
+
+        // if it has exhausted its attempts, we place it in the ready queue to be finalized on the next iteration
+        if (lookup->exhausted()) _ready.emplace_back(std::move(lookup));
+
+        // otherwise try to run it. If it succeeds, it is now inflight
+        else if (lookup->execute(now)) _lookups.push(lookup);
+
+        // otherwise we put it at the back of the awaiter queue, to be retried later
+        else _scheduled.emplace_back(std::move(lookup));
+    }
 
     // reset the timer
     reschedule(now);

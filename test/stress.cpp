@@ -142,6 +142,15 @@ private:
         show(operation);
     }
 
+    virtual void onCancelled(const DNS::Operation *operation) override
+    {
+        // update counter
+        _failures += 1;
+
+        // show what is going on
+        show(operation);
+    }
+
 public:
     /**
      *  Constructor
@@ -193,8 +202,8 @@ int main(int argc, char **argv)
 
     context.buffersize(1024 * 1024); // size of the input buffer (high lowers risk of package loss)
     context.interval(3.0);           // number of seconds until the datagram is retried (possibly to next server) (this does not cancel previous requests)
-    context.attempts(10);            // number of attempts until failure / number of datagrams to send at most
-    context.capacity(128);           // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss)
+    context.attempts(3);             // number of attempts until failure / number of datagrams to send at most
+    context.capacity(256);           // max number of simultaneous lookups per dns-context (high increases speed but also risk of package-loss/servfails)
     context.timeout(3.0);            // time to wait for a response after the _last_ attempt
     context.sockets(4);              // number of sockets
 
@@ -204,8 +213,12 @@ int main(int argc, char **argv)
     // handler for the lookups
     MyHandler handler(domainlist.size());
 
-    for (const auto &domain : domainlist) {
-        context.query(domain.c_str(), ns_t_mx, &handler);
+    for (const auto &domain : domainlist)
+    {
+        DNS::Operation *operation = context.query(domain.c_str(), ns_t_mx, &handler);
+
+        // do random cancellations
+        if (rand() % 100 == 0) operation->cancel();
     }
 
     // run the event loop

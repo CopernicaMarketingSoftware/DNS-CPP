@@ -44,19 +44,13 @@ private:
      */
     virtual bool execute(double now) override
     {
-        // do nothing if ready
-        assert(!finished());
+        // always fail
+        return false;
+    }
 
-        // remember the handler
-        auto *handler = _handler;
-        
-        // get rid of the handler to avoid that the result is reported
-        _handler = nullptr;
-
-        // pass to the hosts (this will trigger an immediate call to the handler)
-        _hosts.notify(Request(this), handler, this);
-        
-        // done
+    virtual bool expired(double now) const noexcept override
+    {
+        // we're always expired
         return true;
     }
 
@@ -98,8 +92,23 @@ private:
      */
     virtual bool exhausted() const override
     {
-        // handler is set on completion
-        return _handler == nullptr;
+        // put me in the ready queue immediately
+        return true;
+    }
+
+    virtual void finalize() override
+    {
+        // do nothing if ready
+        assert(!finished());
+
+        // remember the handler
+        auto *handler = _handler;
+
+        // get rid of the handler to avoid that the result is reported
+        _handler = nullptr;
+
+        // pass to the hosts (this will trigger an immediate call to the handler)
+        _hosts.notify(Request(this), handler, this);
     }
     
     /**

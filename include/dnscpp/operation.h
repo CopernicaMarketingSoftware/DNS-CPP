@@ -94,7 +94,7 @@ public:
     }
     
     /**
-     *  Cancel the operation
+     *  Cancel the operation. Like all other possible callbacks, cancellation happens asynchronously.
      */
     virtual void cancel();
 };

@@ -39,12 +39,8 @@ RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const B
  */
 RemoteLookup::~RemoteLookup()
 {
-    // cleanup the job (note that we have this cleanup-function because we
-    // normally want to cleanup _before_ we report back to userspace, because
-    // you never know what userspace will do (maybe even destruct the _core pointer),
-    // but if userspace decided to kill the job (by calling job->cancel()) we still
-    // have to do some cleaning ourselves
-    cleanup();
+    // we MUST have called back to userspace at this point, otherwise we have broken our promise
+    assert(!_handler);
 }
 
 /**
@@ -68,6 +64,16 @@ bool RemoteLookup::finished() const
 }
 
 /**
+ *  Is the lookup expired?
+ *  @return double
+ */
+bool RemoteLookup::expired(double now) const noexcept
+{
+    // check if it's been too long
+    return now - _last > _core->timeout();
+}
+
+/**
  *  Is this lookup exhausted: meaning that it has sent its max number of requests, but still
  *  has not received an appropriate answer, and is now waiting for its final timer to finish
  *  @return bool
@@ -75,7 +81,7 @@ bool RemoteLookup::finished() const
 bool RemoteLookup::exhausted() const
 {
     // handler must still exist (result has not been reported)
-    if (_handler == nullptr) return false;
+    assert(_handler);
     
     // if a tcp connection is in progress to solve a truncated response we are not going to send out more datagrams
     if (_truncated) return true;
@@ -91,9 +97,8 @@ bool RemoteLookup::exhausted() const
  */
 double RemoteLookup::delay(double now) const
 {
-    // if the operation is ready, we should run asap (so that it is removed)
-    // if the operation never ran it should also run immediately
-    if (_count == 0 || _handler == nullptr) return 0.0;
+    // handler must still exist
+    assert(_handler);
     
     // if already doing a tcp lookup, or when all attemps have passed, we wait until the expire-time
     if (_truncated || _count >= _core->attempts()) return std::max(0.0, _last + _core->timeout() - now);
@@ -139,19 +144,6 @@ Handler *RemoteLookup::cleanup()
     return handler;
 }
 
-/** 
- *  Time out the job because no appropriate response was received in time
- *  @return bool        wsa there a call to userspace?
- */
-bool RemoteLookup::timeout()
-{
-    // before we report to userspace we cleanup the object
-    cleanup()->onTimeout(this);
-    
-    // done
-    return true;
-}
-
 /**
  *  Execute the lookup. Returns true when a user-space call was made, and false when further
  *  processing is required.
@@ -160,21 +152,12 @@ bool RemoteLookup::timeout()
  */
 bool RemoteLookup::execute(double now)
 {
-    // when job times out
-    if ((_truncated || _count >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
-
-    // if we reached the max attempts we stop sending out more datagrams
-    if (_count >= _core->attempts()) return false;
-    
-    // if the operation is already using tcp we simply wait for that
-    if (_truncated) return false;
-
     // access to the nameservers + the number we have
     auto &nameservers = _core->nameservers();
     size_t nscount = nameservers.size();
     
     // what if there are no nameservers?
-    if (nscount == 0) return timeout();
+    if (nscount == 0) return false;
 
     // which nameserver should we sent now?
     size_t target = _core->rotate() ? (_count + _id) % nscount : _count % nscount;
@@ -190,7 +173,7 @@ bool RemoteLookup::execute(double now)
     
     // if the datagram was not _really_ sent (unlikely), we will treat it just as if it WAS sent,
     // so that the problem will be picked up when the timer expires
-    if (inbound == nullptr) return false;
+    if (inbound == nullptr) return true;
     
     // subscribe to the answers that might come in from now onwards
     inbound->subscribe(this, nameserver, _query.id());
@@ -198,8 +181,8 @@ bool RemoteLookup::execute(double now)
     // store this subscription, so that we can unsubscribe on success
     _subscriptions.emplace(std::make_pair(inbound, nameserver));
 
-    // no call to user space
-    return false;
+    // we succeeded in executing this lookup
+    return true;
 }
 
 /**
@@ -209,33 +192,55 @@ bool RemoteLookup::execute(double now)
  *  @param  response        the response to report
  *  @return bool            was there a call to userspace?
  */
-bool RemoteLookup::report(const Response &response)
+void RemoteLookup::report(const Response &response)
 {
-    // if the result has already been reported, we do nothing here
-    if (_handler == nullptr) return false;
-    
-    // for NXDOMAIN errors we need special treatment (maybe the hostname _does_ exists in 
+    // for NXDOMAIN errors we need special treatment (maybe the hostname _does_ exists in
     // /etc/hosts?) For all other type of results the message can be passed to userspace
-    if (response.rcode() != ns_r_nxdomain) return cleanup()->onReceived(this, response), true;
+    if (_response->rcode() != ns_r_nxdomain) return cleanup()->onReceived(this, *_response);
 
     // extract the original question, to find out the host for which we were looking
-    Question question(response);
-    
+    Question question(*_response);
+
     // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
     // file does have a record for this hostname, check this
-    if (!_core->exists(question.name())) return cleanup()->onReceived(this, response), true;
-    
+    if (!_core->exists(question.name())) return cleanup()->onReceived(this, *_response);
+
     // get the original request (so that the response can match the request)
     Request request(this);
-    
+
     // construct a fake-response message (it is fake because we have not actually received it)
     FakeResponse fake(request, question);
 
     // send the fake-response to user-space
     cleanup()->onReceived(this, Response(fake.data(), fake.size()));
-    
-    // done
-    return true;
+}
+
+void RemoteLookup::finalize()
+{
+    // we MUST call back to user space exactly once, otherwise our promise is broken
+    assert(_handler);
+
+    // were we cancelled?
+    if (_cancelled)
+    {
+        cleanup()->onCancelled(this);
+    }
+    // did we get a non-truncated response either via UDP or via TCP?
+    else if (_response)
+    {
+        report(*_response);
+    }
+    // do we at least have the truncated response still?
+    else if (_truncated)
+    {
+        report(*_truncated);
+    }
+    // we must have exhausted all our attempts
+    else
+    {
+        // report a timeout
+        cleanup()->onTimeout(this);
+    }
 }
 
 /**
@@ -246,19 +251,26 @@ bool RemoteLookup::report(const Response &response)
  */
 bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
 {
+    assert(_handler);
+
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
     if (!_query.matches(response)) return false;
-    
-    // if the response was not truncated, we can report it to userspace, we do this also
-    // when the response came from a TCP lookup and was still truncated (_truncated is used as a boolean to indicate tcp)
-    if (!response.truncated() || _truncated) return report(response);
 
     // we can unsubscribe from all inbound udp sockets because we're no longer interested in those responses
     unsubscribe();
-    
-    // try to connect to a TCP socket
-    if (!_core->connect(ip, this)) return report(response);
+
+    // if the response was not truncated, we can report it to userspace, we do this also
+    // when the response came from a TCP lookup and was still truncated (_truncated is used as a boolean to indicate tcp)
+    // hence when _truncated evaluates to false, we try to connect to the nameserver via TCP. If that also fails,
+    // we give up
+    if (!response.truncated() || _truncated || !_core->connect(ip, this))
+    {
+        // @todo: make Response movable or something
+        _response.reset(new Response(response));
+        _core->done(shared_from_this());
+        return true;
+    }
     
     // We remember the truncated response in case tcp fails too, so that we at least have _something_ to 
     // report in case TCP is unavailable. Note that the default user-space onReceived() handler turns truncated 
@@ -270,7 +282,7 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     // remember the start-time of the connection to reset the timeout-period
     _last = Now();
     
-    // done (return false because there was no call to userspace yet)
+    // done (return false because there isn't going to be a call to userspace just yet)
     return false;
 }
 
@@ -303,7 +315,8 @@ bool RemoteLookup::onConnected(const Ip &ip, Tcp *tcp)
 bool RemoteLookup::onFailure(const Ip &ip)
 {
     // tcp failed, in this case we want to send the truncated response instead
-    return report(*_truncated);
+    _core->done(shared_from_this());
+    return true;
 }
 
 /**
@@ -311,11 +324,13 @@ bool RemoteLookup::onFailure(const Ip &ip)
  */
 void RemoteLookup::cancel()
 {
-    // do nothing if already cancelled
-    if (_handler == nullptr) return;
-    
-    // cleanup, and remove to userspace
-    cleanup()->onCancelled(this);
+    // do nothing if already cancelled, or already resolved
+    if (!_handler || _cancelled) return;
+
+    _cancelled = true;
+
+    // simply move ourselves to the ready queue
+    _core->done(shared_from_this());
 }
 
 /**
