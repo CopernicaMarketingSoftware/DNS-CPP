@@ -135,11 +135,20 @@ public:
         // the identifier is a watcher
         ev_io *watcher = (ev_io *)identifier;
         
+        // stop the watcher first
+        ev_io_stop(_loop, watcher);
+        
         // we update the monitor too (in reality the monitor object never changes)
         watcher->data = monitor;
         
         // change the events 
         ev_io_set(watcher, fd, events);
+        
+        // restart it
+        ev_io_start(_loop, watcher);
+        
+        // expose the same identifier
+        return identifier;
     }
     
     /**

@@ -48,7 +48,6 @@ protected:
      */
     std::set<std::tuple<uint16_t,Ip,Processor*>> _processors;
 
-
     /**
      *  Constructor
      */
@@ -66,33 +65,34 @@ protected:
     virtual ~Inbound() = default;
     
     /**
-     *  Method that is called when the object is empty
+     *  Method that is called when there are no more subscribers, and that 
+     *  is implemented in the derived classes. Watch out: this method can be called
+     *  in the middle of loop through sockets so the implementation must be careful.
      */
-    virtual void close() = 0;
-
+    virtual void reset() = 0;
 
 public:
     /**
      *  Subscribe for responses from a certain query-ID received from a certain IP
-     *  @param  processor       the object that no longer is active
-     *  @param  ip              the IP to which it was listening to
-     *  @param  id              the query ID in which it was interested
+     *  @param  processor   the object that no longer is active
+     *  @param  ip          the IP to which it was listening to
+     *  @param  id          the query ID in which it was interested
      */
     void subscribe(Processor *processor, const Ip &ip, uint16_t id);
 
     /**
      *  Unsubscribe (counter-part of the subscribe method above)
-     *  @param  processor       the object that no longer is active
-     *  @param  ip              the IP to which it was listening to
-     *  @param  id              the query ID in which it was interested
+     *  @param  processor   the object that no longer is active
+     *  @param  ip          the IP to which it was listening to
+     *  @param  id          the query ID in which it was interested
      */
     void unsubscribe(Processor *processor, const Ip &ip, uint16_t id);
 
     /**
      *  Get the number of subscribers to this inbound object.
-     *  @return count
+     *  @return count       number of subscribers    
      */
-    size_t subscriberCount() const noexcept { return _processors.size(); }
+    size_t subscribers() const noexcept { return _processors.size(); }
 };
     
 /**

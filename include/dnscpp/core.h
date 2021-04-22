@@ -18,7 +18,7 @@
 /**
  *  Dependencies
  */
-#include "udps.h"
+#include "sockets.h"
 #include "resolvconf.h"
 #include "hosts.h"
 #include "bits.h"
@@ -44,7 +44,7 @@ class Loop;
 /**
  *  Class definition
  */
-class Core : private Timer, private Watchable, private Udps::Handler
+class Core : private Timer, private Watchable, private Sockets::Handler
 {
 protected:
     /**
@@ -54,11 +54,13 @@ protected:
     Loop *_loop;
 
     /**
-     *  UDP socket (we need two for ipv4 and ipv6 traffic)
-     *  @var Udp
+     *  Collection of sockets (we need two for ipv4 and ipv6 traffic)
+     *  @var Sockets
+     * 
+     *  @todo this is stupid
      */
-    Udps _ipv4;
-    Udps _ipv6;
+    Sockets _ipv4;
+    Sockets _ipv6;
 
     /**
      *  The IP addresses of the servers that can be accessed
@@ -142,13 +144,13 @@ protected:
      *  Max number of operations to run at the same time
      *  @var size_t
      */
-    size_t _capacity = 100;
+    size_t _capacity = 1024;
 
     /**
      *  The max number of calls to be made to userspace in one iteration
      *  @var size_t
      */
-    size_t _maxcalls = 5;
+    size_t _maxcalls = 64;
 
     /**
      *  Number of lookups inflight
@@ -164,17 +166,19 @@ protected:
 
     /**
      *  Proceed with more operations
+     *  @param  watcher
      *  @param  now
      */
-    void proceed(double now);
+    void proceed(const Watcher &watcher, double now);
     
     /**
      *  Process a lookup
+     *  @param  watcher     object to monitor if `this` was destructed
      *  @param  lookup      the lookup to process
      *  @param  now         current time
      *  @return bool        was this lookup indeed processable (false if processed too early)
      */
-    bool process(const std::shared_ptr<Lookup> &lookup, double now);
+    bool process(const Watcher &watcher, const std::shared_ptr<Lookup> &lookup, double now);
 
     /**
      *  Notify the timer that it expired
@@ -212,9 +216,9 @@ protected:
 
     /**
      *  Method that is called when a UDP socket has a buffer that it wants to deliver
-     *  @param  udp         the socket with a buffer
+     *  @param  sockets     the sockets with a buffer
      */
-    void onBuffered(Udps *udp) override;
+    void onBuffered(Sockets *sockets) override;
 
     /**
      *  Method that is called when a UDP socket has a buffer that it wants to deliver
@@ -280,23 +284,21 @@ public:
     bool exists(const char *hostname) const { return _hosts.lookup(hostname) != nullptr; }
 
     /**
-     *  Increment the number of inflight requests
-     */
-    void increment() noexcept { ++_inflight; }
-
-    /**
-     *  Decrement the number of inflight requests
-     *  @param count  by what amount to decrease
-     */
-    void decrement(size_t count = 1) noexcept { assert(_inflight >= count); _inflight -= count; }
-
-    /**
      *  Send a message over a UDP socket
      *  @param  ip              target IP
      *  @param  query           the query to send
      *  @return Inbound         the object that receives the answer
      */
     Inbound *datagram(const Ip &ip, const Query &query);
+
+    /**
+     *  Connect with TCP to a socket
+     *  This is an async operation, the connection will later be passed to the connector
+     *  @param  ip          IP address of the target nameservers
+     *  @param  connector   the object interested in the connection
+     *  @return bool
+     */
+    bool connect(const Ip &ip, Connector *connector);
 
     /**
      *  Expose the nameservers
