@@ -196,14 +196,14 @@ void RemoteLookup::report(const Response &response)
 {
     // for NXDOMAIN errors we need special treatment (maybe the hostname _does_ exists in
     // /etc/hosts?) For all other type of results the message can be passed to userspace
-    if (_response->rcode() != ns_r_nxdomain) return cleanup()->onReceived(this, *_response);
+    if (response.rcode() != ns_r_nxdomain) return cleanup()->onReceived(this, response);
 
     // extract the original question, to find out the host for which we were looking
-    Question question(*_response);
+    Question question(response);
 
     // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
     // file does have a record for this hostname, check this
-    if (!_core->exists(question.name())) return cleanup()->onReceived(this, *_response);
+    if (!_core->exists(question.name())) return cleanup()->onReceived(this, response);
 
     // get the original request (so that the response can match the request)
     Request request(this);
