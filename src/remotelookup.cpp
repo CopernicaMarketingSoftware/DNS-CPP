@@ -226,7 +226,7 @@ void RemoteLookup::finalize()
         cleanup()->onCancelled(this);
     }
     // did we get a non-truncated response either via UDP or via TCP?
-    else if (_response)
+    else if (_response && !_response->truncated())
     {
         report(*_response);
     }
