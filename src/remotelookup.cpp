@@ -39,6 +39,9 @@ RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const B
  */
 RemoteLookup::~RemoteLookup()
 {
+    // clear out subscriptions in case we got cancelled or we timed-out
+    unsubscribe();
+
     // we MUST have called back to userspace at this point, otherwise we have broken our promise
     assert(!_handler);
 }
@@ -244,13 +247,15 @@ void RemoteLookup::finalize()
 }
 
 /**
- *  Method that is called when a response is received
+ *  Method that is called when a response is received (either from UDP or from TCP!)
  *  @param  nameserver  the reporting nameserver
  *  @param  response    the received response
  *  @return bool        was the response processed / was there a call to user space?
  */
 bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
 {
+    // it must be the case that the handler was not yet invoked
+    // if we got cancelled then we must have been removed from any kind of queue
     assert(_handler);
 
     // ignore responses that do not match with the query
@@ -266,17 +271,22 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     // we give up
     if (!response.truncated() || _truncated || !_core->connect(ip, this))
     {
-        // @todo: make Response movable or something
+        // @todo: make Response movable
         _response.reset(new Response(response));
+
+        // we have a (possibly truncated) response
         _core->done(shared_from_this());
+
+        // there was a call to user-space
         return true;
     }
-    
+
     // We remember the truncated response in case tcp fails too, so that we at least have _something_ to 
     // report in case TCP is unavailable. Note that the default user-space onReceived() handler turns truncated 
     // responses into onFailure()-calls, so in most user space applications a truncation-plus-failed-tcp 
     // ends up as a SERVFAIL anyway. However, user space programs that want to distinguish a SERVFAIL-rcode 
     // from a truncation error can still write their own onReceived() method because of this:
+    // @todo: make Response movable
     _truncated.reset(new Response(response));
 
     // remember the start-time of the connection to reset the timeout-period
@@ -316,6 +326,8 @@ bool RemoteLookup::onFailure(const Ip &ip)
 {
     // tcp failed, in this case we want to send the truncated response instead
     _core->done(shared_from_this());
+
+    // call to user-space was done
     return true;
 }
 
@@ -327,6 +339,7 @@ void RemoteLookup::cancel()
     // do nothing if already cancelled, or already resolved
     if (!_handler || _cancelled) return;
 
+    // remember that we got cancelled. It's okay for user-space to call this method multiple times.
     _cancelled = true;
 
     // simply move ourselves to the ready queue
