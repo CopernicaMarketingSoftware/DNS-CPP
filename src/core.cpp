@@ -117,18 +117,13 @@ Operation *Core::add(std::shared_ptr<Lookup> lookup)
  */
 double Core::delay(double now)
 {
-    // if there is an unprocessed inbound queue, we have to expire asap
-    if (_ipv4.buffered() || _ipv6.buffered()) return 0.0;
-    
-    // if there is nothing scheduled
-    if (_lookups.empty() && _ready.empty()) return -1.0;
-    
-    // if only one is set
-    if (_lookups.empty()) return _ready.front()->delay(now);
-    if (_ready.empty()) return _lookups.front()->delay(now);
-    
-    // get the minimum
-    return std::min(_lookups.front()->delay(now), _ready.front()->delay(now));
+    // if there is an unprocessed inbound queue, or there are lookups waiting to be finalized, we have to expire asap
+    if (_ipv4.buffered() || _ipv6.buffered() || !_ready.empty()) return 0.0;
+
+    // By convention, we use -1 to signal that we don't have to expire a timer.
+    // Otherwise, if there are inflight lookups, then by design the front of
+    // the queue contains the lookup that will expire first.
+    return _lookups.empty() ? -1.0 : _lookups.front()->delay(now);
 }
 
 /**
