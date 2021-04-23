@@ -308,14 +308,10 @@ void Tcp::notify()
 /**
  *  Invoke callback handlers for buffered raw responses
  *  @param      watcher   The watcher to keep track if the parent object remains valid
- *  @param      maxcalls  The max number of callback handlers to invoke
  *  @return     number of callback handlers invoked
  */
-size_t Tcp::deliver(size_t maxcalls)
+size_t Tcp::deliver()
 {
-    // the object could destruct in the meantime, because there are call to userspace
-    Watcher watcher(this);
-    
     // number of calls made
     size_t calls = 0;
     
@@ -323,7 +319,7 @@ size_t Tcp::deliver(size_t maxcalls)
     bool connecting = !_connected && _identifier != nullptr;
     
     // inform them all
-    while (calls < maxcalls && !_connectors.empty() && !connecting)
+    while (!_connectors.empty() && !connecting)
     {
         // get the oldest connector
         auto *connector = _connectors.front();
@@ -336,16 +332,13 @@ size_t Tcp::deliver(size_t maxcalls)
         
         // update the counter
         if (result) calls += 1;
-        
-        // stop if userspace destructed us
-        if (!watcher.valid()) return calls;
     }
     
     // if there are no more connectors (and also no subscribers) this connection can be removed
     if (_connectors.empty()) reset();
     
     // call base
-    return calls + Socket::deliver(maxcalls - calls);
+    return calls + Socket::deliver();
 }
 
 /**

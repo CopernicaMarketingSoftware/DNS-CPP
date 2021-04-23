@@ -61,19 +61,15 @@ void Socket::add(const Ip &addr, std::vector<unsigned char> &&buffer)
 /**
  *  Invoke callback handlers for buffered raw responses
  *  @param      watcher   The watcher to keep track if the parent object remains valid
- *  @param      maxcalls  The max number of callback handlers to invoke
  *  @return     number of callback handlers invoked
  */
-size_t Socket::deliver(size_t maxcalls)
+size_t Socket::deliver()
 {
     // the number of callback handlers invoked
     size_t result = 0;
     
-    // use a watcher in case object is destructed in the meantime
-    Watcher watcher(this);
-
     // look for a response
-    while (result < maxcalls && watcher.valid() && !_responses.empty())
+    while (!_responses.empty())
     {
         // avoid exceptions (parsing the response could fail)
         try

@@ -73,33 +73,15 @@ void Sockets::sockets(size_t count)
 
 /**
  *  Invoke callback handlers for buffered raw responses
- *  @param   watcher   to keep track if the parent object remains valid
- *  @param   maxcalls  the max number of callback handlers to invoke
  *  @return  number of callback handlers invoked
  */
-size_t Sockets::deliver(size_t maxcalls)
+size_t Sockets::deliver()
 {
     // result variable
     size_t result = 0;
 
-    // we are going to make a call to userspace, so we keep monitoring if `this` is not destructed
-    Watcher watcher(this);
-
     // deliver the buffer from all udp sockets
-    for (auto &socket : _udps)
-    {
-        // pass the buffered responses to the lookup objects
-        result += socket.deliver(maxcalls);
-        
-        // update number of calls
-        maxcalls -= result;
-
-        // the call to userspace may have destructed this object
-        if (!watcher.valid()) return result;
-        
-        // leap out if we have made all the calls back to userspace
-        if (maxcalls == 0) return result;
-    }
+    for (auto &socket : _udps) result += socket.deliver();
     
     // if there are no more tcp connections, we're done
     if (_tcps.empty()) return result;
@@ -110,20 +92,7 @@ size_t Sockets::deliver(size_t maxcalls)
     auto sockets = _tcps;
     
     // deliver the buffer from all tcp sockets
-    for (auto &socket : sockets)
-    {
-        // pass the buffered responses to the lookup objects
-        result += socket->deliver(maxcalls);
-        
-        // update number of calls
-        maxcalls -= result;
-
-        // the call to userspace may have destructed this object
-        if (!watcher.valid()) return result;
-        
-        // leap out if we have made all the calls back to userspace
-        if (maxcalls == 0) return result;
-    }
+    for (auto &socket : sockets) result += socket->deliver();
     
     // return the number of buffered responses that were processed
     return result;

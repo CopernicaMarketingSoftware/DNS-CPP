@@ -91,13 +91,6 @@ protected:
      *  @var std::deque<std::shared_ptr<Lookup>>
      */
     IntrusiveQueue<Lookup> _lookups;
-
-    /**
-     *  Lookups for which the max number of attempts have been reached (no further
-     *  messages will be sent) and that are waiting for response or expiration
-     *  @var std::deque<std::shared_ptr<Lookup>>
-     */
-    std::deque<std::shared_ptr<Lookup>> _ready;
     
     /**
      *  The next timer to run

@@ -81,10 +81,9 @@ protected:
 public:
     /**
      *  Invoke callback handlers for buffered raw responses
-     *  @param   maxcalls  the max number of callback handlers to invoke
      *  @return  number of callback handlers invoked
      */
-    virtual size_t deliver(size_t maxcalls);
+    virtual size_t deliver();
 
     /**
      *  Return true if there are buffered raw responses

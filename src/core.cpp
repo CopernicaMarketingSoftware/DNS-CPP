@@ -118,7 +118,7 @@ Operation *Core::add(std::shared_ptr<Lookup> lookup)
 double Core::delay(double now)
 {
     // if there is an unprocessed inbound queue, or there are lookups waiting to be finalized, we have to expire asap
-    if (_ipv4.buffered() || _ipv6.buffered() || !_ready.empty()) return 0.0;
+    if (_ipv4.buffered() || _ipv6.buffered()) return 0.0;
 
     // By convention, we use -1 to signal that we don't have to expire a timer.
     // Otherwise, if there are inflight lookups, then by design the front of
@@ -200,9 +200,6 @@ void Core::proceed(double now)
         // if it's completely finished, we can forget about it (maybe it was prematurely cancelled)
         if (lookup->finished()) continue;
 
-        // if it has exhausted its attempts, we place it in the ready queue to be finalized on the next iteration
-        if (lookup->exhausted()) _ready.emplace_back(std::move(lookup));
-
         // otherwise try to run it. If it succeeds, it is now inflight
         else if (lookup->execute(now)) _lookups.push(lookup);
 
@@ -226,19 +223,20 @@ void Core::expire()
     // get the current time
     Now now;
 
-    // first we check the udp sockets to see if they have data available
-    // this moves lookups from _lookups to _ready
-    _ipv4.deliver(std::numeric_limits<size_t>::max());
-    _ipv6.deliver(std::numeric_limits<size_t>::max());
-
-    // invoke ready lookups
-    for (auto &lookup : _ready) if (finalize(watcher, move(lookup))) return;
-
-    // all callback handlers have been invoked
-    _ready.clear();
-
     // remove timed-out lookups at the front of the _lookups queue
-    while (!_lookups.empty() && _lookups.front()->expired(now)) _scheduled.emplace_back(_lookups.pop());
+    while (!_lookups.empty() && _lookups.front()->expired(now))
+    {
+        // if all attempts have been made, invoke user-space with a timeout
+        if (_lookups.front()->exhausted()) finalize(watcher, _lookups.pop());
+
+        // otherwise retry later
+        else _scheduled.emplace_back(_lookups.pop());
+    }
+
+    // we now check the udp sockets to see if they have data available
+    // this essentially removes lookups from _lookups
+    _ipv4.deliver();
+    _ipv6.deliver();
 
     // start new lookups
     proceed(now);

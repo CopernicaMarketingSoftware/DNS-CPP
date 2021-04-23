@@ -161,10 +161,9 @@ public:
 
     /**
      *  Deliver messages that have already been received and buffered to their appropriate processor
-     *  @param  size_t      max number of calls to userspace
      *  @return size_t      number of processed answers
      */
-    size_t deliver(size_t maxcalls);
+    size_t deliver();
 
     /**
      *  Is the socket now readable?

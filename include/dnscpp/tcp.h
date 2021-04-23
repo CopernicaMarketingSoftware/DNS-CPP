@@ -204,10 +204,9 @@ public:
     /**
      *  Extended deliver() method (derives from the base class) that also takes the responsibility
      *  of passing the connection to the connectors.
-     *  @param  maxcalls    max number of calls to make
      *  @return size_t
      */
-    virtual size_t deliver(size_t maxcalls) override;
+    virtual size_t deliver() override;
 };
     
 /**
