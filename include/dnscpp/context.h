@@ -162,8 +162,9 @@ public:
     /**
      *  Set the max number of calls that are made to userspace in one iteration
      *  @param  value       the new value
+     *  @deprecated has no effect
      */
-    void maxcalls(size_t value) { _maxcalls = value; }
+    void maxcalls(size_t value) {}
     
     /**
      *  Do a dns lookup and pass the result to a user-space handler object
