@@ -164,18 +164,7 @@ void Core::done(std::shared_ptr<Lookup> lookup)
     _lookups.pop(*lookup);
 
     // prepare to finalize the lookup
-    Watcher watcher(this);
-
-    // it's completely done
-    try
-    {
-        lookup->finalize();
-    }
-    catch (...)
-    {
-        // @todo: report/log this somehow?
-    }
-    if (!watcher.valid()) return;
+    if (finalize(Watcher(this), move(lookup))) return;
 
     // if we now have more room to execute another lookup, do so immediately
     if (_lookups.size() < _capacity) proceed(Now());
@@ -248,18 +237,7 @@ void Core::expire()
     _ipv6.deliver(std::numeric_limits<size_t>::max());
 
     // invoke ready lookups
-    for (const auto &lookup : _ready)
-    {
-        try
-        {
-            lookup->finalize();
-        }
-        catch (...)
-        {
-            // @todo: report/log this somehow?
-        }
-        if (!watcher.valid()) return;
-    }
+    for (auto &lookup : _ready) if (finalize(watcher, move(lookup))) return;
 
     // all callback handlers have been invoked
     _ready.clear();
@@ -272,6 +250,27 @@ void Core::expire()
 
     // reset the timer
     reschedule(now);
+}
+
+/**
+ *  Invoke callback handlers of a lookup that's done.
+ *  @param  watcher  The watcher to check if we're still valid
+ *  @param  lookup   The lookup
+ *  @return true if we should bail out immediately
+ */
+bool Core::finalize(const Watcher &watcher, std::shared_ptr<Lookup> &&lookup) const noexcept
+{
+    // invoke callback handler
+    try
+    {
+        lookup->finalize();
+    }
+    catch (...)
+    {
+        // @todo: report/log this somehow?
+    }
+    // user-space might have destroyed us
+    return !watcher.valid();
 }
 
 /**

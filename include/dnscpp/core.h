@@ -166,6 +166,14 @@ protected:
     void proceed(double now);
 
     /**
+     *  Invoke callback handlers of a lookup that's done.
+     *  @param  watcher  The watcher to check if we're still valid
+     *  @param  lookup   The lookup
+     *  @return true if we should bail out immediately
+     */
+    bool finalize(const Watcher &watcher, std::shared_ptr<Lookup> &&lookup) const noexcept;
+
+    /**
      *  Notify the timer that it expired
      */
     virtual void expire() override;
