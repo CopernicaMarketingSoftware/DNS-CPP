@@ -94,7 +94,8 @@ public:
     }
     
     /**
-     *  Cancel the operation. Like all other possible callbacks, cancellation happens asynchronously.
+     *  Cancel the operation. Calling this method results in your onCancelled callback to be invoked immediately.
+     *  Furthermore, this method is idempotent.
      */
     virtual void cancel();
 };

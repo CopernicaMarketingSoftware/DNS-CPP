@@ -161,19 +161,9 @@ protected:
 
     /**
      *  Proceed with more operations
-     *  @param  watcher
      *  @param  now
      */
-    void proceed(const Watcher &watcher, double now);
-    
-    /**
-     *  Process a lookup
-     *  @param  watcher     object to monitor if `this` was destructed
-     *  @param  lookup      the lookup to process
-     *  @param  now         current time
-     *  @return bool        was this lookup indeed processable (false if processed too early)
-     */
-    bool process(const Watcher &watcher, const std::shared_ptr<Lookup> &lookup, double now);
+    void proceed(double now);
 
     /**
      *  Notify the timer that it expired

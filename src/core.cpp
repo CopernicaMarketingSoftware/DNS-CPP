@@ -160,8 +160,25 @@ void Core::reschedule(double now)
  */
 void Core::done(std::shared_ptr<Lookup> lookup)
 {
+    // remove this potentially inflight lookup, potentially somewhere in the middle of this queue
     _lookups.pop(*lookup);
-    _ready.push_back(move(lookup));
+
+    // prepare to finalize the lookup
+    Watcher watcher(this);
+
+    // it's completely done
+    try
+    {
+        lookup->finalize();
+    }
+    catch (...)
+    {
+        // @todo: report/log this somehow?
+    }
+    if (!watcher.valid()) return;
+
+    // if we now have more room to execute another lookup, do so immediately
+    if (_lookups.size() < _capacity) proceed(Now());
 }
 
 /**
@@ -179,6 +196,35 @@ void Core::onBuffered(Sockets *sockets)
     // check when the next operation should run
     _timer = _loop->timer(0.0, this);
     _immediate = true;
+}
+
+/**
+ *  Proceed with more operations
+ *  @param  now
+ */
+void Core::proceed(double now)
+{
+    // enqueue more awaiting lookups
+    while (_lookups.size() < _capacity && !_scheduled.empty())
+    {
+        // take it from the front of the queue
+        std::shared_ptr<Lookup> lookup = std::move(_scheduled.front());
+
+        // we're going to move this lookup somewhere in all possible cases
+        _scheduled.pop_front();
+
+        // if it's completely finished, we can forget about it (maybe it was prematurely cancelled)
+        if (lookup->finished()) continue;
+
+        // if it has exhausted its attempts, we place it in the ready queue to be finalized on the next iteration
+        if (lookup->exhausted()) _ready.emplace_back(std::move(lookup));
+
+        // otherwise try to run it. If it succeeds, it is now inflight
+        else if (lookup->execute(now)) _lookups.push(lookup);
+
+        // otherwise we put it at the back of the awaiter queue, to be retried later
+        else _scheduled.push_back(std::move(lookup));
+    }
 }
 
 /**
@@ -221,27 +267,8 @@ void Core::expire()
     // remove timed-out lookups at the front of the _lookups queue
     while (!_lookups.empty() && _lookups.front()->expired(now)) _scheduled.emplace_back(_lookups.pop());
 
-    // enqueue more awaiting lookups
-    while (_lookups.size() < _capacity && !_scheduled.empty())
-    {
-        // take it from the front of the queue
-        auto lookup = _scheduled.front();
-
-        // we're going to move this lookup somewhere in all possible cases
-        _scheduled.pop_front();
-
-        // if it's completely finished, we can forget about it (maybe it was prematurely cancelled)
-        if (lookup->finished()) continue;
-
-        // if it has exhausted its attempts, we place it in the ready queue to be finalized on the next iteration
-        if (lookup->exhausted()) _ready.emplace_back(std::move(lookup));
-
-        // otherwise try to run it. If it succeeds, it is now inflight
-        else if (lookup->execute(now)) _lookups.push(lookup);
-
-        // otherwise we put it at the back of the awaiter queue, to be retried later
-        else _scheduled.emplace_back(std::move(lookup));
-    }
+    // start new lookups
+    proceed(now);
 
     // reset the timer
     reschedule(now);
