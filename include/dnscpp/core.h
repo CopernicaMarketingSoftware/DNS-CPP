@@ -76,13 +76,11 @@ protected:
     Hosts _hosts;
 
     /**
-     *  All operations that are in progress and that are waiting for the next 
-     *  (possibly first) attempt. Note that we use multiple queues so that we do
-     *  not have to use a slow (priority) queue.
-     *  @var std::deque<std::shared_ptr<Lookup>>
+     *  All operations that are in progress.
+     *  @var IntrusiveQueue<Lookup>
      */
-    std::deque<std::shared_ptr<Lookup>> _scheduled;
-    
+    IntrusiveQueue<Lookup> _lookups;
+
     /**
      *  To avoid that external DNS servers, or our own response-buffer, is flooded
      *  with data, there is a limit on the number of operations that can run. If
@@ -90,7 +88,7 @@ protected:
      *  overflow (is not supposed to happen often!)
      *  @var std::deque<std::shared_ptr<Lookup>>
      */
-    IntrusiveQueue<Lookup> _lookups;
+    std::deque<std::shared_ptr<Lookup>> _scheduled;
     
     /**
      *  The next timer to run
