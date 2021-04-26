@@ -207,7 +207,7 @@ void Tcp::upgrade()
     // can keep its internal counters of the number of running procedures up-to-date.
     // However, because we KNOW that _connector->onConnected() does not trigger any 
     // callbacks to user-space it is harmless and faster if we call that directly
-    for (auto *connector : _connectors) connector->onConnected(_ip, this);
+    for (auto &weakptr : _connectors) if (auto connector = weakptr.lock()) connector->onConnected(_ip, this);
     
     // reset the connectors
     _connectors.clear();
@@ -326,10 +326,13 @@ size_t Tcp::deliver(size_t maxcalls)
     while (calls < maxcalls && !_connectors.empty() && !connecting)
     {
         // get the oldest connector
-        auto *connector = _connectors.front();
-        
+        auto connector = _connectors.front().lock();
+
         // remove it from the vector
         _connectors.pop_front();
+
+        // is it still alive?
+        if (!connector) continue;
         
         // report the connection
         bool result = _connected ? connector->onConnected(_ip, this) : connector->onFailure(_ip);
@@ -355,7 +358,7 @@ size_t Tcp::deliver(size_t maxcalls)
  * 
  *  @todo   make an unsubscribe() counter-part
  */
-bool Tcp::subscribe(Connector *connector)
+bool Tcp::subscribe(std::shared_ptr<Connector> connector)
 {
     // this is not possible if the connection is already in a failed state
     if (!_connected && _identifier == nullptr) return false;

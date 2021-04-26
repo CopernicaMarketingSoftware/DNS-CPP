@@ -378,12 +378,12 @@ Inbound *Core::datagram(const Ip &ip, const Query &query)
  *  @param  connector   the object interested in the connection
  *  @return bool
  */
-bool Core::connect(const Ip &ip, Connector *connector)
+bool Core::connect(const Ip &ip, std::shared_ptr<Connector> connector)
 {
     // check the version number of ip
     switch (ip.version()) {
-    case 4:     return _ipv4.connect(ip, connector);
-    case 6:     return _ipv6.connect(ip, connector);
+    case 4:     return _ipv4.connect(ip, move(connector));
+    case 6:     return _ipv6.connect(ip, move(connector));
     default:    return false;
     }
 }

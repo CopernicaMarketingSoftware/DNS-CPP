@@ -19,6 +19,7 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 #include <deque>
+#include <memory>
 #include "socket.h"
 #include "monitor.h"
 
@@ -106,7 +107,7 @@ private:
      *  Connectors that want to use this TCP socket for sending out a query
      *  @var std::deque
      */
-    std::deque<Connector *> _connectors;
+    std::deque<std::weak_ptr<Connector>> _connectors;
     
     /**
      *  Helper function to make a connection
@@ -186,7 +187,7 @@ public:
      *  @param  connector   the object that subscribes
      *  @return bool        was it possible to subscribe (not possible in failed state)
      */
-    bool subscribe(Connector *connector);
+    bool subscribe(std::shared_ptr<Connector> connector);
 
     /**
      *  The IP address to which this socket is connected

@@ -139,7 +139,7 @@ Handler *RemoteLookup::cleanup()
     return handler;
 }
 
-/** 
+/**
  *  Time out the job because no appropriate response was received in time
  *  @return bool        wsa there a call to userspace?
  */
@@ -147,7 +147,7 @@ bool RemoteLookup::timeout()
 {
     // before we report to userspace we cleanup the object
     cleanup()->onTimeout(this);
-    
+
     // done
     return true;
 }
@@ -165,7 +165,7 @@ bool RemoteLookup::execute(double now)
 
     // if we reached the max attempts we stop sending out more datagrams
     if (_count >= _core->attempts()) return false;
-    
+
     // if the operation is already using tcp we simply wait for that
     if (_truncated) return false;
 
@@ -213,27 +213,27 @@ bool RemoteLookup::report(const Response &response)
 {
     // if the result has already been reported, we do nothing here
     if (_handler == nullptr) return false;
-    
-    // for NXDOMAIN errors we need special treatment (maybe the hostname _does_ exists in 
+
+    // for NXDOMAIN errors we need special treatment (maybe the hostname _does_ exists in
     // /etc/hosts?) For all other type of results the message can be passed to userspace
     if (response.rcode() != ns_r_nxdomain) return cleanup()->onReceived(this, response), true;
 
     // extract the original question, to find out the host for which we were looking
     Question question(response);
-    
+
     // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
     // file does have a record for this hostname, check this
     if (!_core->exists(question.name())) return cleanup()->onReceived(this, response), true;
-    
+
     // get the original request (so that the response can match the request)
     Request request(this);
-    
+
     // construct a fake-response message (it is fake because we have not actually received it)
     FakeResponse fake(request, question);
 
     // send the fake-response to user-space
     cleanup()->onReceived(this, Response(fake.data(), fake.size()));
-    
+
     // done
     return true;
 }
@@ -249,17 +249,17 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     // ignore responses that do not match with the query
     // @todo should we check for more? like whether the response is indeed a response
     if (!_query.matches(response)) return false;
-    
+
     // if the response was not truncated, we can report it to userspace, we do this also
     // when the response came from a TCP lookup and was still truncated (_truncated is used as a boolean to indicate tcp)
     if (!response.truncated() || _truncated) return report(response);
 
     // we can unsubscribe from all inbound udp sockets because we're no longer interested in those responses
     unsubscribe();
-    
+
     // try to connect to a TCP socket
-    if (!_core->connect(ip, this)) return report(response);
-    
+    if (!_core->connect(ip, shared_from_this())) return report(response);
+
     // We remember the truncated response in case tcp fails too, so that we at least have _something_ to 
     // report in case TCP is unavailable. Note that the default user-space onReceived() handler turns truncated 
     // responses into onFailure()-calls, so in most user space applications a truncation-plus-failed-tcp 
@@ -313,12 +313,12 @@ void RemoteLookup::cancel()
 {
     // do nothing if already cancelled
     if (_handler == nullptr) return;
-    
+
     // notify the core so that it can schedule more lookups
-    // NOTE that this is not so elegant, as it is not the responsibility of the Lookup class 
+    // NOTE that this is not so elegant, as it is not the responsibility of the Lookup class
     // to keep the bookkeeping of the Core class correct
     _core->cancel(this);
-    
+
     // cleanup, and report to userspace
     cleanup()->onCancelled(this);
 }

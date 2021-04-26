@@ -42,7 +42,7 @@ class Inbound;
 /**
  *  Class definition
  */
-class RemoteLookup : public Lookup, private Processor, private Connector
+class RemoteLookup : public Lookup, public std::enable_shared_from_this<RemoteLookup>, private Processor, public Connector
 {
 private:
     /**
@@ -62,7 +62,7 @@ private:
      *  @var size_t
      */
     size_t _id;
-    
+
     /**
      *  If we move to TCP modus because of truncation, we remember the truncated
      *  response in case the TCP attempt fails so that we can at least report something
