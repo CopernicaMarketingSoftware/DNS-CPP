@@ -8,7 +8,6 @@ target_sources(dnscpp PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/inbound.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ip.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/message.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/operation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/query.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/remotelookup.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/resolvconf.cpp

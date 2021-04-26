@@ -30,6 +30,7 @@ namespace DNS {
  *  Forward declarations
  */
 class Handler;
+class Core;
 
 /**
  *  Class definition
@@ -37,6 +38,12 @@ class Handler;
 class Operation
 {
 protected:
+    /**
+     *  The core object
+     *  @var Core
+     */
+    Core *_core;
+
     /**
      *  The user-space handler (this is set to nullptr when the result has been reported to userspace)
      *  @var Handler
@@ -59,8 +66,8 @@ protected:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Operation(Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
-        _handler(handler), _query(op, dname, type, bits, data) {}
+    Operation(Core *core, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
+        _core(core), _handler(handler), _query(op, dname, type, bits, data) {}
 
     /**
      *  Private destructor because userspace is not supposed to destruct this
@@ -96,7 +103,7 @@ public:
     /**
      *  Cancel the operation
      */
-    virtual void cancel();
+    virtual void cancel() = 0;
 };
 
 /**

@@ -72,13 +72,14 @@ private:
     }
 
     /**
-     *  Is this lookup still scheduled: meaning that no requests has been sent yet
+     *  Is this lookup still scheduled: meaning that no requests have been sent yet
      *  @return bool
      */
     virtual bool scheduled() const override
     {
-        // because the handler is reset on completion, we can use it to see if the operation is still scheduled
-        return _handler != nullptr;
+        // we return false here, because the very first call to execute() will immediately trigger a 
+        // call to user-space, AS IF we already sent out one or more requests
+        return false;
     }
     
     /**
@@ -98,17 +99,22 @@ private:
      */
     virtual bool exhausted() const override
     {
-        // handler is set on completion
-        return _handler == nullptr;
+        // because the local lookup does not have to send out requests, it is by definition exhausted
+        return true;
     }
-    
+
     /**
-     *  Cancel the lookup
+     *  Cancel the operation
      */
     virtual void cancel() override
     {
         // if already reported back to user-space
         if (_handler == nullptr) return;
+        
+        // notify the core object so that it can schedule more things
+        // NOTE that this is not so elegant, as it is not the responsibility of the Lookup class 
+        // to keep the bookkeeping of the Core class correct
+        _core->cancel(this);
         
         // remember the handler
         auto *handler = _handler;
@@ -126,13 +132,14 @@ public:
      *  Constructor
      *  To keep the behavior of lookups consistent with the behavior of remote lookups, we set
      *  a timer so that userspace will be informed in a later tick of the event loop
+     *  @param  core
      *  @param  hosts
      *  @param  domain
      *  @param  type
      *  @param  handler
      */
-    LocalLookup(const Hosts &hosts, const char *domain, int type, Handler *handler) :
-        Lookup(handler, ns_o_query, domain, type, false), _hosts(hosts) {}
+    LocalLookup(Core *core, const Hosts &hosts, const char *domain, int type, Handler *handler) :
+        Lookup(core, handler, ns_o_query, domain, type, false), _hosts(hosts) {}
 
     /**
      *  Constructor
@@ -141,19 +148,13 @@ public:
      *  @param  ip
      *  @param  handler
      */
-    LocalLookup(const Hosts &hosts, const Ip &ip, Handler *handler) : LocalLookup(hosts, Reverse(ip), TYPE_PTR, handler) {}
+    LocalLookup(Core *core, const Hosts &hosts, const Ip &ip, Handler *handler) : LocalLookup(core, hosts, Reverse(ip), TYPE_PTR, handler) {}
 
     /**
      *  Destructor
      *  This is a self-destructing class
      */
-    virtual ~LocalLookup()
-    {
-        // if the operation is destructed while it was still running, it means that the
-        // operation was prematurely cancelled from user-space, let the handler know
-        // @todo check if this is correct  / also implement the cancel() method
-        if (_handler != nullptr) _handler->onCancelled(this);
-    }
+    virtual ~LocalLookup() = default;
 };
     
 /**

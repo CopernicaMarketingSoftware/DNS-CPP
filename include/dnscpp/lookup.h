@@ -26,7 +26,8 @@ namespace DNS {
 /**
  *  Forward declarations
  */
-//class Handler;
+class Handler;
+class Core;
 
 /**
  *  Class definition
@@ -36,6 +37,7 @@ class Lookup : public Operation
 protected:
     /**
      *  Constructor
+     *  @param  core        the core object
      *  @param  handler     user space handler
      *  @param  op          the type of operation (normally a regular query)
      *  @param  dname       the domain to lookup
@@ -44,8 +46,8 @@ protected:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Lookup(Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
-        Operation(handler, op, dname, type, bits, data) {}
+    Lookup(Core *core, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
+        Operation(core, handler, op, dname, type, bits, data) {}
 
 public:
     /**

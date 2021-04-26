@@ -46,12 +46,6 @@ class RemoteLookup : public Lookup, private Processor, private Connector
 {
 private:
     /**
-     *  Pointer to the core of the DNS library
-     *  @var Core
-     */
-    Core *_core;
-
-    /**
      *  When was the last time that the job ran?
      *  @var double
      */

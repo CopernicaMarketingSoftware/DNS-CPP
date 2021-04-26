@@ -165,6 +165,12 @@ protected:
     double delay(double now);
 
     /**
+     *  Set the timer to a certain period
+     *  @param  seconds     expire time
+     */
+    void timer(double seconds);
+
+    /**
      *  Proceed with more operations
      *  @param  watcher
      *  @param  now
@@ -305,6 +311,13 @@ public:
      *  @return std::list<Ip>
      */
     const std::vector<Ip> &nameservers() const { return _nameservers; }
+    
+    /**
+     *  Mark a lookup as cancelled and start more queues lookups
+     *  This is called internally when userspace cancels a single operation (via Operation::cancel())
+     *  @param  lookup
+     */
+    void cancel(const Lookup *lookup);
 };
 
 /**
