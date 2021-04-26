@@ -70,6 +70,12 @@ private:
      */
     void show(const DNS::Operation *operation)
     {
+        // hmm, maybe these should not be passed as const
+        operations.erase(const_cast<DNS::Operation*>(operation));
+
+        // do random cancellations
+        if (rand() % 100 == 0 && !operations.empty()) (*operations.begin())->cancel();
+
         if ((_success + _servfails + _nxdomains + _failures + _timeouts) % 100 != 0) return;
 
         std::cerr << printStatistic("success", _success)
@@ -158,7 +164,7 @@ public:
      */
     MyHandler(size_t total) : _total(total) {}
     
-    
+    std::set<DNS::Operation*> operations;
 };
 
 std::vector<std::string> readDomainList(const char *filename)
@@ -215,10 +221,7 @@ int main(int argc, char **argv)
 
     for (const auto &domain : domainlist)
     {
-        DNS::Operation *operation = context.query(domain.c_str(), ns_t_mx, &handler);
-
-        // do random cancellations
-        if (rand() % 100 == 0) operation->cancel();
+        handler.operations.insert(context.query(domain.c_str(), ns_t_mx, &handler));
     }
 
     // run the event loop
