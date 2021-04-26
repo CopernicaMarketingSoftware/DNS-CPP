@@ -218,6 +218,9 @@ void RemoteLookup::report(const Response &response)
     cleanup()->onReceived(this, Response(fake.data(), fake.size()));
 }
 
+/**
+ *  Invoke callback handler
+ */
 void RemoteLookup::finalize()
 {
     // we MUST call back to user space exactly once, otherwise our promise is broken

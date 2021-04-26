@@ -96,6 +96,9 @@ private:
         return true;
     }
 
+    /**
+     *  Invoke callback handler
+     */
     virtual void finalize() override
     {
         // do nothing if ready

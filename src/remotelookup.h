@@ -125,6 +125,9 @@ private:
      */
     virtual bool execute(double now) override;
 
+    /**
+     *  Invoke callback handler
+     */
     virtual void finalize() override;
 
     /**
