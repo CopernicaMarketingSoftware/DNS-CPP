@@ -258,14 +258,8 @@ void Core::expire()
 bool Core::finalize(const Watcher &watcher, std::shared_ptr<Lookup> &&lookup) const noexcept
 {
     // invoke callback handler
-    try
-    {
-        lookup->finalize();
-    }
-    catch (...)
-    {
-        // @todo: report/log this somehow?
-    }
+    lookup->finalize();
+
     // user-space might have destroyed us
     return !watcher.valid();
 }
