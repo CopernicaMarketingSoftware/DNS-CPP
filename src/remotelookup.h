@@ -118,10 +118,13 @@ private:
     virtual bool onFailure(const Ip &ip) override;
 
     /**
-     *  Execute the lookup. Returns true when a user-space call was made, and false when further
-     *  processing is required.
+     *  Execute this lookup.
+     *
+     *  Watch out: this method should NOT be called when a lookup is already finished!!
+     *  or when it has no more attempts left
+     *
      *  @param  now         current time
-     *  @return bool        was there a call back to userspace?
+     *  @return bool        whether the execution succeeded
      */
     virtual bool execute(double now) override;
 

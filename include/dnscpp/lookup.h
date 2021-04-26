@@ -88,19 +88,13 @@ public:
     virtual double delay(double now) const = 0;
     
     /**
-     *  Execute the next step in the lookup (for example to send out an extra datagram, or to report
-     *  a timeout back to userspace). This method returns true when indeed a call to userspace was
-     *  done during this call to execute(), and false if further processing is required.
-     * 
-     *  Note that a lookup can also finish via other execution paths too (for example in a method
-     *  that processes responses to UDP lookups). So you can not solely rely on the return value of
-     *  this method to find out if a lookup was finished, and you might need to call the finished()
-     *  method too to find this out. 
+     *  Execute this lookup.
      * 
      *  Watch out: this method should NOT be called when a lookup is already finished!!
+     *  or when it has no more attempts left
      * 
      *  @param  now         current time
-     *  @return bool        was a result reported to userspace?
+     *  @return bool        whether the execution succeeded
      */
     virtual bool execute(double now) = 0;
 
