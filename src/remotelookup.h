@@ -25,6 +25,7 @@
 #include "../include/dnscpp/now.h"
 #include "../include/dnscpp/ip.h"
 #include "../include/dnscpp/processor.h"
+#include "../include/dnscpp/connecting.h"
 #include "connector.h"
 
 /**
@@ -75,6 +76,13 @@ private:
      *  @var std::set
      */
     std::set<std::pair<Inbound*,Ip>> _subscriptions;
+
+    /**
+     *  During the short period in which we're busy doing a TCP lookup, we keep a pointer
+     *  to the TCP-socket, so that we can unsubscribe from it
+     *  @var Connecting
+     */
+    Connecting *_connecting = nullptr;
 
 
     /**

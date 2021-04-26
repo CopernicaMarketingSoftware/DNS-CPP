@@ -107,6 +107,16 @@ double RemoteLookup::delay(double now) const
  */
 void RemoteLookup::unsubscribe()
 {
+    // if we're still busy connecting
+    if (_connecting) 
+    {
+        // unsubscribe from the tcp connector
+        _connecting->unsubscribe(this);
+        
+        // remember that we're unsubscribed now
+        _connecting = nullptr;
+    }
+    
     // unsubscribe from the UDP sockets
     for (const auto &subscription : _subscriptions)
     {
@@ -258,7 +268,10 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     unsubscribe();
     
     // try to connect to a TCP socket
-    if (!_core->connect(ip, this)) return report(response);
+    _connecting = _core->connect(ip, this);
+    
+    // on failure we report the original truncated response
+    if (_connecting == nullptr) return report(response);
     
     // We remember the truncated response in case tcp fails too, so that we at least have _something_ to 
     // report in case TCP is unavailable. Note that the default user-space onReceived() handler turns truncated 
@@ -282,6 +295,9 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
  */
 bool RemoteLookup::onConnected(const Ip &ip, Tcp *tcp)
 {
+    // forget that we are connecting
+    _connecting = nullptr;
+    
     // send the query
     auto *inbound = tcp->send(_query);
         
@@ -302,6 +318,9 @@ bool RemoteLookup::onConnected(const Ip &ip, Tcp *tcp)
  */
 bool RemoteLookup::onFailure(const Ip &ip)
 {
+    // forget that we are connecting
+    _connecting = nullptr;
+
     // tcp failed, in this case we want to send the truncated response instead
     return report(*_truncated);
 }

@@ -376,15 +376,15 @@ Inbound *Core::datagram(const Ip &ip, const Query &query)
  *  This is an async operation, the connection will later be passed to the connector
  *  @param  ip          IP address of the target nameservers
  *  @param  connector   the object interested in the connection
- *  @return bool
+ *  @return Connecting  the socket to which we're subscribing
  */
-bool Core::connect(const Ip &ip, Connector *connector)
+Connecting *Core::connect(const Ip &ip, Connector *connector)
 {
     // check the version number of ip
     switch (ip.version()) {
     case 4:     return _ipv4.connect(ip, connector);
     case 6:     return _ipv6.connect(ip, connector);
-    default:    return false;
+    default:    return nullptr;
     }
 }
 

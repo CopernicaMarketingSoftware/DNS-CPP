@@ -300,11 +300,11 @@ public:
     /**
      *  Connect with TCP to a socket
      *  This is an async operation, the connection will later be passed to the connector
-     *  @param  ip          IP address of the target nameservers
-     *  @param  connector   the object interested in the connection
-     *  @return bool
+     *  @param  ip              IP address of the target nameservers
+     *  @param  connector       the object interested in the connection
+     *  @return Connecting*     object to which the caller is subscribed
      */
-    bool connect(const Ip &ip, Connector *connector);
+    Connecting *connect(const Ip &ip, Connector *connector);
 
     /**
      *  Expose the nameservers

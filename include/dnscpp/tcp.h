@@ -21,6 +21,7 @@
 #include <deque>
 #include "socket.h"
 #include "monitor.h"
+#include "connecting.h"
 
 /**
  *  Begin of namespace
@@ -37,7 +38,7 @@ class Connector;
 /**
  *  Class definition
  */
-class Tcp : public Socket, private Monitor
+class Tcp : public Socket, private Monitor, private Connecting
 {
 public:
     /**
@@ -166,6 +167,12 @@ private:
      */
     virtual void reset() override;
 
+    /**
+     *  Unsubscribe from the socket (in case a connector is no longer interested in the connect
+     *  @param  connector   the object that unsubscribes
+     */
+    virtual void unsubscribe(Connector *connector) override;
+
 public:
     /**
      *  Constructor
@@ -183,11 +190,11 @@ public:
     
     /**
      *  Subscribe to this socket (wait for the socket to be connected)
-     *  @param  connector   the object that subscribes
-     *  @return bool        was it possible to subscribe (not possible in failed state)
+     *  @param  connector       the object that subscribes
+     *  @return Connecting      object that can be be used for unsubscribing
      */
-    bool subscribe(Connector *connector);
-
+    Connecting *subscribe(Connector *connector);
+    
     /**
      *  The IP address to which this socket is connected
      *  @return Ip

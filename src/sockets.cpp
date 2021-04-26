@@ -180,9 +180,9 @@ Inbound *Sockets::datagram(const Ip &ip, const Query &query)
  *  Connect to a certain IP
  *  @param  ip          IP address of the target nameservers
  *  @param  connector   the object interested in the connection
- *  @return bool
+ *  @return Connecting  object that is connecting
  */
-bool Sockets::connect(const Ip &ip, Connector *connector)
+Connecting *Sockets::connect(const Ip &ip, Connector *connector)
 {
     // check if we already have a connection to this ip
     for (auto &tcp : _tcps)
@@ -191,7 +191,10 @@ bool Sockets::connect(const Ip &ip, Connector *connector)
         if (tcp->ip() != ip) continue;
         
         // subscribe to the connection, so that it will be notified when ready
-        if (tcp->subscribe(connector)) return true;
+        auto *result = tcp->subscribe(connector);
+        
+        // was this a success?
+        if (result != nullptr) return result;
     }
     
     // avoid exceptions to bubble up
@@ -214,7 +217,7 @@ bool Sockets::connect(const Ip &ip, Connector *connector)
     catch (...)
     {
         // failure
-        return false;
+        return nullptr;
     }
 }
 

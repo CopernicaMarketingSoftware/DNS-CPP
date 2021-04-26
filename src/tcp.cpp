@@ -351,27 +351,44 @@ size_t Tcp::deliver(size_t maxcalls)
 /**
  *  Subscribe to this socket (wait for the socket to be connected)
  *  @param  connector   the object that subscribes
- *  @return bool        as subscribing possible (not possible if connection failed)
- * 
- *  @todo   make an unsubscribe() counter-part
+ *  @return Connecting  the object that can be used to unsubscribe
  */
-bool Tcp::subscribe(Connector *connector)
+Connecting *Tcp::subscribe(Connector *connector)
 {
     // this is not possible if the connection is already in a failed state
-    if (!_connected && _identifier == nullptr) return false;
+    if (!_connected && _identifier == nullptr) return nullptr;
     
     // add the connector to be notified later when the connection is available
     _connectors.push_back(connector);
     
     // in case we're not yet connected we already wait for the connection to be ready,
     // and when we already have connectors, the parent was already informed
-    if (!_connected || _connectors.size() > 1) return true;
+    if (!_connected || _connectors.size() > 1) return this;
     
     // notify the parent that there are actions to be performed
     _handler->onBuffered(this);
     
     // report success
-    return true;
+    return this;
+}
+
+/**
+ *  Unsubscribe from the socket (in case a connector is no longer interested in the connect
+ *  @param  connector   the object that unsubscribes
+ */
+void Tcp::unsubscribe(Connector *connector)
+{
+    // remove the connector from the vector
+    _connectors.erase(std::remove(_connectors.begin(), _connectors.end(), connector), _connectors.end());
+    
+    // if the socket is unused by now, we have to inform our parent
+    if (!_connectors.empty() || subscribers() > 0) return;
+    
+    // there are no more subscribers, we are going to tell the parent about it
+    auto *handler = (Tcp::Handler *)_handler;
+    
+    // notify our parent (note that this will immediately destruct `this`)
+    handler->onUnused(this);
 }
 
 /**
@@ -387,7 +404,7 @@ void Tcp::reset()
     // there are no more subscribers, we are going to tell the parent about it
     auto *handler = (Tcp::Handler *)_handler;
     
-    // notify our parent
+    // notify our parent (note that this will immediately destruct `this`)
     handler->onUnused(this);
 }
 

@@ -155,9 +155,9 @@ public:
      *  This is an async operation, the connection will later be passed to the connector
      *  @param  ip          IP address of the target nameservers
      *  @param  connector   the object interested in the connection
-     *  @return bool
+     *  @return Connecting  the socket to which we're busy to connect
      */
-    bool connect(const Ip &ip, Connector *connector);
+    Connecting *connect(const Ip &ip, Connector *connector);
 
     /**
      *  Deliver messages that have already been received and buffered to their appropriate processor
