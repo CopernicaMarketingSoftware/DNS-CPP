@@ -92,6 +92,9 @@ size_t Socket::deliver(size_t maxcalls)
             // parse the response
             Response response(front.second.data(), front.second.size());
 
+            // make it known that this ID is now free to use
+            onReceivedId(response.id());
+
             // filter on the response, the beginning is simply the handler at nullptr
             auto begin = _processors.lower_bound(std::make_tuple(response.id(), front.first, nullptr));
 

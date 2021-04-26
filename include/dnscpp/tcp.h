@@ -19,6 +19,9 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 #include <deque>
+#include <map>
+#include <set>
+#include <functional>
 #include "socket.h"
 #include "monitor.h"
 #include "connecting.h"
@@ -104,6 +107,18 @@ private:
     bool _connected = false;
 
     /**
+     *  Query IDs currently sent over the wire
+     *  @var std::set
+     */
+    std::set<uint16_t> _queryids;
+
+    /**
+     *  Queries awaiting to be sent over wire, but had an ID collision with one that is already in flight
+     *  @var std::map
+     */
+    std::map<uint16_t, std::list<std::reference_wrapper<const Query>>> _awaiting;
+
+    /**
      *  Connectors that want to use this TCP socket for sending out a query
      *  @var std::deque
      */
@@ -148,6 +163,12 @@ private:
     virtual void notify() override;
 
     /**
+     *  A response payload was received with this ID
+     *  @param  id    The identifier
+     */
+    virtual void onReceivedId(uint16_t id) override;
+
+    /**
      *  Number of bytes that we expect in the next read operation
      *  @return size_t
      */
@@ -173,6 +194,13 @@ private:
      */
     virtual void unsubscribe(Connector *connector) override;
 
+    /**
+     *  Blocking send this query
+     *  @param  query  The query
+     *  @return this or nullptr if something went wrong
+     */
+    Inbound *sendimpl(const Query &query);
+
 public:
     /**
      *  Constructor
@@ -194,7 +222,7 @@ public:
      *  @return Connecting      object that can be be used for unsubscribing
      */
     Connecting *subscribe(Connector *connector);
-    
+
     /**
      *  The IP address to which this socket is connected
      *  @return Ip
@@ -203,7 +231,8 @@ public:
 
     /**
      *  Send a full query
-     *  @param  query       the query to send
+     *  @param  query       the query to send. You must ensure the address of this variable stays
+     *                      valid in memory until a response is received.
      *  @return Inbound     the object that can be subscribed to for further processing
      */
     Inbound *send(const Query &query);

@@ -14,8 +14,10 @@
 #include "../include/dnscpp/loop.h"
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/watcher.h"
+#include "../include/dnscpp/query.h"
 #include "blocking.h"
 #include "connector.h"
+#include <cassert>
 
 /**
  *  Begin of namespace
@@ -151,25 +153,66 @@ int Tcp::error() const
  */
 Inbound *Tcp::send(const Query &query)
 {
-    // @todo see https://tools.ietf.org/html/rfc7766#section-7
-    // We MUST avoid having duplicate ID's that are active on the same connection,
-    // for example by delaying queries with identical ids until earlier queries are ready
-    
+    // check if this query id is inflight
+    if (_queryids.count(query.id()))
+    {
+        // it's already inflight. we'll put it in a queue to be sent later
+        auto iter = _awaiting.find(query.id());
+
+        // if there's no list of queries to be sent at this position
+        if (iter == _awaiting.end())
+        {
+            // create the list now
+            decltype(_awaiting)::mapped_type list;
+
+            // put the first element into it
+            list.push_back(query);
+
+            // update the map
+            _awaiting.emplace(query.id(), move(list));
+        }
+        else
+        {
+            // there's already a list at this key, so we can add another query to it
+            iter->second.push_back(query);
+        }
+
+        // we'll pretend everything went OK
+        // @todo: what if later it turns out that we couldn't send it?
+        return this;
+    }
+    else
+    {
+        // this query is not inflight, let's remember that it is in fact in flight
+        _queryids.insert(query.id());
+    }
+
+    // send it over the wire
+    return sendimpl(query);
+}
+
+/**
+ *  Blocking send this query
+ *  @param  query  The query
+ *  @return this or nullptr if something went wrong
+ */
+Inbound *Tcp::sendimpl(const Query &query)
+{
     // make the socket blocking
     Blocking blocking(_fd);
-    
+
     // the first two bytes should contain the message size
     uint16_t size = htons(query.size());
-    
+
     // send the size
     auto result1 = ::send(_fd, &size, sizeof(size), MSG_NOSIGNAL | MSG_MORE);
-    
+
     // was this a success?
     if (result1 < 2) return nullptr;
-    
+
     // now send the entire query
     auto result2 = ::send(_fd, query.data(), query.size(), MSG_NOSIGNAL);
-    
+
     // report the result
     return result2 >= (ssize_t)query.size() ? this : nullptr;
 }
@@ -226,6 +269,8 @@ void Tcp::fail()
     
     // object is no longer connected
     _connected = false;
+    _queryids.clear();
+    _awaiting.clear();
 
     // we connectors should be notified about the failure, but we postpone that so that
     // it can be triggered from the Core class via call to deliver() (so that Core can keep
@@ -303,6 +348,44 @@ void Tcp::notify()
     
     // for the next response we empty the buffer again
     _transferred = 0;
+}
+
+/**
+ *  A response payload was received with this ID
+ *  @param  id    The identifier
+ */
+void Tcp::onReceivedId(uint16_t id)
+{
+    // find the list of queries that are awaiting to be sent
+    auto iter = _awaiting.find(id);
+
+    // if there are no queries with this ID, we can leap out now
+    if (iter == _awaiting.end())
+    {
+        // forget that this query is in flight
+        _queryids.erase(id);
+
+        // leap out
+        return;
+    }
+
+    // get the list of queries to be sent with this ID
+    auto &list = iter->second;
+
+    // send it now
+    if (sendimpl(list.front()))
+    {
+        // remove it from the list
+        list.pop_front();
+
+        // if the list is now empty, we can remove it from the `_awaiting` map
+        if (list.empty()) _awaiting.erase(iter);
+    }
+    else
+    {
+        // oops, forget about this tcp connection
+        fail();
+    }
 }
 
 /**
