@@ -262,7 +262,7 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     // when the response came from a TCP lookup and was still truncated (_truncated is used as a boolean to indicate tcp)
     // hence when _truncated evaluates to false, we try to connect to the nameserver via TCP. If that also fails,
     // we give up
-    if (!response.truncated() || _truncated || !_core->connect(ip, this))
+    if (!response.truncated() || _truncated || !_core->connect(ip, shared_from_this()))
     {
         // @todo: make Response movable
         _response.reset(new Response(response));

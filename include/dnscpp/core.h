@@ -275,7 +275,7 @@ public:
      *  @param  connector   the object interested in the connection
      *  @return bool
      */
-    bool connect(const Ip &ip, Connector *connector);
+    bool connect(const Ip &ip, std::shared_ptr<Connector> connector);
 
     /**
      *  An inflight lookup is done

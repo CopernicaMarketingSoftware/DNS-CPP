@@ -157,7 +157,7 @@ public:
      *  @param  connector   the object interested in the connection
      *  @return bool
      */
-    bool connect(const Ip &ip, Connector *connector);
+    bool connect(const Ip &ip, std::shared_ptr<Connector> connector);
 
     /**
      *  Deliver messages that have already been received and buffered to their appropriate processor

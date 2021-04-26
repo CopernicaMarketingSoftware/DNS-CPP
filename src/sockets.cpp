@@ -151,7 +151,7 @@ Inbound *Sockets::datagram(const Ip &ip, const Query &query)
  *  @param  connector   the object interested in the connection
  *  @return bool
  */
-bool Sockets::connect(const Ip &ip, Connector *connector)
+bool Sockets::connect(const Ip &ip, std::shared_ptr<Connector> connector)
 {
     // check if we already have a connection to this ip
     for (auto &tcp : _tcps)
@@ -160,7 +160,7 @@ bool Sockets::connect(const Ip &ip, Connector *connector)
         if (tcp->ip() != ip) continue;
         
         // subscribe to the connection, so that it will be notified when ready
-        if (tcp->subscribe(connector)) return true;
+        if (tcp->subscribe(move(connector))) return true;
     }
     
     // avoid exceptions to bubble up
@@ -178,7 +178,7 @@ bool Sockets::connect(const Ip &ip, Connector *connector)
         // subscribe to the connection, so that it will be notified when ready (this
         // always returns true because we just created the object and it cannot yet
         // be in a failed state)
-        return tcp->subscribe(connector);
+        return tcp->subscribe(move(connector));
     }
     catch (...)
     {
