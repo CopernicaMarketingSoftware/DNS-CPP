@@ -47,7 +47,7 @@ private:
      */
     virtual bool execute(double now) override
     {
-        // always fail
+        // always fail, because we want to be finalized
         return false;
     }
 
@@ -58,7 +58,7 @@ private:
      */
     virtual bool expired(double now) const noexcept override
     {
-        // we're always expired
+        // we're always expired, because we want to be finalized
         return true;
     }
 
@@ -100,7 +100,7 @@ private:
      */
     virtual bool exhausted() const override
     {
-        // put me in the ready queue immediately
+        // finalize me immediately
         return true;
     }
 
