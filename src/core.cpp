@@ -227,7 +227,11 @@ void Core::expire()
     while (!_lookups.empty() && _lookups.front()->expired(now))
     {
         // if all attempts have been made, invoke user-space with a timeout
-        if (_lookups.front()->exhausted()) finalize(watcher, _lookups.pop());
+        if (_lookups.front()->exhausted())
+        {
+            // check if this resulted in `this` being destroyed
+            if (finalize(watcher, _lookups.pop())) return;
+        }
 
         // otherwise retry later
         else _scheduled.emplace_back(_lookups.pop());
