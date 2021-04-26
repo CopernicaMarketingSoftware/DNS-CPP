@@ -71,6 +71,7 @@ private:
 
     /**
      *  Was this lookup cancelled from userspace
+     *  @var bool
      */
     bool _cancelled = false;
 
