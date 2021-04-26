@@ -165,6 +165,12 @@ protected:
     double delay(double now);
 
     /**
+     *  Set the timer to a certain period
+     *  @param  seconds     expire time
+     */
+    void timer(double seconds);
+
+    /**
      *  Proceed with more operations
      *  @param  watcher
      *  @param  now

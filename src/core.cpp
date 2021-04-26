@@ -92,33 +92,67 @@ Core::~Core()
  */
 Operation *Core::add(Lookup *lookup)
 {
-    // add to the operations
-    if (_inflight < _capacity)
-    {
-        // put at the beginning of the list (because we want to run it immediately)
-        _lookups.emplace_front(lookup);
-        
-        // we consider this lookup to be active (although we still have to make the first execute() call)
-        _inflight += 1;
-
-        // if we already have a timer the expires immediately
-        if (_timer && _immediate) return lookup;
+    // WARNING: purists (like me) will not like this method because we make some assumptions about 
+    // whether `lookup` is a RemoteLookup or LocalLookup plus how those lookups are implemented. 
+    // Technically, this is not necessary (we could have written agnostic code too), but this allows 
+    // us to make things more efficient (for example by immediately calling execute() without first 
+    // going back to the event-loop because we KNOW that execute() will not trigger a user space call)
     
-        // stop existing timer
-        if (_timer) _loop->cancel(_timer, this);
+    // in case the lookup is already exhausted (no more udp messages have to be sent), we can
+    // put it in the ready-queue right away (in reality this means that this is a LocalLookup)
+    if (lookup->exhausted())
+    {
+        // IN THEORY we should call delay(), and put it either on the front or the end of the queue
+        // based on that -- but in this case we know that this code is only executed for local-lookups 
+        // and the delay for those lookups is hardcoded to 0.0 anyway
+        _ready.emplace_front(lookup);
         
-        // reschedule the timer
-        _timer = _loop->timer(0.0, this);
+        // we consider this lookup to be active (note that we might exceed _capacity now, but we're
+        // ok with that as this is a local-lookup that does not put any stress on nameservers)
+        _inflight += 1;
         
-        // this is an immediate-timer
-        _immediate = true;
+        // expire soon so that it is picked up and reported to user space
+        timer(0.0);
+    }
+    else if (_capacity >= _inflight || _nameservers.empty())
+    {
+        // we are going to update _scheduled, check if this is the first time
+        bool wasempty = _scheduled.empty();
+        
+        // this is a remote-lookup, but we have too many operations already in progress so we
+        // delay sending out the first datagram (or, unlikely, there are no nameservers configured, 
+        // meaning that a call to lookup::execute() would trigger a call to userspace, which we want 
+        // to avoid to keep all callbacks ASYNC, so we also want to delay the call to execute())
+        _scheduled.emplace_back(lookup);
+        
+        // make sure the timer expires in time
+        if (wasempty) reschedule(Now{});
     }
     else
     {
-        // we already have too many operations in progress, delay it
-        _scheduled.emplace_back(lookup);
+        // we need the current time
+        Now now;
+        
+        // THEORETICALLY, we should not immediately call execute() because that might trigger a
+        // call to user-space (while user-space expects ASYNC callbacks). However, since this code
+        // is in REALITY only used for RemoteLookups and we know for sure that there are nameservers
+        // (so the call to execute() will not trigger a call to user-space) we execute() right
+        // away for reasons of efficiency.
+        lookup->execute(now);
+        
+        // the operation is in progress
+        _inflight += 1;
+        
+        // we are going to update _lookups, check if this was the first time
+        bool wasempty = _lookups.empty();
+        
+        // put it at the back of the queue to schedule it for repeating the call
+        _lookups.emplace_back(lookup);
+        
+        // we might have to set a timer
+        if (wasempty) reschedule(now);
     }
-    
+        
     // expose the operation
     return lookup;
 }
@@ -144,14 +178,11 @@ double Core::delay(double now)
 }
 
 /**
- *  Reschedule the timer
- *  @param  now         current time
+ *  Set the timer to a certain period
+ *  @param  seconds     expire time
  */
-void Core::reschedule(double now)
+void Core::timer(double seconds)
 {
-    // calculate the delay
-    auto seconds = delay(now);
-    
     // if timer was not set and will not be set
     if (seconds < 0.0 && _timer == nullptr) return;
     
@@ -164,6 +195,16 @@ void Core::reschedule(double now)
     // check when the next operation should run
     _timer = seconds < 0 ? nullptr : _loop->timer(seconds, this);
     _immediate = seconds == 0.0;
+}
+
+/**
+ *  Reschedule the timer
+ *  @param  now         current time
+ */
+void Core::reschedule(double now)
+{
+    // calculate the delay
+    timer(delay(now));
 }
 
 /**
@@ -353,18 +394,17 @@ bool Core::connect(const Ip &ip, Connector *connector)
  */
 void Core::cancel(const Lookup *lookup)
 {
-    // if the operation was still in the _scheduled buffer it was not yet included in the _inflight counter
-    // note that we cannot rely on lookup::scheduled() because we sometimes increment _inflight while a lookup still thinks that it is scheduled
-    // @todo this is a bit ugly
-    if (std::find_if(_scheduled.begin(), _scheduled.end(), [lookup](const std::shared_ptr<Lookup> &scheduled) -> bool {
-        return scheduled.get() == lookup;
-    }) != _scheduled.end()) return;
+    // if the operation was not yet included in the _inflight counter
+    if (lookup->scheduled()) return;
     
     // one operation less active
     _inflight -= 1;
     
-    // there is room for more operations, set a timer for the event loop to start up those lookups
-    reschedule(Now());
+    // there is room for more operations, but do we have them?
+    if (_inflight > _capacity || _scheduled.empty()) return;
+    
+    // start a timer to start more operations
+    timer(0.0);
 }
 
 /**

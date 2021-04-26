@@ -72,13 +72,14 @@ private:
     }
 
     /**
-     *  Is this lookup still scheduled: meaning that no requests has been sent yet
+     *  Is this lookup still scheduled: meaning that no requests have been sent yet
      *  @return bool
      */
     virtual bool scheduled() const override
     {
-        // because the handler is reset on completion, we can use it to see if the operation is still scheduled
-        return _handler != nullptr;
+        // we return false here, because the very first call to execute() will immediately trigger a 
+        // call to user-space, AS IF we already sent out one or more requests
+        return false;
     }
     
     /**
@@ -98,8 +99,8 @@ private:
      */
     virtual bool exhausted() const override
     {
-        // handler is set on completion
-        return _handler == nullptr;
+        // because the local lookup does not have to send out requests, it is by definition exhausted
+        return true;
     }
 
     /**
