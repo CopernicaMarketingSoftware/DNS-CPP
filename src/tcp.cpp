@@ -387,7 +387,7 @@ void Tcp::unsubscribe(Connector *connector)
     // there are no more subscribers, we are going to tell the parent about it
     auto *handler = (Tcp::Handler *)_handler;
     
-    // notify our parent
+    // notify our parent (note that this will immediately destruct `this`)
     handler->onUnused(this);
 }
 
@@ -404,7 +404,7 @@ void Tcp::reset()
     // there are no more subscribers, we are going to tell the parent about it
     auto *handler = (Tcp::Handler *)_handler;
     
-    // notify our parent
+    // notify our parent (note that this will immediately destruct `this`)
     handler->onUnused(this);
 }
 
