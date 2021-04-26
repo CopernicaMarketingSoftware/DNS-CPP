@@ -114,7 +114,7 @@ Operation *Core::add(Lookup *lookup)
         // expire soon so that it is picked up and reported to user space
         timer(0.0);
     }
-    else if (_capacity >= _inflight || _nameservers.empty())
+    else if (_capacity <= _inflight || _nameservers.empty())
     {
         // we are going to update _scheduled, check if this is the first time
         bool wasempty = _scheduled.empty();
@@ -400,8 +400,8 @@ void Core::cancel(const Lookup *lookup)
     // one operation less active
     _inflight -= 1;
     
-    // there is room for more operations, but do we have them?
-    if (_inflight > _capacity || _scheduled.empty()) return;
+    // is there room for more operations, and do we have them?
+    if (_inflight >= _capacity || _scheduled.empty()) return;
     
     // start a timer to start more operations
     timer(0.0);
