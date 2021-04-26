@@ -112,6 +112,8 @@ private:
         if (_handler == nullptr) return;
         
         // notify the core object so that it can schedule more things
+        // NOTE that this is not so elegant, as it is not the responsibility of the Lookup class 
+        // to keep the bookkeeping of the Core class correct
         _core->cancel(this);
         
         // remember the handler
