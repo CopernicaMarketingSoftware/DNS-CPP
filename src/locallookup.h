@@ -51,6 +51,11 @@ private:
         return false;
     }
 
+    /**
+     *  Is this lookup expired: meaning did the lookup took too long
+     *  @param  double      current time
+     *  @return bool        true if it timed out
+     */
     virtual bool expired(double now) const noexcept override
     {
         // we're always expired
