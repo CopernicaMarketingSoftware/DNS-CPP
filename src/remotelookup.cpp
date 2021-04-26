@@ -224,26 +224,16 @@ void RemoteLookup::finalize()
     assert(_handler);
 
     // were we cancelled?
-    if (_cancelled)
-    {
-        cleanup()->onCancelled(this);
-    }
+    if (_cancelled) cleanup()->onCancelled(this);
+
     // did we get a non-truncated response either via UDP or via TCP?
-    else if (_response && !_response->truncated())
-    {
-        report(*_response);
-    }
+    else if (_response && !_response->truncated()) report(*_response);
+
     // do we at least have the truncated response still?
-    else if (_truncated)
-    {
-        report(*_truncated);
-    }
+    else if (_truncated) report(*_truncated);
+
     // we must have exhausted all our attempts
-    else
-    {
-        // report a timeout
-        cleanup()->onTimeout(this);
-    }
+    else cleanup()->onTimeout(this);
 }
 
 /**

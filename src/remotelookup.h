@@ -81,6 +81,10 @@ private:
      */
     std::unique_ptr<Response> _truncated;
 
+    /**
+     *  The response from TCP mode, if we did that
+     *  @var std::unique_ptr<Response>
+     */
     std::unique_ptr<Response> _response;
     
     /**
