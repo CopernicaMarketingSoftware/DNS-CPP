@@ -53,10 +53,16 @@ private:
     double _last = 0.0;
     
     /**
-     *  Number of messages that have already been sent
+     *  Number of datagram messages that have already been sent
      *  @var size_t
      */
-    size_t _count = 0;
+    size_t _datagrams = 0;
+    
+    /**
+     *  Number of TCP connections that have been set up
+     *  @var size_t
+     */
+    size_t _connections = 0;
     
     /**
      *  Random ID (mainly used to decide which nameserver to use first)

@@ -54,7 +54,7 @@ RemoteLookup::~RemoteLookup()
 bool RemoteLookup::scheduled() const
 {
     // if the operation is still busy, but has not sent out anything
-    return _handler != nullptr && _count == 0;
+    return _handler != nullptr && _datagrams == 0;
 }
 
 /**
@@ -78,10 +78,10 @@ bool RemoteLookup::exhausted() const
     if (_handler == nullptr) return false;
     
     // if a tcp connection is in progress to solve a truncated response we are not going to send out more datagrams
-    if (_truncated) return true;
+    if (_connections > 0) return true;
     
     // if max number of datagrams has not yet been reached
-    return _count >= _core->attempts();
+    return _datagrams >= _core->attempts();
 }
 
 /**
@@ -93,10 +93,10 @@ double RemoteLookup::delay(double now) const
 {
     // if the operation is ready, we should run asap (so that it is removed)
     // if the operation never ran it should also run immediately
-    if (_count == 0 || _handler == nullptr) return 0.0;
+    if (_datagrams == 0 || _handler == nullptr) return 0.0;
     
     // if already doing a tcp lookup, or when all attemps have passed, we wait until the expire-time
-    if (_truncated || _count >= _core->attempts()) return std::max(0.0, _last + _core->timeout() - now);
+    if (_connections > 0 || _datagrams >= _core->attempts()) return std::max(0.0, _last + _core->timeout() - now);
     
     // wait until we can send a next datagram
     return std::max(_last + _core->interval() - now, 0.0);
@@ -171,13 +171,13 @@ bool RemoteLookup::timeout()
 bool RemoteLookup::execute(double now)
 {
     // when job times out
-    if ((_truncated || _count >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
+    if ((_connections > 0 || _datagrams >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
 
     // if we reached the max attempts we stop sending out more datagrams
-    if (_count >= _core->attempts()) return false;
-    
+    if (_datagrams >= _core->attempts()) return false;
+
     // if the operation is already using tcp we simply wait for that
-    if (_truncated) return false;
+    if (_connections > 0) return false;
 
     // access to the nameservers + the number we have
     auto &nameservers = _core->nameservers();
@@ -187,7 +187,7 @@ bool RemoteLookup::execute(double now)
     if (nscount == 0) return timeout();
 
     // which nameserver should we sent now?
-    size_t target = _core->rotate() ? (_count + _id) % nscount : _count % nscount;
+    size_t target = _core->rotate() ? (_datagrams + _id) % nscount : _datagrams % nscount;
     
     // send a datagram to each nameserver
     auto &nameserver = nameservers[target];
@@ -196,7 +196,7 @@ bool RemoteLookup::execute(double now)
     auto *inbound = _core->datagram(nameserver, _query);
 
     // one more message has been sent
-    _count += 1; _last = now;
+    _datagrams += 1; _last = now;
     
     // if the datagram was not _really_ sent (unlikely), we will treat it just as if it WAS sent,
     // so that the problem will be picked up when the timer expires
@@ -261,8 +261,8 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     if (!_query.matches(response)) return false;
     
     // if the response was not truncated, we can report it to userspace, we do this also
-    // when the response came from a TCP lookup and was still truncated (_truncated is used as a boolean to indicate tcp)
-    if (!response.truncated() || _truncated) return report(response);
+    // when the response came from a TCP lookup and was still truncated
+    if (!response.truncated() || _connections > 0) return report(response);
 
     // we can unsubscribe from all inbound udp sockets because we're no longer interested in those responses
     unsubscribe();
@@ -272,6 +272,9 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     
     // on failure we report the original truncated response
     if (_connecting == nullptr) return report(response);
+
+    // this was the very first time that we set up a tcp connection
+    _connections = 1;
     
     // We remember the truncated response in case tcp fails too, so that we at least have _something_ to 
     // report in case TCP is unavailable. Note that the default user-space onReceived() handler turns truncated 
@@ -294,12 +297,19 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
  */
 bool RemoteLookup::onLost(const Ip &ip)
 {
+    // this is a hardcoded limit to avoid loops of tcp connect attempts
+    // @todo maybe make this a configurable parameter?
+    if (_connections > 10) return report(*_truncated);
+    
     // connection was lost in the middle of an operation, we try to connect _again_
-    // @todo we should put some limit here to avoid (almost) endless loops of reconnect attempts
+    // @todo maybe try a different nameserver now?
     _connecting = _core->connect(ip, this);
     
     // if it still failed, we report the truncated response (the reason why we tried tcp in the first place)
     if (_connecting == nullptr) return report(*_truncated);
+
+    // one extra tcp connection is in progress
+    _connections = 1;
     
     // the connection is in progress, and not call to userspace was made yet
     return false;
@@ -343,6 +353,7 @@ bool RemoteLookup::onFailure(const Ip &ip)
     _connecting = nullptr;
 
     // tcp failed, in this case we want to send the truncated response instead
+    // @todo maybe try a different nameserver now?
     return report(*_truncated);
 }
 
