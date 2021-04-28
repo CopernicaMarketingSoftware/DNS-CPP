@@ -250,7 +250,7 @@ bool Tcp::updatetransferred(ssize_t result)
 
     // if there is a failure we leap out as well
     if (result <= 0) return fail(State::lost), false;
-
+    
     // update the number of transferred bytes
     _transferred += result;
 
@@ -280,7 +280,7 @@ void Tcp::notify()
         const auto result = ::recv(_fd, (uint8_t*)&_size + _transferred, sizeof(uint16_t) - _transferred, MSG_DONTWAIT);
 
         // if there is a failure we leap out
-        if (updatetransferred(result)) return;
+        if (!updatetransferred(result)) return;
 
         // if we still haven't received the two bytes we should leap out here
         if (_transferred < sizeof(uint16_t)) return;
