@@ -163,14 +163,12 @@ Inbound *Tcp::send(const Query &query)
         // send it after all, we'll enter the `fail()` method.
         return this;
     }
-    else
-    {
-        // this query is not inflight, let's remember that it is in fact in flight
-        _queryids.insert(query.id());
-    }
 
-    // send it over the wire
-    return sendimpl(query);
+    // this query is not inflight, let's remember that it is in fact in flight (if it succeeds)
+    if (auto *inbound = sendimpl(query)) return _queryids.insert(query.id()), inbound;
+
+    // we failed
+    return nullptr;
 }
 
 /**
