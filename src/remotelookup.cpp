@@ -309,7 +309,7 @@ bool RemoteLookup::onLost(const Ip &ip)
     if (_connecting == nullptr) return report(*_truncated);
 
     // one extra tcp connection is in progress
-    _connections = 1;
+    _connections += 1;
     
     // the connection is in progress, and not call to userspace was made yet
     return false;
