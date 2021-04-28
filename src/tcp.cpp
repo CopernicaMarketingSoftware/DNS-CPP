@@ -15,6 +15,7 @@
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/watcher.h"
 #include "../include/dnscpp/query.h"
+#include "../include/dnscpp/processor.h"
 #include "blocking.h"
 #include "connector.h"
 #include <cassert>
@@ -178,6 +179,9 @@ Inbound *Tcp::send(const Query &query)
  */
 Inbound *Tcp::sendimpl(const Query &query)
 {
+    // if the connection was already lost in the meantime
+    if (_state != State::connected) return nullptr;
+    
     // make the socket blocking
     Blocking blocking(_fd);
 
@@ -217,10 +221,10 @@ size_t Tcp::expected() const
 void Tcp::upgrade()
 {
     // is the socket now connected?
-    _connected = error() == 0;
+    if (error() != 0) return fail(State::failed);
     
-    // if the connection failed
-    if (!_connected) return fail();
+    // the connection succeeded
+    _state = State::connected;
 
     // we no longer monitor for writability, but for readability instead
     _loop->update(_identifier, _fd, 1, this);
@@ -238,8 +242,9 @@ void Tcp::upgrade()
 
 /**
  *  Mark the connection as failed
+ *  @param  state       the new state
  */
-void Tcp::fail()
+void Tcp::fail(const State &state)
 {
     // we can stop monitoring the socket
     _loop->remove(_identifier, _fd, this); 
@@ -247,35 +252,33 @@ void Tcp::fail()
     // reset the identifier
     _identifier = nullptr;
     
-    // object is no longer connected
-    _connected = false;
-    _queryids.clear();
-    _awaiting.clear();
+    // update the state
+    _state = state;
 
-    // we connectors should be notified about the failure, but we postpone that so that
-    // it can be triggered from the Core class via call to deliver() (so that Core can keep
+    // the connectors should be notified about the failure, but we postpone that so that
+    // it can be triggered from the Core class via call to process() (so that Core can keep
     // all its timers up-to-date)
-    _handler->onBuffered(this);
+    _handler->onActive(this);
 }
 
 /**
  *  Check return value of a recv syscall
- *  @param  bytes  The bytes transferred
- *  @return true if we should leap out (an error occurred), false if not
+ *  @param  bytes       The bytes transferred
+ *  @return boolean     True on success, false on failure (and we should leap out!)
  */
 bool Tcp::updatetransferred(ssize_t result)
 {
-    // the operation would block, but don't leap out
-    if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return false;
+    // the operation can block, this is ok
+    if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return true;
 
     // if there is a failure we leap out as well
-    if (result <= 0) return fail(), true;
+    if (result <= 0) return fail(State::lost), false;
 
     // update the number of transferred bytes
     _transferred += result;
 
     // don't leap out
-    return false;
+    return true;
 }
 
 /**
@@ -288,7 +291,7 @@ void Tcp::notify()
     // we SHOULD retry the TCP requests
     
     // if the socket is not yet connected, it might be connected right now
-    if (!_connected) return upgrade();
+    if (_state == State::connecting) return upgrade();
 
     // We can be in two receive states: the first state is that we're waiting for the
     // size of the buffer. The second state is that we are waiting for the response content itself.
@@ -296,13 +299,14 @@ void Tcp::notify()
     // If that's less than 2 then we're still waiting for the response size.
     if (_transferred < sizeof(uint16_t))
     {
+        // read one or two bytes into the _size variable
         const auto result = ::recv(_fd, (uint8_t*)&_size + _transferred, sizeof(uint16_t) - _transferred, MSG_DONTWAIT);
 
         // if there is a failure we leap out
-        if (updatetransferred(result)) return;
+        if (!updatetransferred(result)) return;
 
         // if we still haven't received the two bytes we should leap out here
-        else if (_transferred < sizeof(uint16_t)) return;
+        if (_transferred < sizeof(uint16_t)) return;
 
         // OK: the size of the rest of the frame was received, we know how much to allocate
         // update the size
@@ -318,7 +322,7 @@ void Tcp::notify()
     // This is the second state of the Tcp state machine. At this point we know we have
     // received at least two bytes of the frame, and so we know we have resized the
     // buffer accordingly. All that's left to do is to await the full response content
-    if (updatetransferred(::recv(_fd, _buffer.data() + offset, _buffer.size() - offset, MSG_DONTWAIT))) return;
+    if (!updatetransferred(::recv(_fd, _buffer.data() + offset, _buffer.size() - offset, MSG_DONTWAIT))) return;
 
     // continue waiting if we have not yet received everything there is
     if (expected() > 0) return;
@@ -336,8 +340,8 @@ void Tcp::notify()
  */
 void Tcp::onReceivedId(uint16_t id)
 {
-    // leap out if we're in the failure state
-    if (!_connected && _identifier == nullptr) return;
+    // if the connection was already lost in the meantime
+    if (_state != State::connected) return;
 
     // find the list of queries that are awaiting to be sent
     auto iter = _awaiting.find(id);
@@ -356,7 +360,7 @@ void Tcp::onReceivedId(uint16_t id)
     if (sendimpl(iter->second)) _awaiting.erase(iter);
 
     // oops, forget about this tcp connection
-    else fail();
+    else fail(State::failed);
 }
 
 /**
@@ -365,7 +369,7 @@ void Tcp::onReceivedId(uint16_t id)
  *  @param      maxcalls  The max number of callback handlers to invoke
  *  @return     number of callback handlers invoked
  */
-size_t Tcp::deliver(size_t maxcalls)
+size_t Tcp::process(size_t maxcalls)
 {
     // the object could destruct in the meantime, because there are call to userspace
     Watcher watcher(this);
@@ -373,11 +377,8 @@ size_t Tcp::deliver(size_t maxcalls)
     // number of calls made
     size_t calls = 0;
     
-    // is the object still busy connecting?
-    bool connecting = !_connected && _identifier != nullptr;
-    
-    // inform them all
-    while (calls < maxcalls && !_connectors.empty() && !connecting)
+    // inform all connectors that the socket became connected or that the connection failed
+    while (calls < maxcalls && !_connectors.empty() && _state != State::connecting)
     {
         // get the oldest connector
         auto *connector = _connectors.front();
@@ -385,21 +386,55 @@ size_t Tcp::deliver(size_t maxcalls)
         // remove it from the vector
         _connectors.pop_front();
         
-        // report the connection
-        bool result = _connected ? connector->onConnected(_ip, this) : connector->onFailure(_ip);
+        // report the connection (note that it is technically possible (but unlikely) that the socket is
+        // already in a lost state by now, but we still report it as 'connected', which has the consequence
+        // that callers might use this socket to send out messages anyway, so they should check the return
+        // value of the send() method)
+        bool result = _state == State::failed ? connector->onFailure(_ip) : connector->onConnected(_ip, this);
+
+        // if there was no call to user-space we can proceed (`this` cannot be destructed)
+        if (!result) continue;
+
+        // update bookkeeping
+        calls += 1;
+
+        // stop if userspace destructed us
+        if (!watcher.valid()) return calls;
+    }
+
+    // call base to deliver buffered responses to the lookups
+    calls += Socket::process(maxcalls - calls);
+
+    // stop if userspace destructed us
+    if (!watcher.valid()) return calls;
+
+    // if the connection was lost while we have subscribers, we notify them as well
+    while (maxcalls > calls && _state == State::lost && !_processors.empty())
+    {
+        // front of the set
+        auto iter = _processors.begin();
+
+        // get the oldest processor
+        auto *processor = std::get<2>(*iter);
+
+        // remove from the set
+        _processors.erase(iter);
         
-        // update the counter
-        if (result) calls += 1;
+        // notify the processor
+        if (!processor->onLost(_ip)) continue;
+
+        // update bookkeeping
+        calls += 1;
         
         // stop if userspace destructed us
         if (!watcher.valid()) return calls;
     }
     
-    // if there are no more connectors (and also no subscribers) this connection can be removed
-    if (_connectors.empty()) reset();
+    // check if the socket is unused now (our reset() method has some safety checks)
+    reset();
     
-    // call base
-    return calls + Socket::deliver(maxcalls - calls);
+    // done
+    return calls;
 }
 
 /**
@@ -409,18 +444,20 @@ size_t Tcp::deliver(size_t maxcalls)
  */
 Connecting *Tcp::subscribe(Connector *connector)
 {
-    // this is not possible if the connection is already in a failed state
-    if (!_connected && _identifier == nullptr) return nullptr;
+    // this is not possible if the connection is already in a failed state (in all other
+    // cases (even state_lost!) subscribing is possible and will eventually result in a call
+    // to either onConnected() or onFailed())
+    if (_state == State::failed) return nullptr;
     
     // add the connector to be notified later when the connection is available
     _connectors.push_back(connector);
     
     // in case we're not yet connected we already wait for the connection to be ready,
     // and when we already have connectors, the parent was already informed
-    if (!_connected || _connectors.size() > 1) return this;
+    if (_state == State::connecting || _connectors.size() > 1) return this;
     
     // notify the parent that there are actions to be performed
-    _handler->onBuffered(this);
+    _handler->onActive(this);
     
     // report success
     return this;
@@ -435,14 +472,8 @@ void Tcp::unsubscribe(Connector *connector)
     // remove the connector from the vector
     _connectors.erase(std::remove(_connectors.begin(), _connectors.end(), connector), _connectors.end());
     
-    // if the socket is unused by now, we have to inform our parent
-    if (!_connectors.empty() || subscribers() > 0) return;
-    
-    // there are no more subscribers, we are going to tell the parent about it
-    auto *handler = (Tcp::Handler *)_handler;
-    
-    // notify our parent (note that this will immediately destruct `this`)
-    handler->onUnused(this);
+    // check if the socket is unused now (our reset() method has some safety checks)
+    reset();
 }
 
 /**

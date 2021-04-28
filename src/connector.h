@@ -38,7 +38,7 @@ public:
     virtual bool onConnected(const Ip &ip, Tcp *tcp) = 0;
     
     /**
-     *  Called when the connection could not be set up
+     *  Called when the connection could not be set up (server unreachable)
      *  @param  ip          ip to which a connection was set up
      *  @return bool        was there a call back to userspace?
      */

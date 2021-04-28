@@ -101,9 +101,14 @@ private:
     
     /**
      *  Is the socket already connected, or still in the process of being connected?
-     *  @var bool
+     *  @var enum
      */
-    bool _connected = false;
+    enum class State {
+        connecting,     // busy setting up a connection
+        failed,         // connection failure
+        connected,      // connected
+        lost,           // connection was lost in the middle of an operation
+    } _state = State::connecting;
 
     /**
      *  Query IDs currently sent over the wire
@@ -146,8 +151,9 @@ private:
 
     /**
      *  Mark the connection as failed
+     *  @param  state       the new state
      */
-    void fail();
+    void fail(const State &state);
 
     /**
      *  The error state of the socket -- this can be used to check whether the socket is 
@@ -175,8 +181,8 @@ private:
 
     /**
      *  Check return value of a recv syscall
-     *  @param  bytes  The bytes transferred
-     *  @return true if we should leap out (an error occurred or we'd block), false if not
+     *  @param  bytes       The bytes transferred
+     *  @return boolean     True on success, false on failure (and we should leap out!)
      */
     bool updatetransferred(ssize_t bytes);
     
@@ -230,6 +236,7 @@ public:
 
     /**
      *  Send a full query
+     *  Note that this method can return nullptr in case the connection was already lost in the meantime
      *  @param  query       the query to send
      *  @return Inbound     the object that can be subscribed to for further processing
      */
@@ -241,7 +248,7 @@ public:
      *  @param  maxcalls    max number of calls to make
      *  @return size_t
      */
-    virtual size_t deliver(size_t maxcalls) override;
+    virtual size_t process(size_t maxcalls) override;
 };
     
 /**

@@ -64,10 +64,11 @@ protected:
      */
     virtual ~Inbound() = default;
     
+    
     /**
      *  Method that is called when there are no more subscribers, and that 
      *  is implemented in the derived classes. Watch out: this method can be called
-     *  in the middle of loop through sockets so the implementation must be careful.
+     *  in the middle of loops through sockets so the implementation must be careful.
      */
     virtual void reset() = 0;
 

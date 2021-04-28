@@ -221,10 +221,11 @@ protected:
     virtual ~Core();
 
     /**
-     *  Method that is called when a UDP socket has a buffer that it wants to deliver
+     *  Method that is called when a UDP socket has a buffer that it wants to deliver,
+     *  or is otherwise in need of action (like in a lost state)
      *  @param  sockets     the sockets with a buffer
      */
-    void onBuffered(Sockets *sockets) override;
+    void onActive(Sockets *sockets) override;
 
     /**
      *  Method that is called when a UDP socket has a buffer that it wants to deliver

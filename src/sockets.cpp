@@ -89,7 +89,7 @@ size_t Sockets::deliver(size_t maxcalls)
     for (auto &socket : _udps)
     {
         // pass the buffered responses to the lookup objects
-        result += socket.deliver(maxcalls);
+        result += socket.process(maxcalls);
         
         // update number of calls
         maxcalls -= result;
@@ -113,7 +113,7 @@ size_t Sockets::deliver(size_t maxcalls)
     for (auto &socket : sockets)
     {
         // pass the buffered responses to the lookup objects
-        result += socket->deliver(maxcalls);
+        result += socket->process(maxcalls);
         
         // update number of calls
         maxcalls -= result;

@@ -53,10 +53,16 @@ private:
     double _last = 0.0;
     
     /**
-     *  Number of messages that have already been sent
+     *  Number of datagram messages that have already been sent
      *  @var size_t
      */
-    size_t _count = 0;
+    size_t _datagrams = 0;
+    
+    /**
+     *  Number of TCP connections that have been set up
+     *  @var size_t
+     */
+    size_t _connections = 0;
     
     /**
      *  Random ID (mainly used to decide which nameserver to use first)
@@ -92,6 +98,13 @@ private:
      *  @return bool        was the response processed, meaning: was it sent back to userspace?
      */
     virtual bool onReceived(const Ip &ip, const Response &response) override;
+
+    /**
+     *  Called when a TCP connection was lost in the middle of an operation
+     *  @param  ip          ip to which the connection was set up
+     *  @return bool        was there a call to userspace?
+     */
+    virtual bool onLost(const Ip &ip) override;
 
     /**
      *  Called when a TCP connection has been set up (in case an earlier UDP response was truncated)

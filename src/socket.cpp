@@ -41,7 +41,7 @@ void Socket::add(const sockaddr *addr, std::vector<unsigned char> &&buffer)
     }
 
     // reschedule the processing of messages
-    _handler->onBuffered(this);
+    _handler->onActive(this);
 }
 
 /**
@@ -55,7 +55,7 @@ void Socket::add(const Ip &addr, std::vector<unsigned char> &&buffer)
     _responses.emplace_back(addr, move(buffer));
 
     // reschedule the processing of messages
-    _handler->onBuffered(this);
+    _handler->onActive(this);
 }
 
 /**
@@ -64,7 +64,7 @@ void Socket::add(const Ip &addr, std::vector<unsigned char> &&buffer)
  *  @param      maxcalls  The max number of callback handlers to invoke
  *  @return     number of callback handlers invoked
  */
-size_t Socket::deliver(size_t maxcalls)
+size_t Socket::process(size_t maxcalls)
 {
     // the number of callback handlers invoked
     size_t result = 0;
