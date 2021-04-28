@@ -320,23 +320,13 @@ bool RemoteLookup::onConnected(const Ip &ip, Tcp *tcp)
     auto *inbound = tcp->send(_query);
     
     // if we failed to send it means that the connection was lost in the meantime
-    if (inbound == nullptr)
-    {
-        // connection was lost in the middle of an operation, we try to connect _again_
-        // @todo we should put some limit here to avoid (almost) endless loops of reconnect attempts
-        _connecting = _core->connect(ip, this);
+    if (inbound == nullptr) return onLost(ip);
+
+    // subscribe to the answers that might come in from now onwards
+    inbound->subscribe(this, ip, _query.id());
         
-        // if it still failed, we report the truncated response (the reason why we tried tcp in the first place)
-        if (_connecting == nullptr) return report(*_truncated);
-    }
-    else
-    {
-        // subscribe to the answers that might come in from now onwards
-        inbound->subscribe(this, ip, _query.id());
-            
-        // store this subscription, so that we can unsubscribe on success
-        _subscriptions.emplace(std::make_pair(inbound, ip));
-    }
+    // store this subscription, so that we can unsubscribe on success
+    _subscriptions.emplace(std::make_pair(inbound, ip));
     
     // no call to userspace yet
     return false;
