@@ -16,6 +16,7 @@
  *  Dependencies
  */
 #include <arpa/nameser.h>
+#include <array>
 #include <stdint.h>
 #include "bits.h"
 
@@ -46,7 +47,7 @@ private:
      *  Buffer that is big enough to hold the entire query
      *  @var unsigned char[]
      */
-    unsigned char _buffer[HFIXEDSZ + QFIXEDSZ + MAXCDNAME + 1];
+    std::array<unsigned char, HFIXEDSZ + QFIXEDSZ + MAXCDNAME + 1> _buffer;
     
     /**
      *  Size of the buffer
@@ -61,7 +62,7 @@ private:
      */
     unsigned char *end()
     {
-        return _buffer + _size;
+        return _buffer.data() + _size;
     }
 
     /**
@@ -70,7 +71,7 @@ private:
      */
     const unsigned char *end() const
     {
-        return _buffer + _size;
+        return _buffer.data() + _size;
     }
     
     /**
@@ -79,7 +80,7 @@ private:
      */
     size_t remaining() const
     {
-        return sizeof(_buffer) - _size;
+        return _buffer.size() - _size;
     }
     
     /**
@@ -139,13 +140,6 @@ public:
     Query(int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr);
 
     /**
-     *  No copying (disabled because copying is expensive and we want the compiler
-     *  to warn is in case we accidentally do rely on a copy-operation)
-     *  @param that
-     */
-    Query(const Query &that) = delete;
-    
-    /**
      *  Destructor
      */
     virtual ~Query() noexcept = default;
@@ -154,7 +148,7 @@ public:
      *  The internal raw binary data
      *  @return const unsigned char *
      */
-    const unsigned char *data() const noexcept { return _buffer; }
+    const unsigned char *data() const noexcept { return _buffer.data(); }
     
     /**
      *  Size of the request

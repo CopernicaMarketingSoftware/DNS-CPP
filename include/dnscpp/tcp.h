@@ -21,7 +21,6 @@
 #include <deque>
 #include <map>
 #include <set>
-#include <functional>
 #include "socket.h"
 #include "monitor.h"
 #include "connecting.h"
@@ -116,7 +115,7 @@ private:
      *  Queries awaiting to be sent over wire, but had an ID collision with one that is already in flight
      *  @var std::map
      */
-    std::map<uint16_t, std::list<std::reference_wrapper<const Query>>> _awaiting;
+    std::map<uint16_t, std::list<Query>> _awaiting;
 
     /**
      *  Connectors that want to use this TCP socket for sending out a query
@@ -231,8 +230,7 @@ public:
 
     /**
      *  Send a full query
-     *  @param  query       the query to send. You must ensure the address of this variable stays
-     *                      valid in memory until a response is received.
+     *  @param  query       the query to send
      *  @return Inbound     the object that can be subscribed to for further processing
      */
     Inbound *send(const Query &query);
