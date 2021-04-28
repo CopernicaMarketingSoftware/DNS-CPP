@@ -31,6 +31,15 @@ public:
      *  @return bool
      */
     virtual bool onReceived(const Ip &ip, const Response &response) = 0;
+    
+    /**
+     *  Method that is called when an error occurs with the socket
+     *  This is used in case of TCP when a connection was suddenly lost
+     *  @param  ip          the ip from where the response came (nameserver ip)
+     *  @return bool
+     */
+    virtual bool onLost(const Ip &ip) = 0;
+    
 };
 
 /**

@@ -38,10 +38,11 @@ public:
     {
     public:
         /**
-         *  Method that is invoked when this object has buffered responses available
+         *  Method that is invoked when this object has buffered responses 
+         *  available, or is otherwise active
          *  @param  socket      the reporting object
          */
-        virtual void onBuffered(Socket *socket) = 0;
+        virtual void onActive(Socket *socket) = 0;
     };
     
 protected:
@@ -84,13 +85,13 @@ public:
      *  @param   maxcalls  the max number of callback handlers to invoke
      *  @return  number of callback handlers invoked
      */
-    virtual size_t deliver(size_t maxcalls);
+    virtual size_t process(size_t maxcalls);
 
     /**
-     *  Return true if there are buffered raw responses
+     *  Return true if there are buffered raw responses or is otherwise active
      *  @return bool
      */
-    bool buffered() const noexcept { return !_responses.empty(); }
+    virtual bool active() const noexcept { return !_responses.empty(); }
 };
     
 /**
