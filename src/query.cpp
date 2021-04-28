@@ -46,12 +46,12 @@ Query::Query(int op, const char *dname, int type, const Bits &bits, const unsign
 {
     // check if parameters fit in the header
     if (type < 0 || type > 65535) throw std::runtime_error("invalid type passed to dns query");
-    
+
     // make sure buffer is completely filled with zero's
-    memset(_buffer, 0, sizeof(_buffer));
+    std::fill(_buffer.begin(), _buffer.end(), 0);
     
     // for simpler access to the header-properties, we use a local variable
-    HEADER *header = (HEADER *)_buffer;
+    HEADER *header = (HEADER *)_buffer.data();
 
     // store the opcode
     header->opcode = op;
@@ -77,7 +77,7 @@ Query::Query(int op, const char *dname, int type, const Bits &bits, const unsign
     }
     
     // we will be compressing data
-    Compressor compressor(_buffer);
+    Compressor compressor(_buffer.data());
 
     // compress the name in the buffer
     auto size = compressor.add(dname, end(), remaining());
@@ -130,7 +130,7 @@ Query::Query(int op, const char *dname, int type, const Bits &bits, const unsign
 bool Query::contains(const Question &record) const
 {
     // start of the buffer
-    auto *current = _buffer + HFIXEDSZ;
+    auto *current = _buffer.data() + HFIXEDSZ;
     
     // check all questions
     for (size_t i = 0; i < questions(); ++i)
@@ -139,7 +139,7 @@ bool Query::contains(const Question &record) const
         try
         {
             // decompress the name
-            Decompressed name(_buffer, end(), current);
+            Decompressed name(_buffer.data(), end(), current);
         
             // update current pointer to pass the consumed bytes 
             current += name.consumed();
@@ -211,7 +211,7 @@ bool Query::edns(bool dnssec)
     put16(0);
 
     // for simpler access to the header-properties, we use a local variable
-    HEADER *header = (HEADER *)_buffer;
+    HEADER *header = (HEADER *)_buffer.data();
 
     // increment the counter with number of additional sections
     header->arcount = htons(ntohs(header->arcount)+1);
@@ -227,7 +227,7 @@ bool Query::edns(bool dnssec)
 uint16_t Query::id() const noexcept
 {
     // use a local variable to access properties
-    HEADER *header = (HEADER *)_buffer;
+    HEADER *header = (HEADER *)_buffer.data();
     
     // expose the properties
     return ntohs(header->id);
@@ -240,7 +240,7 @@ uint16_t Query::id() const noexcept
 uint8_t Query::opcode() const
 {
     // use a local variable to access properties
-    HEADER *header = (HEADER *)_buffer;
+    HEADER *header = (HEADER *)_buffer.data();
     
     // expose the properties
     return header->opcode;
@@ -253,7 +253,7 @@ uint8_t Query::opcode() const
 size_t Query::questions() const
 {
     // use a local variable to access properties
-    HEADER *header = (HEADER *)_buffer;
+    HEADER *header = (HEADER *)_buffer.data();
     
     // expose the properties
     return ntohs(header->qdcount);

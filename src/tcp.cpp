@@ -14,9 +14,11 @@
 #include "../include/dnscpp/loop.h"
 #include "../include/dnscpp/query.h"
 #include "../include/dnscpp/watcher.h"
+#include "../include/dnscpp/query.h"
 #include "../include/dnscpp/processor.h"
 #include "blocking.h"
 #include "connector.h"
+#include <cassert>
 
 /**
  *  Begin of namespace
@@ -152,28 +154,49 @@ int Tcp::error() const
  */
 Inbound *Tcp::send(const Query &query)
 {
-    // @todo see https://tools.ietf.org/html/rfc7766#section-7
-    // We MUST avoid having duplicate ID's that are active on the same connection,
-    // for example by delaying queries with identical ids until earlier queries are ready
-    
+    // check if this query id is inflight
+    if (_queryids.count(query.id()))
+    {
+        // it's already inflight. we'll put it in a queue to be sent later
+        _awaiting.emplace(query.id(), query);
+
+        // We'll pretend everything went OK. If it later turns out we couldn't
+        // send it after all, we'll enter the `fail()` method.
+        return this;
+    }
+
+    // this query is not inflight, let's remember that it is in fact in flight (if it succeeds)
+    if (auto *inbound = sendimpl(query)) return _queryids.insert(query.id()), inbound;
+
+    // we failed
+    return nullptr;
+}
+
+/**
+ *  Blocking send this query
+ *  @param  query  The query
+ *  @return this or nullptr if something went wrong
+ */
+Inbound *Tcp::sendimpl(const Query &query)
+{
     // if the connection was already lost in the meantime
     if (_state != State::connected) return nullptr;
     
     // make the socket blocking
     Blocking blocking(_fd);
-    
+
     // the first two bytes should contain the message size
     uint16_t size = htons(query.size());
-    
+
     // send the size
     auto result1 = ::send(_fd, &size, sizeof(size), MSG_NOSIGNAL | MSG_MORE);
-    
+
     // was this a success?
     if (result1 < 2) return nullptr;
-    
+
     // now send the entire query
     auto result2 = ::send(_fd, query.data(), query.size(), MSG_NOSIGNAL);
-    
+
     // report the result
     return result2 >= (ssize_t)query.size() ? this : nullptr;
 }
@@ -250,7 +273,7 @@ bool Tcp::updatetransferred(ssize_t result)
 
     // if there is a failure we leap out as well
     if (result <= 0) return fail(State::lost), false;
-    
+
     // update the number of transferred bytes
     _transferred += result;
 
@@ -312,6 +335,35 @@ void Tcp::notify()
 }
 
 /**
+ *  A response payload was received with this ID
+ *  @param  id    The identifier
+ */
+void Tcp::onReceivedId(uint16_t id)
+{
+    // if the connection was already lost in the meantime
+    if (_state != State::connected) return;
+
+    // find the list of queries that are awaiting to be sent
+    auto iter = _awaiting.find(id);
+
+    // if there are no queries with this ID, we can leap out now
+    if (iter == _awaiting.end())
+    {
+        // forget that this query is in flight
+        _queryids.erase(id);
+
+        // leap out
+        return;
+    }
+
+    // send it now
+    if (sendimpl(iter->second)) _awaiting.erase(iter);
+
+    // oops, forget about this tcp connection
+    else fail(State::failed);
+}
+
+/**
  *  Invoke callback handlers for buffered raw responses
  *  @param      watcher   The watcher to keep track if the parent object remains valid
  *  @param      maxcalls  The max number of callback handlers to invoke
@@ -334,18 +386,18 @@ size_t Tcp::process(size_t maxcalls)
         // remove it from the vector
         _connectors.pop_front();
         
-        // report the connection (note that it is technically possible (but unlikely) that the socket is 
+        // report the connection (note that it is technically possible (but unlikely) that the socket is
         // already in a lost state by now, but we still report it as 'connected', which has the consequence
         // that callers might use this socket to send out messages anyway, so they should check the return
         // value of the send() method)
         bool result = _state == State::failed ? connector->onFailure(_ip) : connector->onConnected(_ip, this);
-        
+
         // if there was no call to user-space we can proceed (`this` cannot be destructed)
         if (!result) continue;
-        
+
         // update bookkeeping
         calls += 1;
-        
+
         // stop if userspace destructed us
         if (!watcher.valid()) return calls;
     }
@@ -361,16 +413,16 @@ size_t Tcp::process(size_t maxcalls)
     {
         // front of the set
         auto iter = _processors.begin();
-        
+
         // get the oldest processor
         auto *processor = std::get<2>(*iter);
-        
+
         // remove from the set
         _processors.erase(iter);
         
         // notify the processor
         if (!processor->onLost(_ip)) continue;
-        
+
         // update bookkeeping
         calls += 1;
         
@@ -393,7 +445,7 @@ size_t Tcp::process(size_t maxcalls)
 Connecting *Tcp::subscribe(Connector *connector)
 {
     // this is not possible if the connection is already in a failed state (in all other
-    // cases (even state_lost!) subscribing is possible and will eventually result in a call 
+    // cases (even state_lost!) subscribing is possible and will eventually result in a call
     // to either onConnected() or onFailed())
     if (_state == State::failed) return nullptr;
     

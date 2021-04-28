@@ -59,6 +59,12 @@ private:
      */
     std::list<std::pair<Ip,std::vector<unsigned char>>> _responses;
 
+    /**
+     *  A response payload was received with this ID
+     *  @param  id    The identifier
+     */
+    virtual void onReceivedId(uint16_t id) {};
+
 protected:
     /**
      *  Constructor
