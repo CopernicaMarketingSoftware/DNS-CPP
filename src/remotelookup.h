@@ -94,6 +94,13 @@ private:
     virtual bool onReceived(const Ip &ip, const Response &response) override;
 
     /**
+     *  Called when a TCP connection was lost in the middle of an operation
+     *  @param  ip          ip to which the connection was set up
+     *  @return bool        was there a call to userspace?
+     */
+    virtual bool onLost(const Ip &ip) override;
+
+    /**
      *  Called when a TCP connection has been set up (in case an earlier UDP response was truncated)
      *  @param  ip          ip to which a connection was set up
      *  @param  tcp         the actual TCP connection

@@ -164,7 +164,7 @@ Operation *Core::add(Lookup *lookup)
 double Core::delay(double now)
 {
     // if there is an unprocessed inbound queue, we have to expire asap
-    if (_ipv4.buffered() || _ipv6.buffered()) return 0.0;
+    if (_ipv4.active() || _ipv6.active()) return 0.0;
     
     // if there is nothing scheduled
     if (_lookups.empty() && _ready.empty()) return -1.0;
@@ -211,7 +211,7 @@ void Core::reschedule(double now)
  *  Method that is called when a UDP socket has a buffer that it wants to deliver
  *  @param  sockets     the sockets with a buffer
  */
-void Core::onBuffered(Sockets *sockets)
+void Core::onActive(Sockets *sockets)
 {
     // if we already had an immediate timer we do not have to set it
     if (_timer != nullptr && _immediate) return;

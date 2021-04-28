@@ -288,6 +288,24 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
 }
 
 /**
+ *  Called when a TCP connection was lost in the middle of an operation
+ *  @param  ip          ip to which the connection was set up
+ *  @return bool        was there a call to userspace?
+ */
+bool RemoteLookup::onLost(const Ip &ip)
+{
+    // connection was lost in the middle of an operation, we try to connect _again_
+    // @todo we should put some limit here to avoid (almost) endless loops of reconnect attempts
+    _connecting = _core->connect(ip, this);
+    
+    // if it still failed, we report the truncated response (the reason why we tried tcp in the first place)
+    if (_connecting == nullptr) return report(*_truncated);
+    
+    // the connection is in progress, and not call to userspace was made yet
+    return false;
+}
+
+/**
  *  Called when a TCP connection has been set up (in case an earlier UDP response was truncated)
  *  @param  ip          ip to which a connection was set up
  *  @param  tcp         the actual TCP connection
@@ -298,14 +316,27 @@ bool RemoteLookup::onConnected(const Ip &ip, Tcp *tcp)
     // forget that we are connecting
     _connecting = nullptr;
     
-    // send the query
+    // send the query (this can fail when the connection was immediately lost)
     auto *inbound = tcp->send(_query);
+    
+    // if we failed to send it means that the connection was lost in the meantime
+    if (inbound == nullptr)
+    {
+        // connection was lost in the middle of an operation, we try to connect _again_
+        // @todo we should put some limit here to avoid (almost) endless loops of reconnect attempts
+        _connecting = _core->connect(ip, this);
         
-    // subscribe to the answers that might come in from now onwards
-    inbound->subscribe(this, ip, _query.id());
-        
-    // store this subscription, so that we can unsubscribe on success
-    _subscriptions.emplace(std::make_pair(inbound, ip));
+        // if it still failed, we report the truncated response (the reason why we tried tcp in the first place)
+        if (_connecting == nullptr) return report(*_truncated);
+    }
+    else
+    {
+        // subscribe to the answers that might come in from now onwards
+        inbound->subscribe(this, ip, _query.id());
+            
+        // store this subscription, so that we can unsubscribe on success
+        _subscriptions.emplace(std::make_pair(inbound, ip));
+    }
     
     // no call to userspace yet
     return false;

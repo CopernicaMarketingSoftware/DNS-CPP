@@ -61,7 +61,7 @@ public:
          *  Method that is called when one of the sockets has a buffer of received messages
          *  @param  udp     the reporting socket
          */
-        virtual void onBuffered(Sockets *udp) = 0;
+        virtual void onActive(Sockets *udp) = 0;
     };
     
 private:
@@ -99,10 +99,10 @@ private:
      *  This method is called when a socket has an inbound buffer that requires processing
      *  @param  socket  the reporting object
      */
-    virtual void onBuffered(Socket *socket) override 
+    virtual void onActive(Socket *socket) override 
     { 
         // pass on to the handler
-        _handler->onBuffered(this); 
+        _handler->onActive(this); 
     }
 
     /**
@@ -186,10 +186,10 @@ public:
      *  Does one of the sockets have an inbound buffer (meaning: is there a backlog of unprocessed messages?)
      *  @return bool
      */
-    bool buffered() const
+    bool active() const
     {
         // if there's a buffered response in one of the sockets then we consider ourselves buffered
-        for (const auto &sock : _udps) if (sock.buffered()) return true;
+        for (const auto &sock : _udps) if (sock.active()) return true;
 
         // otherwise we're not buffered
         return false;
