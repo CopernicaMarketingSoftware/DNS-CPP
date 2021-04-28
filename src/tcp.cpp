@@ -356,6 +356,9 @@ void Tcp::notify()
  */
 void Tcp::onReceivedId(uint16_t id)
 {
+    // leap out if we're in the failure state
+    if (!_connected && _identifier == nullptr) return;
+
     // find the list of queries that are awaiting to be sent
     auto iter = _awaiting.find(id);
 
