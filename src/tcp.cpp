@@ -157,25 +157,7 @@ Inbound *Tcp::send(const Query &query)
     if (_queryids.count(query.id()))
     {
         // it's already inflight. we'll put it in a queue to be sent later
-        auto iter = _awaiting.find(query.id());
-
-        // if there's no list of queries to be sent at this position
-        if (iter == _awaiting.end())
-        {
-            // create the list now
-            decltype(_awaiting)::mapped_type list;
-
-            // put the first element into it
-            list.push_back(query);
-
-            // update the map
-            _awaiting.emplace(query.id(), move(list));
-        }
-        else
-        {
-            // there's already a list at this key, so we can add another query to it
-            iter->second.push_back(query);
-        }
+        _awaiting.emplace(query.id(), query);
 
         // We'll pretend everything went OK. If it later turns out we couldn't
         // send it after all, we'll enter the `fail()` method.
@@ -372,23 +354,11 @@ void Tcp::onReceivedId(uint16_t id)
         return;
     }
 
-    // get the list of queries to be sent with this ID
-    auto &list = iter->second;
-
     // send it now
-    if (sendimpl(list.front()))
-    {
-        // remove it from the list
-        list.pop_front();
+    if (sendimpl(iter->second)) _awaiting.erase(iter);
 
-        // if the list is now empty, we can remove it from the `_awaiting` map
-        if (list.empty()) _awaiting.erase(iter);
-    }
-    else
-    {
-        // oops, forget about this tcp connection
-        fail();
-    }
+    // oops, forget about this tcp connection
+    else fail();
 }
 
 /**

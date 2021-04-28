@@ -112,10 +112,10 @@ private:
     std::set<uint16_t> _queryids;
 
     /**
-     *  Queries awaiting to be sent over wire, but had an ID collision with one that is already in flight
-     *  @var std::map
+     *  Queries awaiting to be sent over the wire, but had an ID collision with one that is already in flight
+     *  @var std::multimap
      */
-    std::map<uint16_t, std::list<Query>> _awaiting;
+    std::multimap<uint16_t, Query> _awaiting;
 
     /**
      *  Connectors that want to use this TCP socket for sending out a query
