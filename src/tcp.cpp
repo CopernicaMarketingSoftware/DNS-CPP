@@ -177,8 +177,8 @@ Inbound *Tcp::send(const Query &query)
             iter->second.push_back(query);
         }
 
-        // we'll pretend everything went OK
-        // @todo: what if later it turns out that we couldn't send it?
+        // We'll pretend everything went OK. If it later turns out we couldn't
+        // send it after all, we'll enter the `fail()` method.
         return this;
     }
     else
