@@ -42,7 +42,7 @@ private:
      *  Buffersize for inbound sockets
      *  @var size_t
      */
-    size_t _buffersize;
+    size_t _buffersize = 0;
 
     /**
      *  Helper method to set an integer socket option
