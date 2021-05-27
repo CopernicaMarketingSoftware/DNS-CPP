@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 # Find a suitable compiler, and declare the version and language.
-project(DNS-CPP VERSION 1.2.2 LANGUAGES CXX)
+project(DNS-CPP VERSION 1.2.3 LANGUAGES CXX)
 
 # All artefacts should end up at the root of the build dir for convenience
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
