@@ -15,6 +15,7 @@
 /**
  *  Dependencies
  */
+#include <netinet/in.h>
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <string.h>
@@ -302,6 +303,22 @@ public:
         // for ipv6 addresses
         if (_version == 6) return memcmp(&_data.ipv6, &in6addr_any, sizeof(struct in6_addr)) == 0;
         
+        // failure
+        return false;
+    }
+
+    /**
+     *  Is this the loopback address?
+     *  @return bool
+     */
+    bool loopback() const
+    {
+        // for ipv4 addresses
+        if (_version == 4) return _data.ipv4.s_addr == ntohl(INADDR_LOOPBACK);
+
+        // for ipv6 addresses
+        if (_version == 6) return memcmp(&_data.ipv4, &in6addr_loopback, sizeof(struct in6_addr)) == 0;
+
         // failure
         return false;
     }
