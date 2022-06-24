@@ -38,6 +38,12 @@ private:
     std::vector<Ip> _nameservers;
 
     /**
+     *  The detected search paths
+     *  @var std::vector<std::string>
+     */
+    std::vector<const char *> _searchpaths;
+
+    /**
      *  Timeout as specified in the conf (this is the interval between attempts)
      *  @var size_t
      */
@@ -129,6 +135,19 @@ public:
      *  @return Ip
      */
     const Ip &nameserver(size_t index) const { return _nameservers[index]; }
+
+    /**
+     *  Number of searchpaths
+     *  @return size_t
+     */
+    size_t searchpaths() const { return _nameservers.size(); }
+
+    /**
+     *  Get a specific search path
+     *  @param  index
+     *  @return const char *
+     */
+    const char *searchpath(size_t index) const { return _searchpaths[index]; }
 
     /**
      *  Whether or not the 'rotate' option is set in the resolve conf

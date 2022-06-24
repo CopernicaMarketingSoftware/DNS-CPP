@@ -164,8 +164,8 @@ void ResolvConf::domain(const char *line, size_t size)
  */
 void ResolvConf::search(const char *line, size_t size)
 {
-    // report error
-    throw std::runtime_error(std::string("not implemented: search ") + line);
+    // add search path
+    _searchpaths.emplace_back(line);
 }
 
 /**
