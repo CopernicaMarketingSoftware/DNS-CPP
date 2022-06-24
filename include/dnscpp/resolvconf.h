@@ -140,7 +140,7 @@ public:
      *  Number of searchpaths
      *  @return size_t
      */
-    size_t searchpaths() const { return _nameservers.size(); }
+    size_t searchpaths() const { return _searchpaths.size(); }
 
     /**
      *  Get a specific search path
