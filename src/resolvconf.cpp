@@ -164,17 +164,31 @@ void ResolvConf::domain(const char *line, size_t size)
  */
 void ResolvConf::search(const char *line, size_t size)
 {
+    // we only remember the last entry, so we remove potential previous entries
+    _searchpaths.clear();
     // we dont know if its terminated, so we wrap it in a string
-    std::string searchline(line, size);
-    // we tokenize the string (note that this replaces spaces with null terminators)
-    auto tokens = strtok(&searchline[0], " ");
-    // so long as there are tokens
-    while (tokens != nullptr)
+    std::string source(line, size);
+
+    // create some helper variables
+    size_t prev = 0;
+    size_t next = 0;
+    // while we keep finding spaces or tabs
+    while ((next = source.find_first_of(" \t", prev)) != std::string::npos)
     {
-        // store the (now terminated) searchpath
-        _searchpaths.emplace_back(tokens);
-        // next token
-        tokens = strtok(nullptr, " ");
+        // if the size of the sub-section > 0
+        if (next - prev != 0)
+        {
+            // store the result
+            _searchpaths.emplace_back(source.substr(prev, next - prev));
+        }
+        // search again starting from the last match
+        prev = next + 1;
+    }
+    // if there is part of the line left without a space
+    if (prev < source.size())
+    {
+        // add it
+        _searchpaths.push_back(source.substr(prev));
     }
 }
 
