@@ -5,7 +5,7 @@
  *  configuration options of the resolver.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
 
 /**
@@ -36,6 +36,12 @@ private:
      *  @var std::vector<Ip>
      */
     std::vector<Ip> _nameservers;
+
+    /**
+     *  The search-paths to use in lookups
+     *  @var std::vector
+     */
+    std::vector<std::string> _searchpaths;
 
     /**
      *  Timeout as specified in the conf (this is the interval between attempts)
