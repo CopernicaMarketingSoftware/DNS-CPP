@@ -41,7 +41,7 @@ private:
      *  The detected search paths
      *  @var std::vector<std::string>
      */
-    std::vector<const char *> _searchpaths;
+    std::vector<std::string> _searchpaths;
 
     /**
      *  Timeout as specified in the conf (this is the interval between attempts)
