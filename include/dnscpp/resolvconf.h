@@ -63,6 +63,13 @@ private:
     bool _rotate = false;
 
     /**
+     *  Treshold for number of dots which must appear in a name before an initial absolute query
+     *  will be made.
+     *  @var size_t
+     */
+    size_t _ndots = 1;
+
+    /**
      *  Helper method to parse lines
      *  @param  line        the line to parse (must already be trimmed)
      *  @param  size        size of the line

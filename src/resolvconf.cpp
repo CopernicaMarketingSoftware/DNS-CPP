@@ -69,7 +69,7 @@ static const char *findwhite(const char *line, size_t size)
     while (size > 0)
     {
         // do we have a match?
-        if (isspace(line[0]])) return line;
+        if (isspace(line[0])) return line;
         
         // prepare for next iteration
         size -= 1; line += 1;
@@ -275,6 +275,9 @@ void ResolvConf::option(const char *option, size_t size)
 
     // maybe this is the attempts option? parse it and cap it to 5.
     else if (strncmp(option, "attempts:", 9) == 0) _attempts = std::min(5, atoi(option + 9));
+
+    // may the ndots setting? cap it to 15
+    else if (strncmp(option, "ndots:", 6) == 0) _ndots = std::min(15, atoi(option+6));
 
     // unknown option...
 }
