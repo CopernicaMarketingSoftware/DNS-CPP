@@ -72,7 +72,7 @@ protected:
      *  The IP addresses of the servers that can be accessed
      *  @var std::vector<Ip>
      */
-    std::vector<const char *> _searchpaths;
+    std::vector<std::string> _searchpaths;
     
     /**
      *  The contents of the /etc/hosts file
