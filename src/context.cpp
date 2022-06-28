@@ -43,7 +43,7 @@ void Context::capacity(size_t value)
 
 /**
  *  Do a dns lookup
- *  @param  name        the record name to look for
+ *  @param  domain      the record name to look for
  *  @param  type        type of record (normally you ask for an 'a' record)
  *  @param  bits        bits to include in the query
  *  @param  handler     object that will be notified when the query is ready
