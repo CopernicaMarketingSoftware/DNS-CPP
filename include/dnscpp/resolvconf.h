@@ -154,7 +154,7 @@ public:
      *  @param  index
      *  @return const char *
      */
-    std::string searchpath(size_t index) const { return _searchpaths[index]; }
+    const std::string &searchpath(size_t index) const { return _searchpaths[index]; }
 
     /**
      *  Whether or not the 'rotate' option is set in the resolve conf
