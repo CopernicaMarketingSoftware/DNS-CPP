@@ -144,6 +144,19 @@ public:
     const Ip &nameserver(size_t index) const { return _nameservers[index]; }
 
     /**
+     *  Number of searchpaths
+     *  @return size_t
+     */
+    size_t searchpaths() const { return _searchpaths.size(); }
+
+    /**
+     *  Get a specific search path
+     *  @param  index
+     *  @return const char *
+     */
+    const std::string &searchpath(size_t index) const { return _searchpaths[index]; }
+
+    /**
      *  Whether or not the 'rotate' option is set in the resolve conf
      *  @return bool
      */

@@ -67,6 +67,12 @@ protected:
      *  @var std::vector<Ip>
      */
     std::vector<Ip> _nameservers;
+
+    /**
+     *  The IP addresses of the servers that can be accessed
+     *  @var std::vector<Ip>
+     */
+    std::vector<std::string> _searchpaths;
     
     /**
      *  The contents of the /etc/hosts file
