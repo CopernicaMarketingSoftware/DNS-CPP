@@ -38,9 +38,8 @@ Core::Core(Loop *loop, bool defaults) :
     // load the defaults from /etc/resolv.conf
     ResolvConf settings;
     
-    // copy the nameservers
+    // copy the nameservers and search paths
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
-    // copy the search paths
     for (size_t i = 0; i < settings.searchpaths(); ++i) _searchpaths.emplace_back(settings.searchpath(i));
     
     // take over some of the settings
