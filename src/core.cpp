@@ -63,9 +63,8 @@ Core::Core(Loop *loop, const ResolvConf &settings) :
     _ipv4(loop, this),
     _ipv6(loop, this)
 {
-    // construct the nameservers
+    // construct the nameservers and search paths
     for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
-    // construct the search paths
     for (size_t i = 0; i < settings.searchpaths(); ++i) _searchpaths.emplace_back(settings.searchpath(i));
 
     // take over some of the settings
