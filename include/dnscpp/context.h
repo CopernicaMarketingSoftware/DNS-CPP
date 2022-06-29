@@ -31,6 +31,7 @@ namespace DNS {
  */
 class Handler;
 class Operation;
+class SearchLookupHandler;
 
 /**
  *  Class definition
@@ -67,7 +68,7 @@ public:
     /**
      *  Destructor
      */
-    virtual ~Context() = default;
+    virtual ~Context();
     
     /**
      *  Clear the list of nameservers
@@ -177,7 +178,7 @@ public:
      */
     Operation *query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler);
     Operation *query(const char *domain, ns_type type, DNS::Handler *handler) { return query(domain, type, _bits, handler); }
-    
+
     /**
      *  Do a reverse IP lookup, this is only meaningful for PTR lookups
      *  @param  ip          the ip address to lookup

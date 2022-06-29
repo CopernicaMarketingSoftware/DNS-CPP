@@ -14,11 +14,15 @@
 #include "remotelookup.h"
 #include "locallookup.h"
 #include "idgenerator.h"
+#include <iostream>
+#include "searchlookuphandler.h"
 
 /**
  *  Begin of namespace
  */
 namespace DNS {
+
+Context::~Context() = default;
 
 /**
  *  Set the send & receive buffer size of each individual UDP socket
@@ -51,6 +55,16 @@ void Context::capacity(size_t value)
  */
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler)
 {
+    // @todo is domain always null terminated?
+    // @todo check total amount of dots vs dotn variable
+    // if this call is not yet wrapped, and has no dots
+    if (!dynamic_cast<SearchLookupHandler*>(handler) && !strchr(domain, '.'))
+    {
+        // this new needs to be deleted somewhere, probably same place as locallookups below
+        handler = new SearchLookupHandler(_searchpaths, this, type, bits, domain, handler);
+        // replace searchlookuphandler here to wrap the actual handler
+    }
+
     // for A and AAAA lookups we also check the /etc/hosts file
     if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(this, _hosts, domain, type, handler));
     if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return add(new LocalLookup(this, _hosts, domain, type, handler));
