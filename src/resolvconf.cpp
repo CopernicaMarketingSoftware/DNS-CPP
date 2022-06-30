@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include <fstream>
 #include <iostream>
+#include <unistd.h>
 
 /**
  *  Begin of namespace
@@ -106,6 +107,19 @@ ResolvConf::ResolvConf(const char *filename, bool strict)
             if (strict) throw std::runtime_error(std::string(filename) + ": " + error.what());
         }
     }
+
+    // search path is filled with gethostname its not specified
+    if (_searchpaths.empty())
+    {
+        // allocate a buffer large enough to hold the hostname (+1, as that guarantees its 0-terminated)
+        char buffer[HOST_NAME_MAX + 1];
+
+        // fill the buffer with the hostname
+        gethostname(&buffer[0], HOST_NAME_MAX);
+
+        // add the hostname to the searchpaths
+        _searchpaths.emplace_back(buffer);
+    }
 }
 
 /**
@@ -164,6 +178,7 @@ void ResolvConf::domain(const char *line, size_t size)
  */
 void ResolvConf::search(const char *line, size_t size)
 {
+    std::cout<<"searchpath"<<std::endl;
     // we only remember the last entry, so we remove potential previous entries
     _searchpaths.clear();
     // we dont know if its terminated, so we wrap it in a string
@@ -184,7 +199,7 @@ void ResolvConf::search(const char *line, size_t size)
         // search again starting from the last match
         prev = next + 1;
     }
-    // if there is part of the line left without a space
+    // if there is part of the line left without a space or tab
     if (prev < source.size())
     {
         // add it
