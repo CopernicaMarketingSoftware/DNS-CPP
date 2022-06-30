@@ -173,10 +173,10 @@ private:
      *  Attempt the next searchpath
      *  @return operation        the operation that handles the lookup
      */
-    Operation *tryNextLookup()
+    bool tryNextLookup()
     {
-        // if there are no more paths left, return null
-        if (_index >= _searchPaths.size()) return nullptr;
+        // if there are no more paths left, return false
+        if (_index >= _searchPaths.size()) return false;
 
         // create a string to hold the next domain, and fill it with the user-domain
         std::string nextdomain(_basedomain);
@@ -185,10 +185,11 @@ private:
         nextdomain += "." + _searchPaths[_index++];
 
         // perform dns-query on the constructed path
+        // and save the operation so we can cancell it if requested
         _currentOperation = _context->query(nextdomain.c_str(), _type, _bits, this);
 
-        // return the operation
-        return _currentOperation;
+        // return success
+        return true;
     }
 
     /**
