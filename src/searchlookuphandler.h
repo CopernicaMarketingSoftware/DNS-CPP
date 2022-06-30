@@ -35,7 +35,7 @@ private:
      *  the base domain, this is the domain becofore any modifications
      *  @var std::string
      */
-    std::string _basedomain;
+    const char *_basedomain;
 
     /**
      *  the search paths, these will be appended to the basedomain and attempted in-order
@@ -62,30 +62,6 @@ private:
     const DNS::Bits _bits;
 
     /**
-     *  Destructor
-     */
-    virtual ~SearchLookupHandler() = default;
-
-    /**
-     *  Attempt the next searchpath
-     *  @return bool        is there a searchpath left
-     */
-    bool TryNext()
-    {
-        // if there are no more paths left, return false
-        if (_index >= _searchPaths.size()) return false;
-
-        // create a string to hold the next domain, and fill it with the user-domain
-        std::string nextdomain(_basedomain);
-        // add a . and the searchpath
-        nextdomain += "." + _searchPaths[_index++];
-        // perform dns-query on the constructed path
-        _context->query(nextdomain.c_str(), _type, _bits, this);
-        // return true
-        return true;
-    }
-
-    /**
      *  Method that is called when a valid, successful, response was received.
      * 
      *  This is the method that you normally implement to handle the result
@@ -96,8 +72,8 @@ private:
      */
     virtual void onResolved(const Operation *operation, const Response &response) 
     {
-        // success, return to user-space
-        _realHandler->onResolved(operation, response);
+        // self destruct, as this query is finished
+        delete this;
     }
 
     /**
@@ -116,9 +92,10 @@ private:
     virtual void onFailure(const Operation *operation, int rcode) 
     {
         // try the next searchpath
-        if (TryNext()) return;
-        // return to userspace
-        _realHandler->onFailure(operation, rcode);
+        if (tryNextLookup()) return;
+
+        // self destruct, as this query is finished
+        delete this;
     }
 
     /**
@@ -136,6 +113,7 @@ private:
     {
         // report to user-space
         _realHandler->onReceived(operation, response);
+
         // pass to base class
         Handler::onReceived(operation, response);
     }
@@ -151,10 +129,11 @@ private:
      */
     virtual void onTimeout(const Operation *operation)
     {
-        // try the next searchpath
-        if (TryNext()) return;
         // return to user-space
         _realHandler->onTimeout(operation);
+
+        // pass to base class
+        Handler::onTimeout(operation);
     }
     
     /**
@@ -167,6 +146,9 @@ private:
     {
         // should it try the next one here?
         _realHandler->onCancelled(operation);
+
+        // self destruct, as this query is cancelled
+        delete this;
     }
 
     public:
@@ -188,7 +170,29 @@ private:
         _type(type),
         _bits(bits) {}
 
-        
+    /**
+     *  Attempt the next searchpath
+     *  @return operation        the operation that handles the lookup
+     */
+    Operation *tryNextLookup()
+    {
+        // if there are no more paths left, return null
+        if (_index >= _searchPaths.size()) return nullptr;
+
+        // create a string to hold the next domain, and fill it with the user-domain
+        std::string nextdomain(_basedomain);
+
+        // add a . and the searchpath
+        nextdomain += "." + _searchPaths[_index++];
+
+        // perform dns-query on the constructed path
+        return _context->query(nextdomain.c_str(), _type, _bits, this);
+    }
+
+    /**
+     *  Destructor
+     */
+    virtual ~SearchLookupHandler() = default;
 };
 
 

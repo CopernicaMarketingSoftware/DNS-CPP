@@ -22,6 +22,9 @@
  */
 namespace DNS {
 
+/**
+ *  Destructor
+ */
 Context::~Context() = default;
 
 /**
@@ -56,14 +59,29 @@ void Context::capacity(size_t value)
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler)
 {
     // @todo is domain always null terminated?
-    // @todo check total amount of dots vs dotn variable
-    // if this call is not yet wrapped, and has no dots
-    if (!dynamic_cast<SearchLookupHandler*>(handler) && !strchr(domain, '.'))
+    // convert domain to string, this is done to easily count the number of dots in it
+    std::string stringdomain(domain);
+
+    // count the dots
+    size_t ndots = std::count(stringdomain.begin(), stringdomain.end(), '.');
+
+    // if there are searchpaths, the searchpath contains less then ndots dots, and we are not already wrapped
+    // we wrap the call in a searchlookuphandler, to retry with the appended searchpaths
+    // @todo need to replace this with the actual ndots number, 1 is just the default
+    if (_searchpaths.size() > 0 && !dynamic_cast<SearchLookupHandler*>(handler) && ndots < 1)
     {
-        // this new needs to be deleted somewhere, probably same place as locallookups below
-        handler = new SearchLookupHandler(_searchpaths, this, type, bits, domain, handler);
-        // replace searchlookuphandler here to wrap the actual handler
+        //@todo this new needs to be deleted somewhere, probably same place as locallookups below
+        //      i couldnt figure out a good point to delete this except calling delete this from within
+        // replace the original handler with the searchlookup wrapper
+        auto wrapper = new SearchLookupHandler(_searchpaths, this, type, bits, domain, handler);
+        
+        // replace the dnshandler with our wrapper
+        handler = wrapper;
+
+        // we return the first call to the wrapper, without trying the user-input first
+        return wrapper->tryNextLookup();
     }
+    
 
     // for A and AAAA lookups we also check the /etc/hosts file
     if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(this, _hosts, domain, type, handler));
