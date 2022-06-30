@@ -15,21 +15,15 @@
 
 namespace DNS {
 
-class SearchLookupHandler : public DNS::Handler
+class SearchLookupHandler : public DNS::Operation, public DNS::Handler
 {
 private:
 
     /**
-     *  Ptr to context to chain calls
+     *  DNS context object to ask for querys
      *  @var DNS::Context
      */
     DNS::Context *_context;
-
-    /**
-     *  ptr to the original handler, to pass calls along
-     *  @var DNS::Handler
-     */
-    DNS::Handler *_realHandler;
 
     /**
      *  the base domain, this is the domain becofore any modifications
@@ -45,7 +39,7 @@ private:
 
     /**
      *  the index of searchpaths we are currently trying
-     *  @var int
+     *  @var size_t
      */
     size_t _index;
 
@@ -60,6 +54,11 @@ private:
      *  @var DNS::Bits
      */
     const DNS::Bits _bits;
+
+    /**
+     *  The operation we are currently attempting
+     */
+    Operation *_currentOperation;
 
     /**
      *  Method that is called when a valid, successful, response was received.
@@ -93,7 +92,6 @@ private:
     {
         // try the next searchpath
         if (tryNextLookup()) return;
-
         // self destruct, as this query is finished
         delete this;
     }
@@ -112,7 +110,7 @@ private:
     virtual void onReceived(const Operation *operation, const Response &response)
     {
         // report to user-space
-        _realHandler->onReceived(operation, response);
+        _handler->onReceived(operation, response);
 
         // pass to base class
         Handler::onReceived(operation, response);
@@ -130,7 +128,7 @@ private:
     virtual void onTimeout(const Operation *operation)
     {
         // return to user-space
-        _realHandler->onTimeout(operation);
+        _handler->onTimeout(operation);
 
         // pass to base class
         Handler::onTimeout(operation);
@@ -145,11 +143,25 @@ private:
     virtual void onCancelled(const Operation *operation) 
     {
         // should it try the next one here?
-        _realHandler->onCancelled(operation);
+        _handler->onCancelled(operation);
 
         // self destruct, as this query is cancelled
         delete this;
     }
+
+    /**
+     *  Cancel the operation
+     */
+    virtual void cancel()
+    {
+        // cancell the currently active operation
+        _currentOperation->cancel();
+    }
+
+    /**
+     *  Destructor
+     */
+    virtual ~SearchLookupHandler() = default;
 
     public:
     /**
@@ -162,13 +174,17 @@ private:
      *  @param handler      the handler the user supplied
      */
     SearchLookupHandler(std::vector<std::string> searchpaths, DNS::Context *context, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
+        Operation(handler, 0, basedomain, type, bits),
         _context(context),
-        _realHandler(handler), 
         _basedomain(basedomain),
         _searchPaths(searchpaths),
         _index(0),
         _type(type),
-        _bits(bits) {}
+        _bits(bits) 
+        {
+            // we start the lookup
+            tryNextLookup();
+        }
 
     /**
      *  Attempt the next searchpath
@@ -186,13 +202,12 @@ private:
         nextdomain += "." + _searchPaths[_index++];
 
         // perform dns-query on the constructed path
-        return _context->query(nextdomain.c_str(), _type, _bits, this);
+        _currentOperation = _context->query(nextdomain.c_str(), _type, _bits, this);
+
+        // return the operation
+        return _currentOperation;
     }
 
-    /**
-     *  Destructor
-     */
-    virtual ~SearchLookupHandler() = default;
 };
 
 

@@ -23,11 +23,6 @@
 namespace DNS {
 
 /**
- *  Destructor
- */
-Context::~Context() = default;
-
-/**
  *  Set the send & receive buffer size of each individual UDP socket
  *  @param value  the value to set
  */
@@ -65,21 +60,13 @@ Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DN
     // count the dots
     size_t ndots = std::count(stringdomain.begin(), stringdomain.end(), '.');
 
-    // if there are searchpaths, the searchpath contains less then ndots dots, and we are not already wrapped
-    // we wrap the call in a searchlookuphandler, to retry with the appended searchpaths
+    // if the searchpath contains less then ndots dots, and we are not already wrapped
+    // we wrap the call in a searchlookuphandler, to retry the call with the appended searchpaths
     // @todo need to replace this with the actual ndots number, 1 is just the default
-    if (_searchpaths.size() > 0 && !dynamic_cast<SearchLookupHandler*>(handler) && ndots < 1)
+    if (!dynamic_cast<SearchLookupHandler*>(handler) && ndots < 1)
     {
-        //@todo this new needs to be deleted somewhere, probably same place as locallookups below
-        //      i couldnt figure out a good point to delete this except calling delete this from within
-        // replace the original handler with the searchlookup wrapper
-        auto wrapper = new SearchLookupHandler(_searchpaths, this, type, bits, domain, handler);
-        
-        // replace the dnshandler with our wrapper
-        handler = wrapper;
-
-        // we return the first call to the wrapper, without trying the user-input first
-        return wrapper->tryNextLookup();
+        // return the searchlookuphandler, that will try every search-path one by one
+        return new SearchLookupHandler(_searchpaths, this, type, bits, domain, handler);
     }
     
 

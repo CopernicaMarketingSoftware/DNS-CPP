@@ -68,7 +68,7 @@ public:
     /**
      *  Destructor
      */
-    virtual ~Context();
+    virtual ~Context() = default;
     
     /**
      *  Clear the list of nameservers
