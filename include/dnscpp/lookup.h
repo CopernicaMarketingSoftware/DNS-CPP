@@ -36,6 +36,12 @@ class Lookup : public Operation
 {
 protected:
     /**
+     *  The core object
+     *  @var Core
+     */
+    Core *_core;
+
+    /**
      *  Constructor
      *  @param  core        the core object
      *  @param  handler     user space handler
@@ -47,7 +53,8 @@ protected:
      *  @throws std::runtime_error
      */
     Lookup(Core *core, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
-        Operation(core, handler, op, dname, type, bits, data) {}
+        Operation(handler, op, dname, type, bits, data),
+        _core(core) {}
 
 public:
     /**
