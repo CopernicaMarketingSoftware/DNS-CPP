@@ -29,7 +29,7 @@ private:
      *  the base domain, this is the domain becofore any modifications
      *  @var std::string
      */
-    const char *_basedomain;
+    std::string _basedomain;
 
     /**
      *  the search paths, these will be appended to the basedomain and attempted in-order
