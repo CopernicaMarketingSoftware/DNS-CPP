@@ -14,7 +14,6 @@
 #include "remotelookup.h"
 #include "locallookup.h"
 #include "idgenerator.h"
-#include <iostream>
 #include "searchlookuphandler.h"
 
 /**
@@ -68,7 +67,6 @@ Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DN
         // return the searchlookuphandler, that will try every search-path one by one
         return new SearchLookupHandler(_searchpaths, this, type, bits, domain, handler);
     }
-    
 
     // for A and AAAA lookups we also check the /etc/hosts file
     if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(this, _hosts, domain, type, handler));

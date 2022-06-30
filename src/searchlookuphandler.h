@@ -9,16 +9,27 @@
  *  @copyright 2022 Copernica BV
  */
 
+/**
+ *  Include guard
+ */
 #pragma once
 
+/**
+ *  Dependencies
+ */
 #include <dnscpp/context.h>
 
+/**
+ *  Begin of namespace
+ */
 namespace DNS {
 
+/**
+ *  Class definition
+ */
 class SearchLookupHandler : public DNS::Operation, public DNS::Handler
 {
 private:
-
     /**
      *  DNS context object to ask for querys
      *  @var DNS::Context
@@ -159,6 +170,28 @@ private:
     }
 
     /**
+     *  Attempt the next searchpath
+     *  @return operation        the operation that handles the lookup
+     */
+    Operation *tryNextLookup()
+    {
+        // if there are no more paths left, return null
+        if (_index >= _searchPaths.size()) return nullptr;
+
+        // create a string to hold the next domain, and fill it with the user-domain
+        std::string nextdomain(_basedomain);
+
+        // add a . and the searchpath
+        nextdomain += "." + _searchPaths[_index++];
+
+        // perform dns-query on the constructed path
+        _currentOperation = _context->query(nextdomain.c_str(), _type, _bits, this);
+
+        // return the operation
+        return _currentOperation;
+    }
+
+    /**
      *  Destructor
      */
     virtual ~SearchLookupHandler() = default;
@@ -185,29 +218,6 @@ private:
             // we start the lookup
             tryNextLookup();
         }
-
-    /**
-     *  Attempt the next searchpath
-     *  @return operation        the operation that handles the lookup
-     */
-    Operation *tryNextLookup()
-    {
-        // if there are no more paths left, return null
-        if (_index >= _searchPaths.size()) return nullptr;
-
-        // create a string to hold the next domain, and fill it with the user-domain
-        std::string nextdomain(_basedomain);
-
-        // add a . and the searchpath
-        nextdomain += "." + _searchPaths[_index++];
-
-        // perform dns-query on the constructed path
-        _currentOperation = _context->query(nextdomain.c_str(), _type, _bits, this);
-
-        // return the operation
-        return _currentOperation;
-    }
-
 };
 
 
