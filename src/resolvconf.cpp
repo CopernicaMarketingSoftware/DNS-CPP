@@ -39,6 +39,46 @@ static size_t linesize(const char *line, size_t size)
     // done
     return size - trim;
 }
+
+/**
+ *  Size of leading whitespace
+ *  @param  line        the line to check   
+ *  @param  size        size of the line
+ *  @return size_t      number of leading whitespace characters
+ */
+static size_t whitesize(const char *line, size_t size)
+{
+    // check the amount of whitespace
+    size_t whitespace = 0;
+    
+    // how many chars can be skipped
+    while (size > whitespace && isspace(line[whitespace])) ++whitespace;
+    
+    // done
+    return whitespace;
+}
+
+/**
+ *  Find first whitespace in a line
+ *  @param  line        the line to check
+ *  @param  size        size of the line
+ *  @return char *      pointer to the first whitespace
+ */
+static const char *findwhite(const char *line, size_t size)
+{
+    // check the line
+    while (size > 0)
+    {
+        // do we have a match?
+        if (isspace(line[0])) return line;
+        
+        // prepare for next iteration
+        size -= 1; line += 1;
+    }
+    
+    // not found
+    return nullptr;
+}
     
 /**
  *  Check if a line starts with a certain word
@@ -56,10 +96,7 @@ static size_t check(const char *line, size_t size, const char *required)
     if (strncasecmp(line, required, skip) != 0) return 0;
     
     // check the amount of whitespace
-    size_t whitespace = 0;
-    
-    // how many chars can be skipped
-    while (size > skip+whitespace && isspace(line[skip+whitespace])) ++whitespace;
+    size_t whitespace = whitesize(line+skip, size-skip);
     
     // if there was no whitespace at all the option does not have a value, or it
     // is not skipped with whitespace from the value, we treat this as a no-match
@@ -178,32 +215,32 @@ void ResolvConf::domain(const char *line, size_t size)
  */
 void ResolvConf::search(const char *line, size_t size)
 {
-    std::cout<<"searchpath"<<std::endl;
     // we only remember the last entry, so we remove potential previous entries
     _searchpaths.clear();
-    // we dont know if its terminated, so we wrap it in a string
-    std::string source(line, size);
-
-    // create some helper variables
-    size_t prev = 0;
-    size_t next = 0;
-    // while we keep finding spaces or tabs
-    while ((next = source.find_first_of(" \t", prev)) != std::string::npos)
+    
+    // keep looking for paths
+    while (size > 0)
     {
-        // if the size of the sub-section > 0
-        if (next - prev != 0)
-        {
-            // store the result
-            _searchpaths.emplace_back(source.substr(prev, next - prev));
-        }
-        // search again starting from the last match
-        prev = next + 1;
-    }
-    // if there is part of the line left without a space or tab
-    if (prev < source.size())
-    {
-        // add it
-        _searchpaths.push_back(source.substr(prev));
+        // find an end-marker (whitespace or eos)
+        const char *end = findwhite(line, size);
+        
+        // are we at the end? the last element
+        if (end == nullptr) return (void)_searchpaths.emplace_back(line, size);
+        
+        // size of the part that we found
+        size_t partsize = end - line;
+        
+        // if we're not at the end, we add a part
+        _searchpaths.emplace_back(line, partsize);
+        
+        // prepare for calculating leading whitespace
+        line += partsize; size -= partsize;
+        
+        // calculate initial whitespace
+        size_t white = whitesize(line+partsize, size-partsize);
+        
+        // prepare more for next iteragtion
+        line += white; size -= white;
     }
 }
 
@@ -252,6 +289,9 @@ void ResolvConf::option(const char *option, size_t size)
 
     // maybe this is the attempts option? parse it and cap it to 5.
     else if (strncmp(option, "attempts:", 9) == 0) _attempts = std::min(5, atoi(option + 9));
+
+    // may the ndots setting? cap it to 15
+    else if (strncmp(option, "ndots:", 6) == 0) _ndots = std::min(15, atoi(option+6));
 
     // unknown option...
 }

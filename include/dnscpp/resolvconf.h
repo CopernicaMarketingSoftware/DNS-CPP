@@ -5,7 +5,7 @@
  *  configuration options of the resolver.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
 
 /**
@@ -38,8 +38,8 @@ private:
     std::vector<Ip> _nameservers;
 
     /**
-     *  The detected search paths
-     *  @var std::vector<std::string>
+     *  The search-paths to use in lookups
+     *  @var std::vector
      */
     std::vector<std::string> _searchpaths;
 
@@ -61,6 +61,13 @@ private:
      *  @var bool
      */
     bool _rotate = false;
+
+    /**
+     *  Treshold for number of dots which must appear in a name before an initial absolute query
+     *  will be made.
+     *  @var size_t
+     */
+    size_t _ndots = 1;
 
     /**
      *  Helper method to parse lines
@@ -147,7 +154,7 @@ public:
      *  @param  index
      *  @return const char *
      */
-    std::string searchpath(size_t index) const { return _searchpaths[index]; }
+    const std::string &searchpath(size_t index) const { return _searchpaths[index]; }
 
     /**
      *  Whether or not the 'rotate' option is set in the resolve conf
