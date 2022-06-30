@@ -217,28 +217,28 @@ void ResolvConf::search(const char *line, size_t size)
 {
     // we only remember the last entry, so we remove potential previous entries
     _searchpaths.clear();
-    
+
     // keep looking for paths
     while (size > 0)
     {
         // find an end-marker (whitespace or eos)
         const char *end = findwhite(line, size);
-        
+
         // are we at the end? the last element
         if (end == nullptr) return (void)_searchpaths.emplace_back(line, size);
-        
+
         // size of the part that we found
         size_t partsize = end - line;
-        
+
         // if we're not at the end, we add a part
         _searchpaths.emplace_back(line, partsize);
-        
+
         // prepare for calculating leading whitespace
         line += partsize; size -= partsize;
-        
+
         // calculate initial whitespace
-        size_t white = whitesize(line+partsize, size-partsize);
-        
+        size_t white = whitesize(line, size);
+
         // prepare more for next iteragtion
         line += white; size -= white;
     }
