@@ -138,15 +138,27 @@ private:
         // if there are no more paths left, return false
         if (_index >= searchpaths.size()) return false;
 
-        // create a string to hold the next domain, and fill it with the user-domain
-        std::string nextdomain(_basedomain);
+        // the next path to check
+        const auto &nextdomain = searchpaths[_index++];
+        
+        // for empty domains we do not need to concatenate
+        if (nextdomain.empty())
+        {
+            // start a lookup for just the requested domain
+            _operation = _context->query(_basedomain.c_str(), _type, _bits, this);
+        }
+        else
+        {
+            // create a string to hold the next domain, and fill it with the user-domain
+            std::string nextdomain(_basedomain);
 
-        // add a . and the searchpath
-        nextdomain.append(".").append(searchpaths[_index++]);
+            // add a . and the searchpath
+            nextdomain.append(".").append(searchpaths[_index++]);
 
-        // perform dns-query on the constructed path
-        // and save the operation so we can cancell it if requested
-        _operation = _context->query(nextdomain.c_str(), _type, _bits, this);
+            // perform dns-query on the constructed path
+            // and save the operation so we can cancell it if requested
+            _operation = _context->query(nextdomain.c_str(), _type, _bits, this);
+        }
 
         // return success
         return true;
