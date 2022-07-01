@@ -6,7 +6,7 @@
  *  class for the Response and Request classes.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
 
 /**
@@ -221,7 +221,7 @@ public:
      *  @param  dnsclass    the dnsclass
      *  @return uint16_t
      */
-    uint16_t records(ns_sect section, uint16_t type, uint16_t dnsclass = ns_c_in);
+    uint16_t records(ns_sect section, uint16_t type, uint16_t dnsclass = ns_c_in) const;
 
     /**
      *  Methods to return the number of records in one specific section

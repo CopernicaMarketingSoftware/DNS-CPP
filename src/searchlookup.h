@@ -18,6 +18,7 @@
  *  Dependencies
  */
 #include <dnscpp/context.h>
+#include "../include/dnscpp/response.h"
 
 /**
  *  Begin of namespace
@@ -77,6 +78,9 @@ private:
      */
     virtual void onResolved(const Operation *operation, const Response &response) 
     {
+        // if there were no matching records, we proceed with the next operation
+        if (response.records(ns_s_an, _type) == 0 && proceed()) return;
+        
         // report to user-space
         _handler->onResolved(this, response);
         
@@ -99,10 +103,9 @@ private:
      */
     virtual void onFailure(const Operation *operation, int rcode) 
     {
-        // try the next searchpath
-        if (proceed()) return;
-        
-        // @todo there are multiple sort of failures, should each one trigger a retry????
+        // if the failure is that the domain does not exist we proceed (for all other
+        // sorts of failures, we do report back to user space)
+        if (rcode == ns_r_nxdomain && proceed()) return;
         
         // no more operations are possible, report to user-space
         _handler->onFailure(this, rcode);
@@ -117,12 +120,26 @@ private:
      * 
      *  @param  operation       the operation that was cancelled
      */
-    virtual void onCancelled(const Operation *operation) 
+    virtual void onCancelled(const Operation *operation) override
     {
         // should it try the next one here?
         _handler->onCancelled(operation);
 
         // self destruct, as this query is cancelled
+        delete this;
+    }
+
+    /**
+     *  Method that is called when an operation times out.
+     *  @param  operation       the operation that timed out
+     *  @param  query           the query that was attempted
+     */
+    virtual void onTimeout(const Operation *operation) override
+    {
+        // pass on to user-space
+        _handler->onTimeout(this);
+        
+        // operation is ready
         delete this;
     }
 

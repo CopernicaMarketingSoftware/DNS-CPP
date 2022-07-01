@@ -4,7 +4,7 @@
  *  Implementation file for the Message class
  *  
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
 
 /**
@@ -62,7 +62,7 @@ ns_rcode Message::rcode() const
  *  @param  dnsclass    the dnsclass
  *  @return uint16_t
  */
-uint16_t Message::records(ns_sect section, uint16_t type, uint16_t dnsclass)
+uint16_t Message::records(ns_sect section, uint16_t type, uint16_t dnsclass) const
 {
     // the result
     size_t result = 0;
