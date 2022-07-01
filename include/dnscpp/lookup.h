@@ -5,7 +5,7 @@
  *  used internally, user space code does not interact with it.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2021 Copernica BV
+ *  @copyright 2021 - 2022 Copernica BV
  */
 
 /**

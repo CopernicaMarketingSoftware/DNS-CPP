@@ -4,7 +4,7 @@
  *  Implementation file for the Context class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
 
 /**

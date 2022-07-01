@@ -4,7 +4,7 @@
  *  Implementation-file for the resolv.conf parser
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
  
 /**

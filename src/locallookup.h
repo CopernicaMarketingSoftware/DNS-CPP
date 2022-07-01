@@ -4,7 +4,7 @@
  *  Class that implements the lookup in the local /etc/hosts file
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
  
 /**
