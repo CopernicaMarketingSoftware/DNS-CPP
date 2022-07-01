@@ -61,8 +61,7 @@ protected:
      *  @throws std::runtime_error
      */
     Operation(Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
-        _handler(handler), 
-        _query(op, dname, type, bits, data) {}
+        _handler(handler), _query(op, dname, type, bits, data) {}
 
     /**
      *  Private destructor because userspace is not supposed to destruct this
