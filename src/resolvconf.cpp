@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include <fstream>
 #include <iostream>
+#include <unistd.h>
 
 /**
  *  Begin of namespace
@@ -143,6 +144,19 @@ ResolvConf::ResolvConf(const char *filename, bool strict)
             if (strict) throw std::runtime_error(std::string(filename) + ": " + error.what());
         }
     }
+
+    // search path is filled with gethostname its not specified
+    if (_searchpaths.empty())
+    {
+        // allocate a buffer large enough to hold the hostname (+1, as that guarantees its 0-terminated)
+        char buffer[HOST_NAME_MAX + 1];
+
+        // fill the buffer with the hostname
+        gethostname(&buffer[0], HOST_NAME_MAX);
+
+        // add the hostname to the searchpaths
+        _searchpaths.emplace_back(buffer);
+    }
 }
 
 /**
@@ -203,28 +217,28 @@ void ResolvConf::search(const char *line, size_t size)
 {
     // we only remember the last entry, so we remove potential previous entries
     _searchpaths.clear();
-    
+
     // keep looking for paths
     while (size > 0)
     {
         // find an end-marker (whitespace or eos)
         const char *end = findwhite(line, size);
-        
+
         // are we at the end? the last element
         if (end == nullptr) return (void)_searchpaths.emplace_back(line, size);
-        
+
         // size of the part that we found
         size_t partsize = end - line;
-        
+
         // if we're not at the end, we add a part
         _searchpaths.emplace_back(line, partsize);
-        
+
         // prepare for calculating leading whitespace
         line += partsize; size -= partsize;
-        
+
         // calculate initial whitespace
-        size_t white = whitesize(line+partsize, size-partsize);
-        
+        size_t white = whitesize(line, size);
+
         // prepare more for next iteragtion
         line += white; size -= white;
     }

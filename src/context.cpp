@@ -14,6 +14,7 @@
 #include "remotelookup.h"
 #include "locallookup.h"
 #include "idgenerator.h"
+#include "searchlookuphandler.h"
 
 /**
  *  Begin of namespace
@@ -51,6 +52,22 @@ void Context::capacity(size_t value)
  */
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler)
 {
+    // @todo is domain always null terminated?
+    // convert domain to string, this is done to easily count the number of dots in it
+    std::string stringdomain(domain);
+
+    // count the dots
+    size_t ndots = std::count(stringdomain.begin(), stringdomain.end(), '.');
+
+    // if the searchpath contains less then ndots dots, and we are not already wrapped
+    // we wrap the call in a searchlookuphandler, to retry the call with the appended searchpaths
+    // @todo need to replace this with the actual ndots number, 1 is just the default
+    if (!dynamic_cast<SearchLookupHandler*>(handler) && ndots < 1)
+    {
+        // return the searchlookuphandler, that will try every search-path one by one
+        return new SearchLookupHandler(_searchpaths, this, type, bits, domain, handler);
+    }
+
     // for A and AAAA lookups we also check the /etc/hosts file
     if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(this, _hosts, domain, type, handler));
     if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return add(new LocalLookup(this, _hosts, domain, type, handler));
