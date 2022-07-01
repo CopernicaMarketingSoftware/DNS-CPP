@@ -42,6 +42,12 @@ protected:
     Core *_core;
 
     /**
+     *  The query that we're going to send
+     *  @var Query
+     */
+    const Query _query;
+
+    /**
      *  Constructor
      *  @param  core        the core object
      *  @param  handler     user space handler
@@ -53,14 +59,21 @@ protected:
      *  @throws std::runtime_error
      */
     Lookup(Core *core, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
-        Operation(handler, op, dname, type, bits, data),
-        _core(core) {}
+        Operation(handler),
+        _core(core),
+        _query(op, dname, type, bits, data) {}
 
 public:
     /**
      *  Destructor
      */
     virtual ~Lookup() = default;
+
+    /**
+     *  Expose the original query
+     *  @return Query
+     */
+    virtual const Query &query() const override { return _query; }
     
     /**
      *  Is this lookup still scheduled: meaning that no requests has been sent yet

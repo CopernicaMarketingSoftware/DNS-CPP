@@ -133,15 +133,6 @@ private:
     }
 
     /**
-     *  Cancel the operation
-     */
-    virtual void cancel() override
-    {
-        // cancell the currently active operation
-        _operation->cancel();
-    }
-
-    /**
      *  Attempt the next searchpath
      *  @return operation        the operation that handles the lookup
      */
@@ -180,18 +171,35 @@ public:
      *  @param handler      the handler the user supplied
      */
     SearchLookup(std::vector<std::string> searchpaths, DNS::Context *context, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
-        Operation(handler, 0, basedomain, type, bits),
+        Operation(handler),
         _context(context),
         _basedomain(basedomain),
         _searchPaths(searchpaths),
         _index(0),
         _type(type),
         _bits(bits) 
-        {
-            // we start the lookup
-            proceed();
-        }
+    {
+        // we start the lookup
+        proceed();
+    }
+
+    /**
+     *  Expose the original query
+     *  @return Query
+     */
+    virtual const Query &query() const override { return _operation->query(); }
+
+    /**
+     *  Cancel the operation
+     */
+    virtual void cancel() override
+    {
+        // cancell the currently active operation
+        _operation->cancel();
+    }
 };
 
-
+/**
+ *  End of namespace
+ */
 }

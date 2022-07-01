@@ -43,25 +43,13 @@ protected:
      *  @var Handler
      */
     Handler *_handler;
-    
-    /**
-     *  The query that we're going to send
-     *  @var Query
-     */
-    const Query _query;
-        
+            
     /**
      *  Constructor
      *  @param  handler     user space handler
-     *  @param  op          the type of operation (normally a regular query)
-     *  @param  dname       the domain to lookup
-     *  @param  type        record type to look up
-     *  @param  bits        extra bits to be included in the query
-     *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Operation(Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
-        _handler(handler), _query(op, dname, type, bits, data) {}
+    Operation(Handler *handler) : _handler(handler) {}
 
     /**
      *  Private destructor because userspace is not supposed to destruct this
@@ -79,7 +67,7 @@ public:
      *  Expose the original query
      *  @return Query
      */
-    const Query &query() const { return _query; }
+    virtual const Query &query() const = 0;
     
     /**
      *  Change the handler / install a different object to be notified of changes
