@@ -150,7 +150,7 @@ protected:
      *  The 'ndots' setting from resolv.conf
      *  @var ndots
      */
-    size_t _ndots = 1;
+    uint8_t _ndots = 1;
     
     /**
      *  Max number of operations to run at the same time

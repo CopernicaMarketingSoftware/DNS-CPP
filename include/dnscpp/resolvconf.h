@@ -67,7 +67,7 @@ private:
      *  will be made.
      *  @var size_t
      */
-    size_t _ndots = 1;
+    uint8_t _ndots = 1;
 
     /**
      *  Helper method to parse lines
@@ -164,9 +164,9 @@ public:
     
     /**
      *  Value of the 'ndots' setting
-     *  @return size_t
+     *  @return uint8_t
      */
-    size_t ndots() const { return _ndots; }
+    uint8_t ndots() const { return _ndots; }
     
     /**
      *  Timeout of a request (this is the time until the next dgram is sent, but also
