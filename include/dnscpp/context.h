@@ -4,7 +4,7 @@
  *  Main context for DNS lookups. This is the starting point
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
 
 /**
@@ -220,6 +220,7 @@ public:
     using Core::expire;
     using Core::interval;
     using Core::capacity;
+    using Core::searchpaths;
 };
     
 /**

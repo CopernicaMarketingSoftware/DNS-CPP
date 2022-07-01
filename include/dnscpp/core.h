@@ -7,7 +7,7 @@
  *  be called from user space, but they are used internally.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
 
 /**
@@ -315,9 +315,16 @@ public:
 
     /**
      *  Expose the nameservers
-     *  @return std::list<Ip>
+     *  @return std::string<Ip>
      */
     const std::vector<Ip> &nameservers() const { return _nameservers; }
+
+    /**
+     *  Expose the search-paths
+     *  @return std::vector<std::string>
+     */
+    const std::vector<std::string> &searchpaths() const { return _searchpaths; }
+
     
     /**
      *  Mark a lookup as cancelled and start more queues lookups

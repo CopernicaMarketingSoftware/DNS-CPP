@@ -43,12 +43,6 @@ private:
     std::string _basedomain;
 
     /**
-     *  the search paths, these will be appended to the basedomain and attempted in-order
-     *  @var std::vector<std::string>
-     */
-    std::vector<std::string> _searchPaths;
-
-    /**
      *  the index of searchpaths we are currently trying
      *  @var size_t
      */
@@ -138,14 +132,17 @@ private:
      */
     bool proceed()
     {
+        // shortcut to the search-paths
+        const auto &searchpaths = _context->searchpaths();
+        
         // if there are no more paths left, return false
-        if (_index >= _searchPaths.size()) return false;
+        if (_index >= searchpaths.size()) return false;
 
         // create a string to hold the next domain, and fill it with the user-domain
         std::string nextdomain(_basedomain);
 
         // add a . and the searchpath
-        nextdomain += "." + _searchPaths[_index++];
+        nextdomain.append(".").append(searchpaths[_index++]);
 
         // perform dns-query on the constructed path
         // and save the operation so we can cancell it if requested
@@ -163,18 +160,16 @@ private:
 public:
     /**
      *  Constructor
-     *  @param searchpaths  the searchpaths we need to iterate one by one
      *  @param context      the context object that will perform the querys
      *  @param type         the type of query the user supplied
      *  @param bits         the bits the user supplied
      *  @param basedomain   the base domain the user supplied
      *  @param handler      the handler the user supplied
      */
-    SearchLookup(std::vector<std::string> searchpaths, DNS::Context *context, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
+    SearchLookup(DNS::Context *context, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
         Operation(handler),
         _context(context),
         _basedomain(basedomain),
-        _searchPaths(searchpaths),
         _index(0),
         _type(type),
         _bits(bits) 
