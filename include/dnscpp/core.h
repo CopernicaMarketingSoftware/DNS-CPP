@@ -147,6 +147,12 @@ protected:
     bool _rotate = false;
     
     /**
+     *  The 'ndots' setting from resolv.conf
+     *  @var ndots
+     */
+    size_t _ndots = 1;
+    
+    /**
      *  Max number of operations to run at the same time
      *  @var size_t
      */

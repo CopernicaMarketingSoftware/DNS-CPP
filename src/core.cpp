@@ -4,7 +4,7 @@
  *  Implementation file for the Core class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2022 Copernica BV
  */
 
 /**
@@ -47,6 +47,7 @@ Core::Core(Loop *loop, bool defaults) :
     _interval = settings.timeout();
     _attempts = settings.attempts();
     _rotate = settings.rotate();
+    _ndots = settings.ndots();
 
     // we also have to load /etc/hosts
     if (!_hosts.load()) throw std::runtime_error("failed to load /etc/hosts");
@@ -72,6 +73,7 @@ Core::Core(Loop *loop, const ResolvConf &settings) :
     _interval = settings.timeout();
     _attempts = settings.attempts();
     _rotate = settings.rotate();
+    _ndots = settings.ndots();
 }
 
 

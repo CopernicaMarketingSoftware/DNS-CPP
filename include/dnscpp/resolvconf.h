@@ -163,6 +163,12 @@ public:
     bool rotate() const { return _rotate; }
     
     /**
+     *  Value of the 'ndots' setting
+     *  @return size_t
+     */
+    size_t ndots() const { return _ndots; }
+    
+    /**
      *  Timeout of a request (this is the time until the next dgram is sent, but also
      *  the time until we consider a request failed)
      *  @return size_t
