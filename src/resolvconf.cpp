@@ -16,6 +16,7 @@
 #include <fstream>
 #include <iostream>
 #include <unistd.h>
+#include "localdomain.h"
 
 /**
  *  Begin of namespace
@@ -146,17 +147,7 @@ ResolvConf::ResolvConf(const char *filename, bool strict)
     }
 
     // search path is filled with gethostname its not specified
-    if (_searchpaths.empty())
-    {
-        // allocate a buffer large enough to hold the hostname (+1, as that guarantees its 0-terminated)
-        char buffer[HOST_NAME_MAX + 1];
-
-        // fill the buffer with the hostname
-        gethostname(&buffer[0], HOST_NAME_MAX);
-
-        // add the hostname to the searchpaths
-        _searchpaths.emplace_back(buffer);
-    }
+    if (_searchpaths.empty()) _searchpaths.emplace_back(LocalDomain());
 }
 
 /**
