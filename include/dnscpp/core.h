@@ -331,7 +331,6 @@ public:
      */
     const std::vector<std::string> &searchpaths() const { return _searchpaths; }
 
-    
     /**
      *  Mark a lookup as cancelled and start more queues lookups
      *  This is called internally when userspace cancels a single operation (via Operation::cancel())

@@ -47,7 +47,7 @@ void Handler::onReceived(const Operation *operation, const Response &response)
     // we have a successful response
     onResolved(operation, response);
 }
-    
+
 /**
  *  End of namespace
  */

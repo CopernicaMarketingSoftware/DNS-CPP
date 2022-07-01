@@ -68,52 +68,25 @@ private:
     Operation *_operation = nullptr;
 
     /**
-     *  Method that is called when a valid, successful, response was received.
-     * 
-     *  This is the method that you normally implement to handle the result
-     *  of a resolver-query.
-     * 
-     *  @param  operation       the operation that finished
+     *  Method that is called when a raw response is received
+     *  @param  operation       the reporting operation
      *  @param  response        the received response
      */
-    virtual void onResolved(const Operation *operation, const Response &response) 
+    virtual void onReceived(const Operation *operation, const Response &response) override
     {
-        // if there were no matching records, we proceed with the next operation
+        // an mxdomain error should trigger a next lookup
+        if (response.rcode() == ns_r_nxdomain && proceed()) return;
+        
+        // if there are no matching records, we also want to do the next lookup
         if (response.records(ns_s_an, _type) == 0 && proceed()) return;
         
-        // report to user-space
-        _handler->onResolved(this, response);
+        // pass on to user-space
+        _handler->onReceived(this, response);
         
         // self destruct, as this query is finished
         delete this;
     }
 
-    /**
-     *  Method that is called when a query could not be processed or answered. 
-     * 
-     *  If the RCODE is servfail it could mean multiple things: the nameserver sent
-     *  back an actual SERVFAIL response, or is was impossible to reach the nameserver,
-     *  or the response from the nameserver was invalid.
-     * 
-     *  If you want more detailed information about the error, you can implement the
-     *  low-level onReceived() or onTimeout() methods).
-     * 
-     *  @param  operation       the operation that finished
-     *  @param  rcode           the received rcode
-     */
-    virtual void onFailure(const Operation *operation, int rcode) 
-    {
-        // if the failure is that the domain does not exist we proceed (for all other
-        // sorts of failures, we do report back to user space)
-        if (rcode == ns_r_nxdomain && proceed()) return;
-        
-        // no more operations are possible, report to user-space
-        _handler->onFailure(this, rcode);
-        
-        // self destruct, as this query is finished
-        delete this;
-    }
-    
     /**
      *  Method that is called when the operation is cancelled
      *  This method is immediately triggered when operation->cancel() is called.
