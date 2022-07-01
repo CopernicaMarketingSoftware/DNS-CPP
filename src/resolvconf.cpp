@@ -146,8 +146,19 @@ ResolvConf::ResolvConf(const char *filename, bool strict)
         }
     }
 
-    // search path is filled with gethostname its not specified
-    if (_searchpaths.empty()) _searchpaths.emplace_back(LocalDomain());
+    // if there was no explicit search-path specified, we will add the own domain to it
+    if (!_searchpaths.empty()) return;
+    
+    // find the local domain
+    LocalDomain localdomain;
+
+    // if the localdomain is the root-domain, we do not add it to the search path, because deeper 
+    // down in the DNS-CPP library it is then more efficient to start the actual query right away, 
+    // instead of the loop to try all domains in the search-list
+    if (strlen(localdomain) == 0) return;
+    
+    // add to the paths
+    _searchpaths.emplace_back(localdomain);
 }
 
 /**

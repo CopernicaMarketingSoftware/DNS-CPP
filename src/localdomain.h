@@ -39,11 +39,12 @@ private:
 public:
     /**
      *  Constructor
+     *  @throws std::runtime_error
      */
     LocalDomain()
     {
         // fill the buffer with the hostname
-        gethostname(_buffer, HOST_NAME_MAX);
+        if (gethostname(_buffer, HOST_NAME_MAX) < 0) throw std::runtime_error(strerror(errno));
 
         // pointer to the end of the buffer
         char *lastchar = _buffer+strlen(_buffer);

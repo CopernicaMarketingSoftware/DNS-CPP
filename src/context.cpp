@@ -57,7 +57,7 @@ Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DN
 
     // if the searchpath contains less then ndots dots, and we are not already wrapped
     // we wrap the call in a searchlookuphandler, to retry the call with the appended searchpaths
-    if (!dynamic_cast<SearchLookup*>(handler) && ndots < _ndots) return new SearchLookup( this, type, bits, domain, handler);
+    if (!dynamic_cast<SearchLookup*>(handler) && ndots < _ndots && !_searchpaths.empty()) return new SearchLookup( this, type, bits, domain, handler);
 
     // for A and AAAA lookups we also check the /etc/hosts file
     if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(this, _hosts, domain, type, handler));
