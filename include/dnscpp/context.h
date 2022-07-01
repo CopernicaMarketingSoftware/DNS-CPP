@@ -167,6 +167,12 @@ public:
     void maxcalls(size_t value) { _maxcalls = value; }
     
     /**
+     *  Change the ndots setting
+     *  @param  value       the new value
+     */
+    void ndots(uint8_t value) { _ndots = value; }
+    
+    /**
      *  Do a dns lookup and pass the result to a user-space handler object
      *  When you supply invalid parameters (for example a syntactivally invalid
      *  domain or an unsupported type) this method returns null.

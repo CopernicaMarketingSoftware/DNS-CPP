@@ -53,7 +53,7 @@ void Context::capacity(size_t value)
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler)
 {
     // count the dots
-    size_t ndots = std::count(domain, (const char *)strlen(domain)+1, '.');
+    size_t ndots = std::count(domain, domain + strlen(domain) + 1, '.');
 
     // if the searchpath contains less then ndots dots, and we are not already wrapped
     // we wrap the call in a searchlookuphandler, to retry the call with the appended searchpaths
