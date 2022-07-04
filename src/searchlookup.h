@@ -143,7 +143,7 @@ private:
             std::string nextdomain(_basedomain);
 
             // add a . and the searchpath
-            nextdomain.append(".").append(nexdomain);
+            nextdomain.append(".").append(nextdomain);
 
             // perform dns-query on the constructed path
             // and save the operation so we can cancell it if requested
