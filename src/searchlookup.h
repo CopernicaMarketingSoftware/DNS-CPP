@@ -122,35 +122,48 @@ private:
      */
     bool proceed()
     {
+        // do nothing if we already have exhausted all calls
+        if (_index == size_t(-1)) return false;
+
         // shortcut to the search-paths
         const auto &searchpaths = _context->searchpaths();
         
         // if there are no more paths left, return false
-        if (_index >= searchpaths.size()) return false;
+        if (_index >= searchpaths.size()) return finalize();
 
         // the next path to check
         const auto &nextdomain = searchpaths[_index++];
         
         // for empty domains we do not need to concatenate
-        if (nextdomain.empty())
-        {
-            // start a lookup for just the requested domain
-            _operation = _context->query(_basedomain.c_str(), _type, _bits, this);
-        }
-        else
-        {
-            // create a string to hold the next domain, and fill it with the user-domain
-            std::string nextdomain(_basedomain);
+        if (nextdomain.empty()) return finalize();
 
-            // add a . and the searchpath
-            nextdomain.append(".").append(nextdomain);
+        // create a string to hold the next domain, and fill it with the user-domain
+        std::string nexthost(_basedomain);
 
-            // perform dns-query on the constructed path
-            // and save the operation so we can cancell it if requested
-            _operation = _context->query(nextdomain.c_str(), _type, _bits, this);
-        }
+        // add a . and the searchpath
+        nexthost.append(".").append(nextdomain);
+
+        // perform dns-query on the constructed path
+        // and save the operation so we can cancell it if requested
+        _operation = _context->query(nexthost.c_str(), _type, _bits, this);
 
         // return success
+        return true;
+    }
+
+    /**
+     *  Do the ultimate, final lookup
+     *  @return bool
+     */
+    bool finalize()
+    {
+        // start a lookup for just the requested domain
+        _operation = _context->query(_basedomain.c_str(), _type, _bits, this);
+        
+        // update index to prevent loops
+        _index = size_t(-1);
+        
+        // still busy
         return true;
     }
 

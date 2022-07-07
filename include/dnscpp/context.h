@@ -38,6 +38,15 @@ class SearchLookupHandler;
  */
 class Context : private Core
 {
+private:
+    /**
+     *  Should the search path be respected?
+     *  @param  domain      the domain to lookup
+     *  @param  handler     handler that is already in use
+     *  @return bool
+     */
+    bool searchable(const char *domain, DNS::Handler *handler) const;
+
 public:
     /**
      *  Constructor

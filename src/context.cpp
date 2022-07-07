@@ -43,6 +43,33 @@ void Context::capacity(size_t value)
 }
 
 /**
+ *  Should the search path be respected?
+ *  @param  domain      the domain to lookup
+ *  @param  handler     handler that is already in use
+ *  @return bool
+ */
+bool Context::searchable(const char *domain, DNS::Handler *handler) const
+{
+    // length of the lookup
+    size_t length = strlen(domain);
+    
+    // empty domains fail anyway
+    if (length == 0) return false;
+    
+    // canonical domains don't go into recursion
+    if (domain[length-1] == '.') return false;
+    
+    // count the dots
+    size_t ndots = std::count(domain, domain + length + 1, '.');
+    
+    // compare with the 'ndots' setting
+    if (ndots >= _ndots) return false;
+    
+    // do not do recursion (if the current handler already is a SearchLookup)
+    return dynamic_cast<SearchLookup*>(handler) == nullptr;
+}
+
+/**
  *  Do a dns lookup
  *  @param  domain      the record name to look for
  *  @param  type        type of record (normally you ask for an 'a' record)
@@ -52,13 +79,9 @@ void Context::capacity(size_t value)
  */
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler)
 {
-    // count the dots
-    size_t ndots = std::count(domain, domain + strlen(domain) + 1, '.');
-
-    // if the searchpath contains less then ndots dots, and we are not already wrapped
-    // we wrap the call in a searchlookuphandler, to retry the call with the appended searchpaths
-    if (!dynamic_cast<SearchLookup*>(handler) && ndots < _ndots && !_searchpaths.empty()) return new SearchLookup(this, type, bits, domain, handler);
-
+    // check if we should respect the search path
+    if (searchable(domain, handler)) return new SearchLookup(this, type, bits, domain, handler);
+    
     // for A and AAAA lookups we also check the /etc/hosts file
     if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(this, _hosts, domain, type, handler));
     if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return add(new LocalLookup(this, _hosts, domain, type, handler));
@@ -75,6 +98,8 @@ Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DN
         return nullptr;
     }
 }
+
+
 
 /**
  *  Do a reverse IP lookup, this is only meaningful for PTR lookups
