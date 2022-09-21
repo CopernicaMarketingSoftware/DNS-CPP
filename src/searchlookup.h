@@ -66,6 +66,28 @@ private:
      *  @var Operation
      */
     Operation *_operation = nullptr;
+    
+    /**
+     *  Optional empty response (with no matching records) that we found for one of the
+     *  lookups in the process (because we rather report an empty record set than a NXDOMAIN
+     *  result, because we want to tell the caller that at least *something* exists).
+     *  @var Response
+     */
+    std::optional<Response> _response;
+
+
+    /**
+     *  Cache the response for later use
+     *  @param  response
+     */
+    void cache(const Response &response)
+    {
+        // no need to cache if we already have something, and invalid responses are not cached either
+        if (_response || response.rcode() != 0) return;
+        
+        // cache the response
+        _response.emplace(response);
+    }
 
     /**
      *  Method that is called when a raw response is received
@@ -77,11 +99,12 @@ private:
         // an mxdomain error should trigger a next lookup
         if (response.rcode() == ns_r_nxdomain && proceed()) return;
         
-        // if there are no matching records, we also want to do the next lookup
-        if (response.records(ns_s_an, _type) == 0 && proceed()) return;
-        
-        // pass on to user-space
-        _handler->onReceived(this, response);
+        // if there are no matching records, we also want to do the next lookup,
+        // but we do remember this empty response because it could be better than the final nxdomain
+        if (response.records(ns_s_an, _type) == 0 && proceed()) return cache(response);
+
+        // pass on to user-space (note that we do not pass the nxdomain response if we have a better alternative)
+        _handler->onReceived(this, response.rcode() != ns_r_nxdomain || !_response ? response : *_response);
         
         // self destruct, as this query is finished
         delete this;
