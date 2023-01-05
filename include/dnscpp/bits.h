@@ -7,7 +7,7 @@
  *  passing such bits
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2023 Copernica BV
  */
 
 /**
@@ -37,6 +37,7 @@ namespace DNS {
 const int BIT_AD    =   1;
 const int BIT_CD    =   2;
 const int BIT_DO    =   4;
+const int BIT_RD    =   8;
 
 /**
  *  Class definition
@@ -59,10 +60,10 @@ private:
     
 public:
     /**
-     *  Constructor
+     *  Constructor - default behavior is to enable recursion
      *  @param  value
      */
-    Bits(int value = 0) : _value(value) {}
+    Bits(int value = BIT_RD) : _value(value) {}
     
     /**
      *  Destructor
@@ -76,6 +77,7 @@ public:
     bool AD() const { return _value & BIT_AD; }
     bool CD() const { return _value & BIT_CD; }
     bool DO() const { return _value & BIT_DO; }
+    bool RD() const { return _value & BIT_RD; }
     
     /**
      *  Get access to the bits in long notation
@@ -84,6 +86,7 @@ public:
     bool authentic()        const { return AD(); }
     bool checkingdisabled() const { return CD(); }
     bool dnssec()           const { return DO(); }
+    bool recursion()        const { return RD(); }
     
     /**
      *  Setters
@@ -92,6 +95,7 @@ public:
     void AD(bool value) { value ? add(BIT_AD) : del(BIT_AD); }
     void CD(bool value) { value ? add(BIT_CD) : del(BIT_CD); }
     void DO(bool value) { value ? add(BIT_DO) : del(BIT_DO); }
+    void RD(bool value) { value ? add(BIT_RD) : del(BIT_RD); }
 
     /**
      *  Setters, long notation
@@ -100,6 +104,7 @@ public:
     void authentic(bool value)        { AD(value); }
     void checkingdisabled(bool value) { CD(value); }
     void dnssec(bool value)           { DO(value); }
+    void recursion(bool value)        { RD(value); }
 
 };
 

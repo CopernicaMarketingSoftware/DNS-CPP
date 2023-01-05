@@ -4,7 +4,7 @@
  *  Implementation file for the Query class
  *  
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2023 Copernica BV
  */
 
 /**
@@ -56,8 +56,8 @@ Query::Query(int op, const char *dname, int type, const Bits &bits, const unsign
     // store the opcode
     header->opcode = op;
     
-    // the default behavior is to ask for recursion
-    header->rd = 1;
+    // bit to ask for a recursive lookup
+    header->rd = bits.RD();
     
     // bits to ask for the server to include verify info, or to avoid verification by the server
     header->ad = bits.AD();
