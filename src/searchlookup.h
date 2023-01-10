@@ -19,6 +19,7 @@
  */
 #include <dnscpp/context.h>
 #include "../include/dnscpp/response.h"
+#include <optional>
 
 /**
  *  Begin of namespace
