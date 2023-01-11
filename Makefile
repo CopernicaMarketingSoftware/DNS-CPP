@@ -2,8 +2,8 @@ PREFIX                  ?= /usr
 INCLUDE_DIR             = ${PREFIX}/include
 LIBRARY_DIR             = ${PREFIX}/lib
 export LIBRARY_NAME		= dnscpp
-export SONAME			= 1.2
-export VERSION			= 1.2.8
+export SONAME			= 1.3
+export VERSION			= 1.3.1
 
 all:
 		$(MAKE) -C src all
