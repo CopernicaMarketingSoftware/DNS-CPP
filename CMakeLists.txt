@@ -16,7 +16,7 @@ option(DNS-CPP_BUILD_TESTS "Build the tests" ON)
 # The source files to be compiled are defined in a separate subdirectory.
 add_library(dnscpp "")
 
-# We require C++11.
+# We require C++17.
 target_compile_features(dnscpp PUBLIC cxx_std_17)
 
 # Disable GNU extensions, and define the .so version scheme.
