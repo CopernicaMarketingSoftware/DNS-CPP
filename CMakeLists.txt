@@ -17,7 +17,7 @@ option(DNS-CPP_BUILD_TESTS "Build the tests" ON)
 add_library(dnscpp "")
 
 # We require C++11.
-target_compile_features(dnscpp PUBLIC cxx_std_11)
+target_compile_features(dnscpp PUBLIC cxx_std_17)
 
 # Disable GNU extensions, and define the .so version scheme.
 set_target_properties(
