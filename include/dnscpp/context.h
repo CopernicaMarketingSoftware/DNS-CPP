@@ -4,7 +4,7 @@
  *  Main context for DNS lookups. This is the starting point
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2022 Copernica BV
+ *  @copyright 2020 - 2023 Copernica BV
  */
 
 /**
@@ -162,6 +162,8 @@ public:
      *  @param  value
      */
     void bits(const Bits &bits) { _bits = bits; }
+    void enable(const Bits &bits) { _bits.enable(bits); }
+    void disable(const Bits &bits) { _bits.disable(bits); }
 
     /**
      *  Set the rotate setting: If true, nameservers will be rotated, if false, nameservers are tried in-order

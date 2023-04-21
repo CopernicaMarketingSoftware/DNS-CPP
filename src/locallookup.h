@@ -4,7 +4,7 @@
  *  Class that implements the lookup in the local /etc/hosts file
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2022 Copernica BV
+ *  @copyright 2020 - 2023 Copernica BV
  */
  
 /**
@@ -139,7 +139,7 @@ public:
      *  @param  handler
      */
     LocalLookup(Core *core, const Hosts &hosts, const char *domain, int type, Handler *handler) :
-        Lookup(core, handler, ns_o_query, domain, type, false), _hosts(hosts) {}
+        Lookup(core, handler, ns_o_query, domain, type, Bits{}), _hosts(hosts) {}
 
     /**
      *  Constructor

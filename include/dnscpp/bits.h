@@ -63,12 +63,25 @@ public:
      *  Constructor - default behavior is to enable recursion
      *  @param  value
      */
-    Bits(int value = BIT_RD) : _value(value) {}
+    explicit Bits(int value = BIT_RD) : _value(value) {}
     
     /**
      *  Destructor
      */
     virtual ~Bits() = default;
+
+    /**
+     *  Cast to an integer
+     *  @return int
+     */
+    operator int () const { return _value; }
+    
+    /**
+     *  Enable or disable certain bits
+     *  @param  bits
+     */
+    void enable(const Bits &bits) { _value |= bits._value; }
+    void disable(const Bits &bits) { _value &= ~bits._value; }
     
     /**
      *  Get access to the bits
