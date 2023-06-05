@@ -340,6 +340,12 @@ public:
     {
         return any();
     }
+    
+    /**
+     *  Inverse operator
+     *  @return Ip
+     */
+    Ip operator~() const;
 
     /**
      *  Bitwise assignment OR operator (x |= y)

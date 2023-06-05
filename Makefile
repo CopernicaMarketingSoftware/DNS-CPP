@@ -3,7 +3,7 @@ INCLUDE_DIR             = ${PREFIX}/include
 LIBRARY_DIR             = ${PREFIX}/lib
 export LIBRARY_NAME		= dnscpp
 export SONAME			= 1.3
-export VERSION			= 1.3.2
+export VERSION			= 1.3.3
 
 all:
 		$(MAKE) -C src all

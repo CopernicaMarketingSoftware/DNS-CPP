@@ -229,6 +229,37 @@ Ip &Ip::operator=(const struct in6_addr *ip)
 }
 
 /**
+ *  Inverse operator
+ *  @return Ip
+ */
+Ip Ip::operator~() const
+{
+    // implementation depends on ip version
+    if (_version == 6)
+    {
+        // get the address
+        auto address = _data.ipv6;
+        
+        // iterate over the entire address
+        for (unsigned i = 0; i < 16; ++i) address.s6_addr[i] = ~address.s6_addr[i];
+        
+        // construct a new ip
+        return DNS::Ip(address);
+    }
+    else
+    {
+        // get the address
+        auto address = _data.ipv4;
+        
+        // ipv4 can use a single cpu operation
+        address.s_addr = ~address.s_addr;
+
+        // construct a new ip
+        return DNS::Ip(address);
+    }
+}
+
+/**
  *  Bitwise assignment OR operator (x |= y)
  *  @param  that        The other IP
  *  @return Ip
