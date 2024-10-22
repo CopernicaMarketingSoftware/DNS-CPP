@@ -255,7 +255,7 @@ int main(int argc, const char *argv[])
         DNS::Context context(&myloop, config);
 
         // set the AD bit (but not the DO and CD bits)
-        context.bits(DNS::BIT_AD);
+        //context.bits(DNS::BIT_AD);
 
         // check usage
         if (argc != 3) throw std::runtime_error(std::string("usage: ") + argv[0] + " type value");

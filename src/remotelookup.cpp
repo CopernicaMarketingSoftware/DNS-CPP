@@ -261,8 +261,12 @@ bool RemoteLookup::onReceived(const Ip &ip, const Response &response)
     if (!_query.matches(response)) return false;
     
     // if the response was not truncated, we can report it to userspace, we do this also
-    // when the response came from a TCP lookup and was still truncated
-    if (!response.truncated() || _connections > 0) return report(response);
+    // when the response came from a TCP lookup and was still truncated, or when the response
+    // contained an error (for error-responses we do not normally inspect the body, so who cares anyway?)
+    // (note: we ran into a dns-cpp error when switching to tcp-mode, but could not reproduce this
+    // in a test setup, the extra check for the rcode was added as workaround to avoid switching
+    // to tcp that often (in our case the switch only happened for truncated NXDOMAIN responses)
+    if (!response.truncated() || response.rcode() != 0 || _connections > 0) return report(response);
 
     // we can unsubscribe from all inbound udp sockets because we're no longer interested in those responses
     unsubscribe();
