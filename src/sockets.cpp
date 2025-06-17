@@ -107,7 +107,16 @@ size_t Sockets::deliver(size_t maxcalls)
     // when responses from tcp sockets are delivered, it is possible that at the same
     // time those sockets are removed from the underlying array (by the onUnused() method),
     // to ensure that we can use a simple iterator, we make a copy of the sockets
-    auto sockets = _tcps;
+    // (note that the Tcp object has smarty detection of user-space destruction, so we
+    // cannot make a normal copy of the shared_ptr<Tcp> here, as that would keep the
+    // object in space)
+    std::vector<Tcp*> sockets;
+    
+    // micro-optimization
+    sockets.reserve(_tcps.size());
+    
+    // copy them one at a time
+    for (const auto &socket : _tcps) sockets.push_back(socket.get());
     
     // deliver the buffer from all tcp sockets
     for (auto &socket : sockets)
