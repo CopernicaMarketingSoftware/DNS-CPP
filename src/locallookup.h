@@ -132,7 +132,7 @@ public:
      *  @param  type
      *  @param  handler
      */
-    LocalLookup(Core *core, const Authority *authority, const char *domain, int type, Handler *handler) :
+    LocalLookup(Core *core, const std::shared_ptr<Authority> &authority, const char *domain, int type, Handler *handler) :
         Lookup(core, authority, handler, ns_o_query, domain, type, Bits{}) {}
 
     /**
@@ -143,7 +143,7 @@ public:
      *  @param  ip
      *  @param  handler
      */
-    LocalLookup(Core *core, const Authority *authority, const Ip &ip, Handler *handler) : LocalLookup(core, authority, Reverse(ip), TYPE_PTR, handler) {}
+    LocalLookup(Core *core, const std::shared_ptr<Authority> &authority, const Ip &ip, Handler *handler) : LocalLookup(core, authority, Reverse(ip), TYPE_PTR, handler) {}
 
     /**
      *  Destructor

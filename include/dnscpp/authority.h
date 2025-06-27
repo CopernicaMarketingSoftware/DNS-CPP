@@ -46,27 +46,15 @@ public:
         // construct the nameservers and search paths
         for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
         for (size_t i = 0; i < settings.searchpaths(); ++i) _searchpaths.emplace_back(settings.searchpath(i));
-    }
-
-    /**
-     *  Default constructor
-     *  @param  defaults        load the defaults
-     */
-    Authority(bool defaults)
-    {
-        // do nothing if we don't need the defaults
-        if (!defaults) return;
-        
-        // load the defaults from /etc/resolv.conf
-        ResolvConf settings;
-        
-        // copy the nameservers and search paths
-        for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
-        for (size_t i = 0; i < settings.searchpaths(); ++i) _searchpaths.emplace_back(settings.searchpath(i));
 
         // we also have to load /etc/hosts
         if (!_hosts.load()) throw std::runtime_error("failed to load /etc/hosts");
     }
+
+    /**
+     *  Default constructor
+     */
+    Authority() = default;
 
     /**
      *  Clear the list of nameservers

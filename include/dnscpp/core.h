@@ -65,9 +65,9 @@ protected:
 
     /**
      *  The authority
-     *  @var Authority
+     *  @var std::shared_ptr<Authority>
      */
-    Authority _authority;
+    std::shared_ptr<Authority> _authority;
 
     /**
      *  All operations that are in progress and that are waiting for the next 
@@ -289,7 +289,7 @@ public:
      *  @param  hostname        hostname to check
      *  @return bool            does it exists in /etc/hosts?
      */
-    bool exists(const char *hostname) const { return _authority.exists(hostname); }
+    bool exists(const char *hostname) const { return _authority->exists(hostname); }
 
     /**
      *  Send a message over a UDP socket
@@ -312,13 +312,13 @@ public:
      *  Expose the nameservers
      *  @return std::string<Ip>
      */
-    const std::vector<Ip> &nameservers() const { return _authority.nameservers(); }
+    const std::vector<Ip> &nameservers() const { return _authority->nameservers(); }
 
     /**
      *  Expose the search-paths
      *  @return std::vector<std::string>
      */
-    const std::vector<std::string> &searchpaths() const { return _authority.searchpaths(); }
+    const std::vector<std::string> &searchpaths() const { return _authority->searchpaths(); }
 
     /**
      *  Mark a lookup as cancelled and start more queues lookups

@@ -30,21 +30,30 @@ namespace DNS {
 Core::Core(Loop *loop, bool defaults) :
     _loop(loop),
     _ipv4(loop, this),
-    _ipv6(loop, this),
-    _authority(defaults)
+    _ipv6(loop, this)
 {
     // do nothing if we don't need the defaults
-    if (!defaults) return;
-    
-    // load the defaults from /etc/resolv.conf
-    ResolvConf settings;
-    
-    // take over some of the settings
-    _timeout = settings.timeout();
-    _interval = settings.timeout();
-    _attempts = settings.attempts();
-    _rotate = settings.rotate();
-    _ndots = settings.ndots();
+    if (!defaults)
+    {
+        // use default authority
+        _authority = std::make_shared<Authority>();
+    }
+    else
+    {
+        // load the defaults from /etc/resolv.conf
+        ResolvConf settings;
+        
+        // construct the context
+        _authority = std::make_shared<Authority>(settings);
+        
+        // take over some of the settings
+        // @todo should we be using other settings for a different nameserver?
+        _timeout = settings.timeout();
+        _interval = settings.timeout();
+        _attempts = settings.attempts();
+        _rotate = settings.rotate();
+        _ndots = settings.ndots();
+    }
 }
 
 /**
@@ -57,7 +66,7 @@ Core::Core(Loop *loop, const ResolvConf &settings) :
     _loop(loop),
     _ipv4(loop, this),
     _ipv6(loop, this),
-    _authority(settings)
+    _authority(std::make_shared<Authority>(settings))
 {
     // take over some of the settings
     _timeout = settings.timeout();

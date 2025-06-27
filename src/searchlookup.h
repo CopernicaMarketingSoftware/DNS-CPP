@@ -39,10 +39,9 @@ private:
     
     /**
      *  The authority to use
-     *  @var Authority
+     *  @var std::shared_ptr<Authority>
      */
-    const Authority *_authority;
-    
+    std::shared_ptr<Authority> _authority;
 
     /**
      *  the base domain, this is the domain becofore any modifications
@@ -212,7 +211,7 @@ public:
      *  @param basedomain   the base domain the user supplied
      *  @param handler      the handler the user supplied
      */
-    SearchLookup(DNS::Context *context, const Authority *authority, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
+    SearchLookup(DNS::Context *context, const std::shared_ptr<Authority> &authority, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
         Operation(handler),
         _context(context),
         _authority(authority),

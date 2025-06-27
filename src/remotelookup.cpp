@@ -32,7 +32,7 @@ namespace DNS {
  *  @param  bits        bits to include
  *  @param  handler     user space object
  */
-RemoteLookup::RemoteLookup(Core *core, const Authority *authority, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
+RemoteLookup::RemoteLookup(Core *core, const std::shared_ptr<Authority> &authority, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
     Lookup(core, authority, handler, ns_o_query, domain, type, bits), _id(rand()) {}
 
 /**

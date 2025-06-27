@@ -46,7 +46,7 @@ protected:
      *  The authority (settings about nameservers, etc)
      *  @var Authority
      */
-    const Authority *_authority;
+    std::shared_ptr<Authority> _authority;
 
     /**
      *  The query that we're going to send
@@ -65,7 +65,7 @@ protected:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Lookup(Core *core, const Authority *authority, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
+    Lookup(Core *core, const std::shared_ptr<Authority> &authority, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
         Operation(handler),
         _core(core),
         _authority(authority),
@@ -87,7 +87,7 @@ public:
      *  Expose the authority
      *  @return Authority
      */
-    const Authority *authority() const { return _authority; }
+    const std::shared_ptr<Authority> &authority() const { return _authority; }
     
     /**
      *  Is this lookup still scheduled: meaning that no requests has been sent yet
