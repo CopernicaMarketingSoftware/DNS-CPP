@@ -26,7 +26,7 @@
 #include "lookup.h"
 #include "processor.h"
 #include "timer.h"
-#include "authority.h"
+#include "config.h"
 #include <list>
 #include <deque>
 #include <memory>
@@ -64,10 +64,10 @@ protected:
     Sockets _ipv6;
 
     /**
-     *  The authority
-     *  @var std::shared_ptr<Authority>
+     *  The configuration
+     *  @var std::shared_ptr<Config>
      */
-    std::shared_ptr<Authority> _authority;
+    std::shared_ptr<Config> _config;
 
     /**
      *  All operations that are in progress and that are waiting for the next 
@@ -289,7 +289,7 @@ public:
      *  @param  hostname        hostname to check
      *  @return bool            does it exists in /etc/hosts?
      */
-    bool exists(const char *hostname) const { return _authority->exists(hostname); }
+    bool exists(const char *hostname) const { return _config->exists(hostname); }
 
     /**
      *  Send a message over a UDP socket

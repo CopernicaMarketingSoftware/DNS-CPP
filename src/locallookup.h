@@ -48,7 +48,7 @@ private:
         _handler = nullptr;
 
         // pass to the hosts (this will trigger an immediate call to the handler)
-        _authority->hosts().notify(Request(this), handler, this);
+        _config->hosts().notify(Request(this), handler, this);
         
         // done
         return true;
@@ -127,23 +127,23 @@ public:
      *  To keep the behavior of lookups consistent with the behavior of remote lookups, we set
      *  a timer so that userspace will be informed in a later tick of the event loop
      *  @param  core
-     *  @param  authority
+     *  @param  config
      *  @param  domain
      *  @param  type
      *  @param  handler
      */
-    LocalLookup(Core *core, const std::shared_ptr<Authority> &authority, const char *domain, int type, Handler *handler) :
-        Lookup(core, authority, handler, ns_o_query, domain, type, Bits{}) {}
+    LocalLookup(Core *core, const std::shared_ptr<Config> &config, const char *domain, int type, Handler *handler) :
+        Lookup(core, config, handler, ns_o_query, domain, type, Bits{}) {}
 
     /**
      *  Constructor
      *  This is a utility constructor for reverse lookups
      *  @param  core
-     *  @param  authority
+     *  @param  config
      *  @param  ip
      *  @param  handler
      */
-    LocalLookup(Core *core, const std::shared_ptr<Authority> &authority, const Ip &ip, Handler *handler) : LocalLookup(core, authority, Reverse(ip), TYPE_PTR, handler) {}
+    LocalLookup(Core *core, const std::shared_ptr<Config> &config, const Ip &ip, Handler *handler) : LocalLookup(core, config, Reverse(ip), TYPE_PTR, handler) {}
 
     /**
      *  Destructor

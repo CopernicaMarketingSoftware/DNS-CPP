@@ -208,13 +208,13 @@ public:
     /**
      *  Constructor
      *  @param  core        dns core object
-     *  @param  authority   the authority to use
+     *  @param  config      the configuration to use
      *  @param  domain      the domain of the lookup
      *  @param  type        type of records to look for
      *  @param  bits        the bits to include in the request
      *  @param  handler     user space object interested in the result
      */
-    RemoteLookup(Core *core, const std::shared_ptr<Authority> &authority, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler);
+    RemoteLookup(Core *core, const std::shared_ptr<Config> &config, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler);
     
     /**
      *  No copying

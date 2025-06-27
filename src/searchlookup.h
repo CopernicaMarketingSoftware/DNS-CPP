@@ -38,10 +38,10 @@ private:
     DNS::Context *_context;
     
     /**
-     *  The authority to use
-     *  @var std::shared_ptr<Authority>
+     *  The congifuration to use
+     *  @var std::shared_ptr<Config>
      */
-    std::shared_ptr<Authority> _authority;
+    std::shared_ptr<Config> _config;
 
     /**
      *  the base domain, this is the domain becofore any modifications
@@ -155,10 +155,10 @@ private:
         if (_index == size_t(-1)) return false;
 
         // if there are no more paths left, return false
-        if (_index >= _authority->searchpaths()) return finalize();
+        if (_index >= _config->searchpaths()) return finalize();
 
         // the next path to check
-        const auto &nextdomain = _authority->searchpath(_index++);
+        const auto &nextdomain = _config->searchpath(_index++);
         
         // for empty domains we do not need to concatenate
         if (nextdomain.empty()) return finalize();
@@ -202,16 +202,16 @@ public:
     /**
      *  Constructor
      *  @param context      the context object that will perform the queries
-     *  @param authority    object that knows which search-path to use
+     *  @param config       object that knows which search-path to use
      *  @param type         the type of query the user supplied
      *  @param bits         the bits the user supplied
      *  @param basedomain   the base domain the user supplied
      *  @param handler      the handler the user supplied
      */
-    SearchLookup(DNS::Context *context, const std::shared_ptr<Authority> &authority, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
+    SearchLookup(DNS::Context *context, const std::shared_ptr<Config> &config, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
         Operation(handler),
         _context(context),
-        _authority(authority),
+        _config(config),
         _basedomain(basedomain),
         _index(0),
         _type(type),

@@ -26,14 +26,14 @@ namespace DNS {
 /**
  *  Constructor
  *  @param  core        dns core object
- *  @param  authority   authority with settings about nameservers, etc
+ *  @param  config      object with settings about nameservers, etc
  *  @param  domain      the domain of the lookup
  *  @param  type        the type of the request
  *  @param  bits        bits to include
  *  @param  handler     user space object
  */
-RemoteLookup::RemoteLookup(Core *core, const std::shared_ptr<Authority> &authority, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
-    Lookup(core, authority, handler, ns_o_query, domain, type, bits), _id(rand()) {}
+RemoteLookup::RemoteLookup(Core *core, const std::shared_ptr<Config> &config, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
+    Lookup(core, config, handler, ns_o_query, domain, type, bits), _id(rand()) {}
 
 /**
  *  Destructor
@@ -181,7 +181,7 @@ bool RemoteLookup::execute(double now)
     if (_connections > 0) return false;
 
     // access to the nameservers + the number we have
-    size_t nscount = _authority->nameservers();
+    size_t nscount = _config->nameservers();
     
     // what if there are no nameservers?
     if (nscount == 0) return timeout();
@@ -190,7 +190,7 @@ bool RemoteLookup::execute(double now)
     size_t target = _core->rotate() ? (_datagrams + _id) % nscount : _datagrams % nscount;
     
     // send a datagram to each nameserver
-    auto &nameserver = _authority->nameserver(target);
+    auto &nameserver = _config->nameserver(target);
 
     // send a datagram to this server
     auto *inbound = _core->datagram(nameserver, _query);
@@ -233,7 +233,7 @@ bool RemoteLookup::report(const Response &response)
     
     // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
     // file does have a record for this hostname, check this
-    if (!_authority->exists(question.name())) return cleanup()->onReceived(this, response), true;
+    if (!_config->exists(question.name())) return cleanup()->onReceived(this, response), true;
     
     // get the original request (so that the response can match the request)
     Request request(this);

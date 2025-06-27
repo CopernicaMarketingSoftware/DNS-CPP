@@ -1,7 +1,8 @@
 /**
- *  The authority
+ *  The configuration
  * 
- *  Object that holds the nameservers + /etc/hosts file settings
+ *  Object that holds the nameservers, loaded from /etc/resolv.conf and
+ *  the /etc/hosts file settings
  *  
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
  *  @copyright 2025 Copernica BV
@@ -15,7 +16,7 @@ namespace DNS {
 /**
  *  Class definition
  */
-class Authority
+class Config
 {
 private:
     /**
@@ -41,7 +42,7 @@ public:
      *  Default constructor
      *  @param  settings
      */
-    Authority(const ResolvConf &settings)
+    Config(const ResolvConf &settings)
     {
         // construct the nameservers and search paths
         for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
@@ -54,7 +55,7 @@ public:
     /**
      *  Default constructor
      */
-    Authority() = default;
+    Config() = default;
 
     /**
      *  Expose the /etc/hosts file

@@ -85,7 +85,7 @@ public:
     void clear()
     {
         // empty the list
-        _authority->clear();
+        _config->clear();
     }
     
     /**
@@ -95,7 +95,7 @@ public:
     void nameserver(const Ip &ip)
     {
         // add to the member in the base class
-        _authority->nameserver(ip);
+        _config->nameserver(ip);
     }
     
     /**

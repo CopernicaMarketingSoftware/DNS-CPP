@@ -35,8 +35,8 @@ Core::Core(Loop *loop, bool defaults) :
     // do nothing if we don't need the defaults
     if (!defaults)
     {
-        // use default authority
-        _authority = std::make_shared<Authority>();
+        // use default configuration
+        _config = std::make_shared<Config>();
     }
     else
     {
@@ -44,7 +44,7 @@ Core::Core(Loop *loop, bool defaults) :
         ResolvConf settings;
         
         // construct the context
-        _authority = std::make_shared<Authority>(settings);
+        _config = std::make_shared<Config>(settings);
         
         // take over some of the settings
         // @todo should we be using other settings for a different nameserver?
@@ -66,7 +66,7 @@ Core::Core(Loop *loop, const ResolvConf &settings) :
     _loop(loop),
     _ipv4(loop, this),
     _ipv6(loop, this),
-    _authority(std::make_shared<Authority>(settings))
+    _config(std::make_shared<Config>(settings))
 {
     // take over some of the settings
     _timeout = settings.timeout();
@@ -117,7 +117,7 @@ Operation *Core::add(Lookup *lookup)
         // expire soon so that it is picked up and reported to user space
         timer(0.0);
     }
-    else if (_capacity <= _inflight || lookup->authority()->nameservers() == 0)
+    else if (_capacity <= _inflight || lookup->config()->nameservers() == 0)
     {
         // we are going to update _scheduled, check if this is the first time
         bool wasempty = _scheduled.empty();
