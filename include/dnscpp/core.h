@@ -103,7 +103,7 @@ protected:
      *  Is the timer expected to expire right away
      *  @var bool
      */
-    double _immediate = false;
+    bool _immediate = false;
 
     /**
      *  Max time that we wait for a response
