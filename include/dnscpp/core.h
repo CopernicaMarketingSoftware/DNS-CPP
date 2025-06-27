@@ -309,12 +309,6 @@ public:
     Connecting *connect(const Ip &ip, Connector *connector);
 
     /**
-     *  Expose the nameservers
-     *  @return std::string<Ip>
-     */
-    const std::vector<Ip> &nameservers() const { return _authority->nameservers(); }
-
-    /**
      *  Expose the search-paths
      *  @return std::vector<std::string>
      */

@@ -57,6 +57,15 @@ public:
     Authority() = default;
 
     /**
+     *  Expose the /etc/hosts file
+     *  @return Hosts
+     */
+    const Hosts &hosts() const
+    {
+        return _hosts;
+    }
+
+    /**
      *  Clear the list of nameservers
      */
     void clear()
@@ -76,21 +85,22 @@ public:
     }
 
     /**
-     *  Expose the /etc/hosts file
-     *  @return Hosts
+     *  Total number of nameservers
+     *  @return size_t
      */
-    const Hosts &hosts() const
+    size_t nameservers() const
     {
-        return _hosts;
+        return _nameservers.size();
     }
 
     /**
-     *  Expose the nameservers
-     *  @return std::string<Ip>
+     *  Expose to one of the nameservers
+     *  @param  index
+     *  @return Ip
      */
-    const std::vector<Ip> &nameservers() const 
+    const Ip &nameserver(size_t index) const 
     { 
-        return _nameservers;
+        return _nameservers[index];
     }
 
     /**

@@ -181,8 +181,7 @@ bool RemoteLookup::execute(double now)
     if (_connections > 0) return false;
 
     // access to the nameservers + the number we have
-    auto &nameservers = _authority->nameservers();
-    size_t nscount = nameservers.size();
+    size_t nscount = _authority->nameservers();
     
     // what if there are no nameservers?
     if (nscount == 0) return timeout();
@@ -191,7 +190,7 @@ bool RemoteLookup::execute(double now)
     size_t target = _core->rotate() ? (_datagrams + _id) % nscount : _datagrams % nscount;
     
     // send a datagram to each nameserver
-    auto &nameserver = nameservers[target];
+    auto &nameserver = _authority->nameserver(target);
 
     // send a datagram to this server
     auto *inbound = _core->datagram(nameserver, _query);

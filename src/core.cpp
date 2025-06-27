@@ -117,7 +117,7 @@ Operation *Core::add(Lookup *lookup)
         // expire soon so that it is picked up and reported to user space
         timer(0.0);
     }
-    else if (_capacity <= _inflight || lookup->authority()->nameservers().empty())
+    else if (_capacity <= _inflight || lookup->authority()->nameservers() == 0)
     {
         // we are going to update _scheduled, check if this is the first time
         bool wasempty = _scheduled.empty();
