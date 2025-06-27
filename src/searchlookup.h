@@ -154,14 +154,11 @@ private:
         // do nothing if we already have exhausted all calls
         if (_index == size_t(-1)) return false;
 
-        // shortcut to the search-paths
-        const auto &searchpaths = _authority->searchpaths();
-        
         // if there are no more paths left, return false
-        if (_index >= searchpaths.size()) return finalize();
+        if (_index >= _authority->searchpaths()) return finalize();
 
         // the next path to check
-        const auto &nextdomain = searchpaths[_index++];
+        const auto &nextdomain = _authority->searchpath(_index++);
         
         // for empty domains we do not need to concatenate
         if (nextdomain.empty()) return finalize();

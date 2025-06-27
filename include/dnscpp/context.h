@@ -237,7 +237,7 @@ public:
     using Core::expire;
     using Core::interval;
     using Core::capacity;
-    using Core::searchpaths;
+    //using Core::searchpaths;
 };
     
 /**

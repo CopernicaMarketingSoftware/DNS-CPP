@@ -309,12 +309,6 @@ public:
     Connecting *connect(const Ip &ip, Connector *connector);
 
     /**
-     *  Expose the search-paths
-     *  @return std::vector<std::string>
-     */
-    const std::vector<std::string> &searchpaths() const { return _authority->searchpaths(); }
-
-    /**
      *  Mark a lookup as cancelled and start more queues lookups
      *  This is called internally when userspace cancels a single operation (via Operation::cancel())
      *  @param  lookup

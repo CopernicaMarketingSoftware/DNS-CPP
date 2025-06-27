@@ -104,12 +104,22 @@ public:
     }
 
     /**
-     *  Expose the search-paths
-     *  @return std::vector<std::string>
+     *  The total number of searchpaths
+     *  @return size_t
      */
-    const std::vector<std::string> &searchpaths() const
+    size_t searchpaths() const
+    {
+        return _searchpaths.size();
+    }
+
+    /**
+     *  Expose one of the search-paths
+     *  @param  index
+     *  @return std::string
+     */
+    const std::string &searchpath(size_t index) const
     { 
-        return _searchpaths;
+        return _searchpaths[index];
     }
 
     /**
