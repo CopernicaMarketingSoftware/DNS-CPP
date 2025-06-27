@@ -4,7 +4,7 @@
  *  Class that encapsulates all data that is needed for a single request
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -208,12 +208,13 @@ public:
     /**
      *  Constructor
      *  @param  core        dns core object
+     *  @param  authority   the authority to use
      *  @param  domain      the domain of the lookup
      *  @param  type        type of records to look for
      *  @param  bits        the bits to include in the request
      *  @param  handler     user space object interested in the result
      */
-    RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler);
+    RemoteLookup(Core *core, const Authority *authority, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler);
     
     /**
      *  No copying

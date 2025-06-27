@@ -5,8 +5,7 @@
  *  It then passes the first successfull call, or the last failed call, back to user-space
  *  
  *  @author Bram van den Brink (bram.vandenbrink@copernica.nl)
- *  @date 2022-06-29
- *  @copyright 2022 Copernica BV
+ *  @copyright 2022 - 2025 Copernica BV
  */
 
 /**
@@ -37,6 +36,13 @@ private:
      *  @var DNS::Context
      */
     DNS::Context *_context;
+    
+    /**
+     *  The authority to use
+     *  @var Authority
+     */
+    const Authority *_authority;
+    
 
     /**
      *  the base domain, this is the domain becofore any modifications
@@ -150,7 +156,7 @@ private:
         if (_index == size_t(-1)) return false;
 
         // shortcut to the search-paths
-        const auto &searchpaths = _context->searchpaths();
+        const auto &searchpaths = _authority->searchpaths();
         
         // if there are no more paths left, return false
         if (_index >= searchpaths.size()) return finalize();
@@ -199,15 +205,17 @@ private:
 public:
     /**
      *  Constructor
-     *  @param context      the context object that will perform the querys
+     *  @param context      the context object that will perform the queries
+     *  @param authority    object that knows which search-path to use
      *  @param type         the type of query the user supplied
      *  @param bits         the bits the user supplied
      *  @param basedomain   the base domain the user supplied
      *  @param handler      the handler the user supplied
      */
-    SearchLookup(DNS::Context *context, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
+    SearchLookup(DNS::Context *context, const Authority *authority, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
         Operation(handler),
         _context(context),
+        _authority(authority),
         _basedomain(basedomain),
         _index(0),
         _type(type),

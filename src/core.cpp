@@ -4,7 +4,7 @@
  *  Implementation file for the Core class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2022 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -30,7 +30,8 @@ namespace DNS {
 Core::Core(Loop *loop, bool defaults) :
     _loop(loop),
     _ipv4(loop, this),
-    _ipv6(loop, this)
+    _ipv6(loop, this),
+    _authority(defaults)
 {
     // do nothing if we don't need the defaults
     if (!defaults) return;
@@ -38,19 +39,12 @@ Core::Core(Loop *loop, bool defaults) :
     // load the defaults from /etc/resolv.conf
     ResolvConf settings;
     
-    // copy the nameservers and search paths
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
-    for (size_t i = 0; i < settings.searchpaths(); ++i) _searchpaths.emplace_back(settings.searchpath(i));
-    
     // take over some of the settings
     _timeout = settings.timeout();
     _interval = settings.timeout();
     _attempts = settings.attempts();
     _rotate = settings.rotate();
     _ndots = settings.ndots();
-
-    // we also have to load /etc/hosts
-    if (!_hosts.load()) throw std::runtime_error("failed to load /etc/hosts");
 }
 
 /**
@@ -62,12 +56,9 @@ Core::Core(Loop *loop, bool defaults) :
 Core::Core(Loop *loop, const ResolvConf &settings) :
     _loop(loop),
     _ipv4(loop, this),
-    _ipv6(loop, this)
+    _ipv6(loop, this),
+    _authority(settings)
 {
-    // construct the nameservers and search paths
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
-    for (size_t i = 0; i < settings.searchpaths(); ++i) _searchpaths.emplace_back(settings.searchpath(i));
-
     // take over some of the settings
     _timeout = settings.timeout();
     _interval = settings.timeout();
@@ -75,7 +66,6 @@ Core::Core(Loop *loop, const ResolvConf &settings) :
     _rotate = settings.rotate();
     _ndots = settings.ndots();
 }
-
 
 /**
  *  Destructor
@@ -118,7 +108,7 @@ Operation *Core::add(Lookup *lookup)
         // expire soon so that it is picked up and reported to user space
         timer(0.0);
     }
-    else if (_capacity <= _inflight || _nameservers.empty())
+    else if (_capacity <= _inflight || lookup->authority()->nameservers().empty())
     {
         // we are going to update _scheduled, check if this is the first time
         bool wasempty = _scheduled.empty();

@@ -5,7 +5,7 @@
  *  used internally, user space code does not interact with it.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2021 - 2022 Copernica BV
+ *  @copyright 2021 - 2025 Copernica BV
  */
 
 /**
@@ -28,6 +28,7 @@ namespace DNS {
  */
 class Handler;
 class Core;
+class Authority;
 
 /**
  *  Class definition
@@ -40,6 +41,12 @@ protected:
      *  @var Core
      */
     Core *_core;
+
+    /**
+     *  The authority (settings about nameservers, etc)
+     *  @var Authority
+     */
+    const Authority *_authority;
 
     /**
      *  The query that we're going to send
@@ -58,9 +65,10 @@ protected:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Lookup(Core *core, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
+    Lookup(Core *core, const Authority *authority, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
         Operation(handler),
         _core(core),
+        _authority(authority),
         _query(op, dname, type, bits, data) {}
 
 public:
@@ -74,6 +82,12 @@ public:
      *  @return Query
      */
     virtual const Query &query() const override { return _query; }
+    
+    /**
+     *  Expose the authority
+     *  @return Authority
+     */
+    const Authority *authority() const { return _authority; }
     
     /**
      *  Is this lookup still scheduled: meaning that no requests has been sent yet

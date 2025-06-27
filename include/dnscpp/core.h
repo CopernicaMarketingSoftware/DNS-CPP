@@ -7,7 +7,7 @@
  *  be called from user space, but they are used internally.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2022 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -26,6 +26,7 @@
 #include "lookup.h"
 #include "processor.h"
 #include "timer.h"
+#include "authority.h"
 #include <list>
 #include <deque>
 #include <memory>
@@ -63,22 +64,10 @@ protected:
     Sockets _ipv6;
 
     /**
-     *  The IP addresses of the servers that can be accessed
-     *  @var std::vector<Ip>
+     *  The authority
+     *  @var Authority
      */
-    std::vector<Ip> _nameservers;
-
-    /**
-     *  The IP addresses of the servers that can be accessed
-     *  @var std::vector<Ip>
-     */
-    std::vector<std::string> _searchpaths;
-    
-    /**
-     *  The contents of the /etc/hosts file
-     *  @var Hosts
-     */
-    Hosts _hosts;
+    Authority _authority;
 
     /**
      *  All operations that are in progress and that are waiting for the next 
@@ -300,7 +289,7 @@ public:
      *  @param  hostname        hostname to check
      *  @return bool            does it exists in /etc/hosts?
      */
-    bool exists(const char *hostname) const { return _hosts.lookup(hostname) != nullptr; }
+    bool exists(const char *hostname) const { return _authority.exists(hostname); }
 
     /**
      *  Send a message over a UDP socket
@@ -323,13 +312,13 @@ public:
      *  Expose the nameservers
      *  @return std::string<Ip>
      */
-    const std::vector<Ip> &nameservers() const { return _nameservers; }
+    const std::vector<Ip> &nameservers() const { return _authority.nameservers(); }
 
     /**
      *  Expose the search-paths
      *  @return std::vector<std::string>
      */
-    const std::vector<std::string> &searchpaths() const { return _searchpaths; }
+    const std::vector<std::string> &searchpaths() const { return _authority.searchpaths(); }
 
     /**
      *  Mark a lookup as cancelled and start more queues lookups

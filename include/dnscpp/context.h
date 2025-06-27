@@ -4,7 +4,7 @@
  *  Main context for DNS lookups. This is the starting point
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2023 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -85,7 +85,7 @@ public:
     void clear()
     {
         // empty the list
-        _nameservers.clear();
+        _authority.clear();
     }
     
     /**
@@ -95,7 +95,7 @@ public:
     void nameserver(const Ip &ip)
     {
         // add to the member in the base class
-        _nameservers.emplace_back(ip);
+        _authority.nameserver(ip);
     }
     
     /**

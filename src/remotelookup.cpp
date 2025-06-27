@@ -4,7 +4,7 @@
  *  Implementation file for the RemoteLookup class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -26,13 +26,14 @@ namespace DNS {
 /**
  *  Constructor
  *  @param  core        dns core object
+ *  @param  authority   authority with settings about nameservers, etc
  *  @param  domain      the domain of the lookup
  *  @param  type        the type of the request
  *  @param  bits        bits to include
  *  @param  handler     user space object
  */
-RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
-    Lookup(core, handler, ns_o_query, domain, type, bits), _id(rand()) {}
+RemoteLookup::RemoteLookup(Core *core, const Authority *authority, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
+    Lookup(core, authority, handler, ns_o_query, domain, type, bits), _id(rand()) {}
 
 /**
  *  Destructor
@@ -180,7 +181,7 @@ bool RemoteLookup::execute(double now)
     if (_connections > 0) return false;
 
     // access to the nameservers + the number we have
-    auto &nameservers = _core->nameservers();
+    auto &nameservers = _authority->nameservers();
     size_t nscount = nameservers.size();
     
     // what if there are no nameservers?
@@ -233,7 +234,7 @@ bool RemoteLookup::report(const Response &response)
     
     // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
     // file does have a record for this hostname, check this
-    if (!_core->exists(question.name())) return cleanup()->onReceived(this, response), true;
+    if (!_authority->exists(question.name())) return cleanup()->onReceived(this, response), true;
     
     // get the original request (so that the response can match the request)
     Request request(this);
