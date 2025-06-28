@@ -47,7 +47,7 @@ static std::shared_ptr<Config> createConfig(bool defaults)
  *  @param  loop        your event loop
  *  @param  defaults    should system settings be loaded
  */
-Context::Context(Loop *loop, bool defaults) : Core(loop, createConfig(defaults)) {}
+Context::Context(Loop *loop, bool defaults) : Context(loop, createConfig(defaults)) {}
 
 /**
  *  Constructor
@@ -56,7 +56,7 @@ Context::Context(Loop *loop, bool defaults) : Core(loop, createConfig(defaults))
  * 
  *  @deprecated
  */
-Context::Context(Loop *loop, const ResolvConf &settings) : Core(loop, std::make_shared<Config>(settings)) {}
+Context::Context(Loop *loop, const ResolvConf &settings) : Context(loop, std::make_shared<Config>(settings)) {}
 
 /**
  *  Set the send & receive buffer size of each individual UDP socket

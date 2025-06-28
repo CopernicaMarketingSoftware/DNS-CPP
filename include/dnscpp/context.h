@@ -40,12 +40,25 @@ class Context : private Core
 {
 private:
     /**
+     *  The configuration used by this context
+     *  @var std::shared<Config>
+     */
+    std::shared_ptr<Config> _config;
+
+    /**
      *  Should the search path be respected?
      *  @param  domain      the domain to lookup
      *  @param  handler     handler that is already in use
      *  @return bool
      */
     bool searchable(const char *domain, DNS::Handler *handler) const;
+
+    /**
+     *  Constructor
+     *  @param  loop
+     *  @param  config
+     */
+    Context(Loop *loop, const std::shared_ptr<Config> &config) : Core(loop, config), _config(config) {}
 
 public:
     /**
@@ -121,8 +134,8 @@ public:
      */
     void timeout(double timeout)
     {
-        // store property, make sure the numbers are reasonably clamped
-        _timeout = std::max(timeout, 0.1);
+        // pass on
+        _config->timeout(timeout);
     }
     
     /**

@@ -106,12 +106,6 @@ protected:
     bool _immediate = false;
 
     /**
-     *  Max time that we wait for a response
-     *  @var double
-     */
-    double _timeout = 60.0;
-    
-    /**
      *  Max number of attempts / requests to send per query
      *  @var size_t
      */
@@ -250,7 +244,7 @@ public:
      *  The time to wait for a response
      *  @return double
      */
-    double timeout() const { return _timeout; }
+    double timeout() const { return _config->timeout(); }
     
     /**
      *  Max number of attempts / number of requests to send

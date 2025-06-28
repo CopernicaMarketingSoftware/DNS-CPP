@@ -35,7 +35,6 @@ Core::Core(Loop *loop, const std::shared_ptr<Config> &config) :
 {
     // take over some of the settings
     // @todo should we be using other settings for a different nameserver?
-    _timeout = _config->timeout();
     _interval = _config->timeout();
     _attempts = _config->attempts();
     _rotate = _config->rotate();

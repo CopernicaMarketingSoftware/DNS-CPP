@@ -181,6 +181,12 @@ public:
      *  @return double
      */
     double timeout() const { return _timeout; }
+
+    /**
+     *  Set max time to wait for a response
+     *  @param timeout      time in seconds
+     */
+    void timeout(double timeout) { _timeout = std::max(timeout, 0.1); }
     
     /**
      *  Max number of attempts / requests to send per query
