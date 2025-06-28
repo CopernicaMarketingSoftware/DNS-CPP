@@ -100,7 +100,7 @@ bool Context::searchable(const char *domain, DNS::Handler *handler) const
     size_t ndots = std::count(domain, domain + length + 1, '.');
     
     // compare with the 'ndots' setting
-    if (ndots >= _ndots) return false;
+    if (ndots >= _config->ndots()) return false;
     
     // do not do recursion (if the current handler already is a SearchLookup)
     return dynamic_cast<SearchLookup*>(handler) == nullptr;

@@ -112,18 +112,6 @@ protected:
     Bits _bits;
     
     /**
-     *  Should all nameservers be rotated? otherwise they will be tried in-order
-     *  @var bool
-     */
-    bool _rotate = false;
-    
-    /**
-     *  The 'ndots' setting from resolv.conf
-     *  @var ndots
-     */
-    uint8_t _ndots = 1;
-    
-    /**
      *  Max number of operations to run at the same time
      *  @var size_t
      */
@@ -256,7 +244,7 @@ public:
      *  Should all nameservers be rotated? otherwise they will be tried in-order
      *  @var bool
      */
-    bool rotate() const { return _rotate; }
+    bool rotate() const { return _config->rotate(); }
 
     /**
      *  Does a certain hostname exists in /etc/hosts? In that case a NXDOMAIN error should not be given

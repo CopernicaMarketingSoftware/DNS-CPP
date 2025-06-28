@@ -31,13 +31,7 @@ Core::Core(Loop *loop, const std::shared_ptr<Config> &config) :
     _loop(loop),
     _ipv4(loop, this),
     _ipv6(loop, this),
-    _config(config)
-{
-    // take over some of the settings
-    // @todo should we be using other settings for a different nameserver?
-    _rotate = _config->rotate();
-    _ndots = _config->ndots();
-}
+    _config(config) {}
 
 /**
  *  Destructor

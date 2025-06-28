@@ -56,12 +56,6 @@ private:
     double _interval = 2.0;
     
     /**
-     *  Default bits to include in queries
-     *  @var Bits
-     */
-    Bits _bits;
-    
-    /**
      *  Should all nameservers be rotated? otherwise they will be tried in-order
      *  @var bool
      */
@@ -213,22 +207,28 @@ public:
     void interval(double interval) { _interval = std::max(interval, 0.1); }
     
     /**
-     *  Default bits to include in queries
-     *  @return Bits
-     */
-    const Bits &bits() const { return _bits; }
-    
-    /**
      *  Should all nameservers be rotated? otherwise they will be tried in-order
      *  @return bool
      */
     bool rotate() const { return _rotate; }
+
+    /**
+     *  Set the rotate setting: If true, nameservers will be rotated, if false, nameservers are tried in-order
+     *  @param rotate   the new setting
+     */
+    void rotate(bool rotate) { _rotate = rotate; }
     
     /**
      *  The 'ndots' setting from resolv.conf
      *  @return ndots
      */
     uint8_t ndots() const { return _ndots; }
+
+    /**
+     *  Change the ndots setting
+     *  @param  value       the new value
+     */
+    void ndots(uint8_t value) { _ndots = value; }
 };
 
 /**

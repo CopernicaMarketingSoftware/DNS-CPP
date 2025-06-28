@@ -182,7 +182,7 @@ public:
      *  Set the rotate setting: If true, nameservers will be rotated, if false, nameservers are tried in-order
      *  @param rotate   the new setting
      */
-    void rotate(bool rotate) { _rotate = rotate; }
+    void rotate(bool rotate) { _config->rotate(rotate); }
     
     /**
      *  Set the max number of calls that are made to userspace in one iteration
@@ -194,7 +194,7 @@ public:
      *  Change the ndots setting
      *  @param  value       the new value
      */
-    void ndots(uint8_t value) { _ndots = value; }
+    void ndots(uint8_t value) { _config->ndots(value); }
     
     /**
      *  Do a dns lookup and pass the result to a user-space handler object
