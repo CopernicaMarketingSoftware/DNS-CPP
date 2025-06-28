@@ -11,10 +11,6 @@
  *  Dependencies
  */
 #include "../include/dnscpp/context.h"
-#include "remotelookup.h"
-#include "locallookup.h"
-#include "idgenerator.h"
-#include "searchlookup.h"
 
 /**
  *  Begin of namespace
@@ -59,54 +55,6 @@ Context::Context(Loop *loop, bool defaults) : Context(loop, createConfig(default
 Context::Context(Loop *loop, const ResolvConf &settings) : Context(loop, std::make_shared<Config>(settings)) {}
 
 /**
- *  Set the send & receive buffer size of each individual UDP socket
- *  @param value  the value to set
- */
-void Context::buffersize(int32_t value)
-{
-    // pass to the actual sockets
-    _ipv4.buffersize(value);
-    _ipv6.buffersize(value);
-}
-
-/**
- *  Set the capacity: number of operations to run at the same time
- *  @param  value       the new value
- */
-void Context::capacity(size_t value)
-{
-    // store property
-    _capacity = std::min((size_t)IdGenerator::capacity(), std::max(size_t(1), value));
-}
-
-/**
- *  Should the search path be respected?
- *  @param  domain      the domain to lookup
- *  @param  handler     handler that is already in use
- *  @return bool
- */
-bool Context::searchable(const char *domain, DNS::Handler *handler) const
-{
-    // length of the lookup
-    size_t length = strlen(domain);
-    
-    // empty domains fail anyway
-    if (length == 0) return false;
-    
-    // canonical domains don't go into recursion
-    if (domain[length-1] == '.') return false;
-    
-    // count the dots
-    size_t ndots = std::count(domain, domain + length + 1, '.');
-    
-    // compare with the 'ndots' setting
-    if (ndots >= _config->ndots()) return false;
-    
-    // do not do recursion (if the current handler already is a SearchLookup)
-    return dynamic_cast<SearchLookup*>(handler) == nullptr;
-}
-
-/**
  *  Do a dns lookup
  *  @param  domain      the record name to look for
  *  @param  type        type of record (normally you ask for an 'a' record)
@@ -116,27 +64,9 @@ bool Context::searchable(const char *domain, DNS::Handler *handler) const
  */
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler)
 {
-    // check if we should respect the search path
-    if (searchable(domain, handler)) return new SearchLookup(this, _config, type, bits, domain, handler);
-    
-    // for A and AAAA lookups we also check the /etc/hosts file
-    if (type == ns_t_a    && _config->hosts().lookup(domain, 4)) return add(new LocalLookup(this, _config, domain, type, handler));
-    if (type == ns_t_aaaa && _config->hosts().lookup(domain, 6)) return add(new LocalLookup(this, _config, domain, type, handler));
-    
-    // the request can throw (for example when the domain is invalid
-    try
-    {
-        // we are going to create a self-destructing request
-        return add(new RemoteLookup(this, _config, domain, type, bits, handler));
-    }
-    catch (...)
-    {
-        // invalid parameters were supplied
-        return nullptr;
-    }
+    // pass to the core
+    return _core->query(_config, domain, type, bits, handler);
 }
-
-
 
 /**
  *  Do a reverse IP lookup, this is only meaningful for PTR lookups
@@ -147,11 +77,8 @@ Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DN
  */
 Operation *Context::query(const Ip &ip, const Bits &bits, DNS::Handler *handler)
 {
-    // if the /etc/hosts file already holds a record
-    if (_config->hosts().lookup(ip)) return add(new LocalLookup(this, _config, ip, handler));
-
-    // pass on to the regular query method
-    return query(Reverse(ip), TYPE_PTR, bits, handler);
+    // pass to the core
+    return _core->query(_config, ip, bits, handler);
 }
 
 /**

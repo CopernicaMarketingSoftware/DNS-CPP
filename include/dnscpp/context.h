@@ -36,9 +36,15 @@ class SearchLookupHandler;
 /**
  *  Class definition
  */
-class Context : private Core
+class Context
 {
 private:
+    /**
+     *  Core as member variable
+     *  @var std::shared_ptr<Core>
+     */
+    std::shared_ptr<Core> _core;
+
     /**
      *  The configuration used by this context
      *  @var std::shared<Config>
@@ -52,19 +58,11 @@ private:
     Bits _bits;
 
     /**
-     *  Should the search path be respected?
-     *  @param  domain      the domain to lookup
-     *  @param  handler     handler that is already in use
-     *  @return bool
-     */
-    bool searchable(const char *domain, DNS::Handler *handler) const;
-
-    /**
      *  Constructor
      *  @param  loop
      *  @param  config
      */
-    Context(Loop *loop, const std::shared_ptr<Config> &config) : Core(loop), _config(config) {}
+    Context(Loop *loop, const std::shared_ptr<Config> &config) : _core(std::make_shared<Core>(loop)), _config(config) {}
 
 public:
     /**
@@ -119,20 +117,9 @@ public:
     
     /**
      *  Number of sockets to use
-     *  This is normally 1 which is enough for most applications. However,
-     *  for applications that send many UDP requests (new requests are sent
-     *  before the previous ones are completed, this number could be set higher
-     *  to ensure that the load is spread out over multiple sockets that are 
-     *  closed and opened every now and then to ensure that port numbers are
-     *  refreshed. You can only use this to _increment_ the number of sockets.
      *  @param  count       number of sockets
      */
-    void sockets(size_t count)
-    {
-        // pass on
-        _ipv4.sockets(count);
-        _ipv6.sockets(count);
-    }
+    void sockets(size_t count) { _core->sockets(count); }
     
     /**
      *  Set max time to wait for a response
@@ -168,13 +155,19 @@ public:
      *  Set the send & receive buffer size of each individual UDP socket
      *  @param value  the value to set
      */
-    void buffersize(int32_t value);
+    void buffersize(int32_t value) { _core->buffersize(value); }
+
+    /**
+     *  THe capacity: number of operations to run at the same time
+     *  @return size_t
+     */
+    size_t capacity() const { return _core->capacity(); }
 
     /**
      *  Set the capacity: number of operations to run at the same time
      *  @param  value       the new value
      */
-    void capacity(size_t value);
+    void capacity(size_t value) { _core->capacity(value); }
 
     /**
      *  Default bits that are sent with each query
@@ -206,7 +199,7 @@ public:
      *  Set the max number of calls that are made to userspace in one iteration
      *  @param  value       the new value
      */
-    void maxcalls(size_t value) { _maxcalls = value; }
+    void maxcalls(size_t value) { _core->maxcalls(value); }
 
     /**
      *  The 'ndots' setting from resolv.conf
@@ -265,11 +258,6 @@ public:
      */
     Operation *query(const DNS::Ip &ip, const Bits &bits, const SuccessCallback &success, const FailureCallback &failure);
     Operation *query(const DNS::Ip &ip, const SuccessCallback &success, const FailureCallback &failure) { return query(ip, _bits, success, failure); }
-    
-    /**
-     *  Expose some getters from core
-     */
-    using Core::capacity;
 };
     
 /**

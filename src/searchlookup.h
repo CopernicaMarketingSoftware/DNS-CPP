@@ -32,10 +32,10 @@ class SearchLookup : public DNS::Operation, public DNS::Handler
 {
 private:
     /**
-     *  DNS context object to ask for querys
-     *  @var DNS::Context
+     *  DNS core object to ask for querys
+     *  @var DNS::Core
      */
-    DNS::Context *_context;
+    DNS::Core *_core;
     
     /**
      *  The congifuration to use
@@ -171,7 +171,7 @@ private:
 
         // perform dns-query on the constructed path
         // and save the operation so we can cancell it if requested
-        _operation = _context->query(nexthost.c_str(), _type, _bits, this);
+        _operation = _core->query(_config, nexthost.c_str(), _type, _bits, this);
 
         // return success
         return true;
@@ -184,7 +184,7 @@ private:
     bool finalize()
     {
         // start a lookup for just the requested domain
-        _operation = _context->query(_basedomain.c_str(), _type, _bits, this);
+        _operation = _core->query(_config, _basedomain.c_str(), _type, _bits, this);
         
         // update index to prevent loops
         _index = size_t(-1);
@@ -201,16 +201,16 @@ private:
 public:
     /**
      *  Constructor
-     *  @param context      the context object that will perform the queries
+     *  @param core         the context object that will perform the queries
      *  @param config       object that knows which search-path to use
      *  @param type         the type of query the user supplied
      *  @param bits         the bits the user supplied
      *  @param basedomain   the base domain the user supplied
      *  @param handler      the handler the user supplied
      */
-    SearchLookup(DNS::Context *context, const std::shared_ptr<Config> &config, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
+    SearchLookup(DNS::Core *core, const std::shared_ptr<Config> &config, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
         Operation(handler),
-        _context(context),
+        _core(core),
         _config(config),
         _basedomain(basedomain),
         _index(0),

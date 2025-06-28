@@ -156,6 +156,14 @@ protected:
      *  @return Operation
      */
     Operation *add(Lookup *lookup);
+
+    /**
+     *  Should the search path be respected?
+     *  @param  domain      the domain to lookup
+     *  @param  handler     handler that is already in use
+     *  @return bool
+     */
+    static bool searchable(const std::shared_ptr<Config> &config, const char *domain, DNS::Handler *handler);
     
 
 public:
@@ -194,12 +202,52 @@ public:
      *  @return Loop
      */
     Loop *loop() { return _loop; }
+
+    /**
+     *  Number of sockets to use
+     *  This is normally 1 which is enough for most applications. However,
+     *  for applications that send many UDP requests (new requests are sent
+     *  before the previous ones are completed, this number could be set higher
+     *  to ensure that the load is spread out over multiple sockets that are 
+     *  closed and opened every now and then to ensure that port numbers are
+     *  refreshed. You can only use this to _increment_ the number of sockets.
+     *  @param  count       number of sockets
+     */
+    void sockets(size_t count)
+    {
+        // pass on
+        _ipv4.sockets(count);
+        _ipv6.sockets(count);
+    }
+
+    /**
+     *  Set the max number of calls that are made to userspace in one iteration
+     *  @param  value       the new value
+     */
+    void maxcalls(size_t value) { _maxcalls = value; }
     
     /**
      *  THe capacity: number of operations to run at the same time
      *  @return size_t
      */
     size_t capacity() const { return _capacity; }
+
+    /**
+     *  Set the capacity: number of operations to run at the same time
+     *  @param  value       the new value
+     */
+    void capacity(size_t value);
+
+    /**
+     *  Set the send & receive buffer size of each individual UDP socket
+     *  @param value  the value to set
+     */
+    void buffersize(int32_t value)
+    {
+        // pass to the actual sockets
+        _ipv4.buffersize(value);
+        _ipv6.buffersize(value);
+    }
     
     /**
      *  Send a message over a UDP socket
@@ -217,6 +265,27 @@ public:
      *  @return Connecting*     object to which the caller is subscribed
      */
     Connecting *connect(const Ip &ip, Connector *connector);
+
+    /**
+     *  Do a dns lookup
+     *  @param  config      configuration to use
+     *  @param  domain      the record name to look for
+     *  @param  type        type of record (normally you ask for an 'a' record)
+     *  @param  bits        bits to include in the query
+     *  @param  handler     object that will be notified when the query is ready
+     *  @return Operation   object to interact with the operation while it is in progress
+     */
+    Operation *query(const std::shared_ptr<Config> &config, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler);
+
+    /**
+     *  Do a reverse IP lookup, this is only meaningful for PTR lookups
+     *  @param  config      configuration to use
+     *  @param  ip          the ip address to lookup
+     *  @param  bits        bits to include in the query
+     *  @param  handler     object that will be notified when the query is ready
+     *  @return operation   object to interact with the operation while it is in progress
+     */
+    Operation *query(const std::shared_ptr<Config> &config, const Ip &ip, const Bits &bits, DNS::Handler *handler);
 
     /**
      *  Mark a lookup as cancelled and start more queues lookups
