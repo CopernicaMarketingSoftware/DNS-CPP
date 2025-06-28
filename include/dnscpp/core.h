@@ -64,12 +64,6 @@ protected:
     Sockets _ipv6;
 
     /**
-     *  The configuration
-     *  @var std::shared_ptr<Config>
-     */
-    std::shared_ptr<Config> _config;
-
-    /**
      *  All operations that are in progress and that are waiting for the next 
      *  (possibly first) attempt. Note that we use multiple queues so that we do
      *  not have to use a slow (priority) queue.
@@ -168,11 +162,8 @@ public:
     /**
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
-     *  @param  config      the configuration
-     * 
-     *  @deprecated
      */
-    Core(Loop *loop, const std::shared_ptr<Config> &config);
+    Core(Loop *loop);
 
     /**
      *  No copying
@@ -205,42 +196,11 @@ public:
     Loop *loop() { return _loop; }
     
     /**
-     *  The period between sending the datagram again
-     *  @return double
-     */
-    double interval() const { return _config->interval(); }
-    
-    /**
-     *  The time to wait for a response
-     *  @return double
-     */
-    double timeout() const { return _config->timeout(); }
-    
-    /**
-     *  Max number of attempts / number of requests to send
-     *  @return size_t
-     */
-    size_t attempts() const { return _config->attempts(); }
-    
-    /**
      *  THe capacity: number of operations to run at the same time
      *  @return size_t
      */
     size_t capacity() const { return _capacity; }
     
-    /**
-     *  Should all nameservers be rotated? otherwise they will be tried in-order
-     *  @var bool
-     */
-    bool rotate() const { return _config->rotate(); }
-
-    /**
-     *  Does a certain hostname exists in /etc/hosts? In that case a NXDOMAIN error should not be given
-     *  @param  hostname        hostname to check
-     *  @return bool            does it exists in /etc/hosts?
-     */
-    bool exists(const char *hostname) const { return _config->exists(hostname); }
-
     /**
      *  Send a message over a UDP socket
      *  @param  ip              target IP

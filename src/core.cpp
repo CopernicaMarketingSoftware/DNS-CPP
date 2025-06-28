@@ -23,15 +23,12 @@ namespace DNS {
 /**
  *  Constructor
  *  @param  loop        your event loop
- *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
- *  @param  buffersize  send & receive buffer size of each UDP socket
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, const std::shared_ptr<Config> &config) :
+Core::Core(Loop *loop) :
     _loop(loop),
     _ipv4(loop, this),
-    _ipv6(loop, this),
-    _config(config) {}
+    _ipv6(loop, this) {}
 
 /**
  *  Destructor

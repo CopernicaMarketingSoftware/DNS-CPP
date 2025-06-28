@@ -64,7 +64,7 @@ private:
      *  @param  loop
      *  @param  config
      */
-    Context(Loop *loop, const std::shared_ptr<Config> &config) : Core(loop, config), _config(config) {}
+    Context(Loop *loop, const std::shared_ptr<Config> &config) : Core(loop), _config(config) {}
 
 public:
     /**
