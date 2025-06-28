@@ -106,12 +106,6 @@ protected:
     bool _immediate = false;
 
     /**
-     *  Default bits to include in queries
-     *  @var Bits
-     */
-    Bits _bits;
-    
-    /**
      *  Max number of operations to run at the same time
      *  @var size_t
      */
@@ -234,12 +228,6 @@ public:
      */
     size_t capacity() const { return _capacity; }
     
-    /**
-     *  Default bits that are sent with each query
-     *  @return Bits
-     */
-    const Bits &bits() const { return _bits; }
-
     /**
      *  Should all nameservers be rotated? otherwise they will be tried in-order
      *  @var bool

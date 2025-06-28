@@ -46,6 +46,12 @@ private:
     std::shared_ptr<Config> _config;
 
     /**
+     *  Default bits to include in queries
+     *  @var Bits
+     */
+    Bits _bits;
+
+    /**
      *  Should the search path be respected?
      *  @param  domain      the domain to lookup
      *  @param  handler     handler that is already in use
@@ -169,6 +175,12 @@ public:
      *  @param  value       the new value
      */
     void capacity(size_t value);
+
+    /**
+     *  Default bits that are sent with each query
+     *  @return Bits
+     */
+    const Bits &bits() const { return _bits; }
     
     /**
      *  Enable or disable certain bits
@@ -257,9 +269,7 @@ public:
     /**
      *  Expose some getters from core
      */
-    using Core::bits;
     using Core::capacity;
-    //using Core::searchpaths;
 };
     
 /**
