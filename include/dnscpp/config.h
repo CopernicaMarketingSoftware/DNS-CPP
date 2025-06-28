@@ -205,6 +205,12 @@ public:
      *  @return double
      */
     double interval() const { return _interval; }
+
+    /**
+     *  Set interval before a datagram is sent again
+     *  @param  interval    time in seconds
+     */
+    void interval(double interval) { _interval = std::max(interval, 0.1); }
     
     /**
      *  Default bits to include in queries

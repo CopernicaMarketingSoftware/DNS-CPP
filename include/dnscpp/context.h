@@ -144,8 +144,8 @@ public:
      */
     void interval(double interval)
     {
-        // store property, make sure the numbers are reasonably clamped
-        _interval = std::max(interval, 0.1);
+        // pass on
+        _config->interval(interval);
     }
     
     /**

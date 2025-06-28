@@ -106,12 +106,6 @@ protected:
     bool _immediate = false;
 
     /**
-     *  Interval before a datagram is sent again
-     *  @var double
-     */
-    double _interval = 2.0;
-    
-    /**
      *  Default bits to include in queries
      *  @var Bits
      */
@@ -232,7 +226,7 @@ public:
      *  The period between sending the datagram again
      *  @return double
      */
-    double interval() const { return _interval; }
+    double interval() const { return _config->interval(); }
     
     /**
      *  The time to wait for a response
