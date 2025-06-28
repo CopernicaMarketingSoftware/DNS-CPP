@@ -132,31 +132,31 @@ public:
      *  Set max time to wait for a response
      *  @param timeout      time in seconds
      */
-    void timeout(double timeout)
-    {
-        // pass on
-        _config->timeout(timeout);
-    }
+    void timeout(double timeout) { _config->timeout(timeout); }
+    
+    /**
+     *  Interval before a datagram is sent again
+     *  @return double
+     */
+    double interval() const { return _config->interval(); }
     
     /**
      *  Set interval before a datagram is sent again
      *  @param  interval    time in seconds
      */
-    void interval(double interval)
-    {
-        // pass on
-        _config->interval(interval);
-    }
+    void interval(double interval) { _config->interval(interval); }
+
+    /**
+     *  Max number of attempts / requests to send per query
+     *  @return size_t
+     */
+    size_t attempts() const { return _config->attempts(); }
     
     /**
      *  Set the max number of attempts
      *  @param  attempt     max number of attemps
      */
-    void attempts(size_t attempts)
-    {
-        // pass on
-        _config->attempts(attempts);
-    }
+    void attempts(size_t attempts) { _config->attempts(attempts); }
 
     /**
      *  Set the send & receive buffer size of each individual UDP socket
@@ -179,6 +179,12 @@ public:
     void disable(const Bits &bits) { _bits.disable(bits); }
 
     /**
+     *  Should all nameservers be rotated? otherwise they will be tried in-order
+     *  @return bool
+     */
+    bool rotate() const { return _config->rotate(); }
+
+    /**
      *  Set the rotate setting: If true, nameservers will be rotated, if false, nameservers are tried in-order
      *  @param rotate   the new setting
      */
@@ -189,6 +195,12 @@ public:
      *  @param  value       the new value
      */
     void maxcalls(size_t value) { _maxcalls = value; }
+
+    /**
+     *  The 'ndots' setting from resolv.conf
+     *  @return ndots
+     */
+    uint8_t ndots() const { return _config->ndots(); }
     
     /**
      *  Change the ndots setting
@@ -246,9 +258,6 @@ public:
      *  Expose some getters from core
      */
     using Core::bits;
-    using Core::rotate;
-    using Core::expire;
-    using Core::interval;
     using Core::capacity;
     //using Core::searchpaths;
 };
