@@ -22,6 +22,43 @@
 namespace DNS {
 
 /**
+ *  Helper function to construct the configuration
+ *  @param  defaults
+ *  @return std::shared_ptr<Config>
+ */
+static std::shared_ptr<Config> createConfig(bool defaults)
+{
+    // if we do not have to load system defaults, we start with an empty config
+    if (!defaults) return std::make_shared<Config>();
+    
+    // load the defaults from /etc/resolv.conf
+    ResolvConf settings;
+    
+    // construct the context
+    return std::make_shared<Config>(settings);
+}    
+
+/**
+ *  Constructor
+ *  You can specify whether the system defaults from /etc/resolv.conf and
+ *  /etc/hosts should be loaded or not. If you decide to no load the system
+ *  defaults, you must explicitly assign nameservers to the context before
+ *  you can run any queries.
+ *  @param  loop        your event loop
+ *  @param  defaults    should system settings be loaded
+ */
+Context::Context(Loop *loop, bool defaults) : Core(loop, createConfig(defaults)) {}
+
+/**
+ *  Constructor
+ *  @param  loop        your event loop
+ *  @param  settings    settings parsed from the /etc/resolv.conf file
+ * 
+ *  @deprecated
+ */
+Context::Context(Loop *loop, const ResolvConf &settings) : Core(loop, std::make_shared<Config>(settings)) {}
+
+/**
  *  Set the send & receive buffer size of each individual UDP socket
  *  @param value  the value to set
  */

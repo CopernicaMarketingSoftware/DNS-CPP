@@ -37,12 +37,54 @@ private:
      */
     Hosts _hosts;
 
+    /**
+     *  Max time that we wait for a response
+     *  @var double
+     */
+    double _timeout = 60.0;
+    
+    /**
+     *  Max number of attempts / requests to send per query
+     *  @var size_t
+     */
+    size_t _attempts = 5;
+
+    /**
+     *  Interval before a datagram is sent again
+     *  @var double
+     */
+    double _interval = 2.0;
+    
+    /**
+     *  Default bits to include in queries
+     *  @var Bits
+     */
+    Bits _bits;
+    
+    /**
+     *  Should all nameservers be rotated? otherwise they will be tried in-order
+     *  @var bool
+     */
+    bool _rotate = false;
+    
+    /**
+     *  The 'ndots' setting from resolv.conf
+     *  @var ndots
+     */
+    uint8_t _ndots = 1;
+
+
 public:
     /**
      *  Default constructor
      *  @param  settings
      */
-    Config(const ResolvConf &settings)
+    Config(const ResolvConf &settings) :
+        _timeout(settings.timeout()),
+        _attempts(settings.attempts()),
+        _interval(settings.timeout()),
+        _rotate(settings.rotate()),
+        _ndots(settings.ndots())
     {
         // construct the nameservers and search paths
         for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
@@ -133,6 +175,42 @@ public:
         // lookup the name
         return _hosts.lookup(hostname) != nullptr;
     }
+
+    /**
+     *  Max time that we wait for a response
+     *  @return double
+     */
+    double timeout() const { return _timeout; }
+    
+    /**
+     *  Max number of attempts / requests to send per query
+     *  @return size_t
+     */
+    size_t attempts() const { return _attempts; }
+
+    /**
+     *  Interval before a datagram is sent again
+     *  @return double
+     */
+    double interval() const { return _interval; }
+    
+    /**
+     *  Default bits to include in queries
+     *  @return Bits
+     */
+    const Bits &bits() const { return _bits; }
+    
+    /**
+     *  Should all nameservers be rotated? otherwise they will be tried in-order
+     *  @return bool
+     */
+    bool rotate() const { return _rotate; }
+    
+    /**
+     *  The 'ndots' setting from resolv.conf
+     *  @return ndots
+     */
+    uint8_t ndots() const { return _ndots; }
 };
 
 /**

@@ -199,22 +199,22 @@ protected:
      */
     Operation *add(Lookup *lookup);
     
-    /**
-     *  Protected constructor, only the derived class may construct it
-     *  @param  loop        your event loop
-     *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
-     *  @throws std::runtime_error
-     */
-    Core(Loop *loop, bool defaults);
 
+public:
     /**
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
-     *  @param  settings    settings from the resolv.conf file
+     *  @param  config      the configuration
      * 
      *  @deprecated
      */
-    Core(Loop *loop, const ResolvConf &settings);
+    Core(Loop *loop, const std::shared_ptr<Config> &config);
+
+    /**
+     *  No copying
+     *  @param  that
+     */
+    Core(const Core &that) = delete;
     
     /**
      *  Destructor
@@ -234,14 +234,6 @@ protected:
      */
     void reschedule(double now);
 
-
-public:
-    /**
-     *  No copying
-     *  @param  that
-     */
-    Core(const Core &that) = delete;
-    
     /**
      *  Expose the event loop
      *  @return Loop

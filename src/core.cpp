@@ -27,53 +27,19 @@ namespace DNS {
  *  @param  buffersize  send & receive buffer size of each UDP socket
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults) :
-    _loop(loop),
-    _ipv4(loop, this),
-    _ipv6(loop, this)
-{
-    // do nothing if we don't need the defaults
-    if (!defaults)
-    {
-        // use default configuration
-        _config = std::make_shared<Config>();
-    }
-    else
-    {
-        // load the defaults from /etc/resolv.conf
-        ResolvConf settings;
-        
-        // construct the context
-        _config = std::make_shared<Config>(settings);
-        
-        // take over some of the settings
-        // @todo should we be using other settings for a different nameserver?
-        _timeout = settings.timeout();
-        _interval = settings.timeout();
-        _attempts = settings.attempts();
-        _rotate = settings.rotate();
-        _ndots = settings.ndots();
-    }
-}
-
-/**
- *  Protected constructor, only the derived class may construct it
- *  @param  loop        your event loop
- *  @param  settings    settings from the resolv.conf file
- *  @param  buffersize  send & receive buffer size of each UDP socket
- */
-Core::Core(Loop *loop, const ResolvConf &settings) :
+Core::Core(Loop *loop, const std::shared_ptr<Config> &config) :
     _loop(loop),
     _ipv4(loop, this),
     _ipv6(loop, this),
-    _config(std::make_shared<Config>(settings))
+    _config(config)
 {
     // take over some of the settings
-    _timeout = settings.timeout();
-    _interval = settings.timeout();
-    _attempts = settings.attempts();
-    _rotate = settings.rotate();
-    _ndots = settings.ndots();
+    // @todo should we be using other settings for a different nameserver?
+    _timeout = _config->timeout();
+    _interval = _config->timeout();
+    _attempts = _config->attempts();
+    _rotate = _config->rotate();
+    _ndots = _config->ndots();
 }
 
 /**

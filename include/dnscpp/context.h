@@ -57,7 +57,7 @@ public:
      *  @param  loop        your event loop
      *  @param  defaults    should system settings be loaded
      */
-    Context(Loop *loop, bool defaults = true) : Core(loop, defaults) {}
+    Context(Loop *loop, bool defaults = true);
 
     /**
      *  Constructor
@@ -66,7 +66,7 @@ public:
      * 
      *  @deprecated
      */
-    Context(Loop *loop, const ResolvConf &settings) : Core(loop, settings) {}
+    Context(Loop *loop, const ResolvConf &settings);
     
     /**
      *  No copying
