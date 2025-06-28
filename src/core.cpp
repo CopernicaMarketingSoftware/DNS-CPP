@@ -4,7 +4,7 @@
  *  Implementation file for the Core class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2022 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -14,6 +14,10 @@
 #include "../include/dnscpp/lookup.h"
 #include "../include/dnscpp/loop.h"
 #include "../include/dnscpp/watcher.h"
+#include "idgenerator.h"
+#include "searchlookup.h"
+#include "locallookup.h"
+#include "remotelookup.h"
 
 /**
  *  Begin of namespace
@@ -23,59 +27,12 @@ namespace DNS {
 /**
  *  Constructor
  *  @param  loop        your event loop
- *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
- *  @param  buffersize  send & receive buffer size of each UDP socket
  *  @throws std::runtime_error
  */
-Core::Core(Loop *loop, bool defaults) :
+Core::Core(Loop *loop) :
     _loop(loop),
     _ipv4(loop, this),
-    _ipv6(loop, this)
-{
-    // do nothing if we don't need the defaults
-    if (!defaults) return;
-    
-    // load the defaults from /etc/resolv.conf
-    ResolvConf settings;
-    
-    // copy the nameservers and search paths
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
-    for (size_t i = 0; i < settings.searchpaths(); ++i) _searchpaths.emplace_back(settings.searchpath(i));
-    
-    // take over some of the settings
-    _timeout = settings.timeout();
-    _interval = settings.timeout();
-    _attempts = settings.attempts();
-    _rotate = settings.rotate();
-    _ndots = settings.ndots();
-
-    // we also have to load /etc/hosts
-    if (!_hosts.load()) throw std::runtime_error("failed to load /etc/hosts");
-}
-
-/**
- *  Protected constructor, only the derived class may construct it
- *  @param  loop        your event loop
- *  @param  settings    settings from the resolv.conf file
- *  @param  buffersize  send & receive buffer size of each UDP socket
- */
-Core::Core(Loop *loop, const ResolvConf &settings) :
-    _loop(loop),
-    _ipv4(loop, this),
-    _ipv6(loop, this)
-{
-    // construct the nameservers and search paths
-    for (size_t i = 0; i < settings.nameservers(); ++i) _nameservers.emplace_back(settings.nameserver(i));
-    for (size_t i = 0; i < settings.searchpaths(); ++i) _searchpaths.emplace_back(settings.searchpath(i));
-
-    // take over some of the settings
-    _timeout = settings.timeout();
-    _interval = settings.timeout();
-    _attempts = settings.attempts();
-    _rotate = settings.rotate();
-    _ndots = settings.ndots();
-}
-
+    _ipv6(loop, this) {}
 
 /**
  *  Destructor
@@ -87,6 +44,16 @@ Core::~Core()
     
     // stop the timer
     _loop->cancel(_timer, this);
+}
+
+/**
+ *  Set the capacity: number of operations to run at the same time
+ *  @param  value       the new value
+ */
+void Core::capacity(size_t value)
+{
+    // store property
+    _capacity = std::min((size_t)IdGenerator::capacity(), std::max(size_t(1), value));
 }
 
 /**
@@ -118,7 +85,7 @@ Operation *Core::add(Lookup *lookup)
         // expire soon so that it is picked up and reported to user space
         timer(0.0);
     }
-    else if (_capacity <= _inflight || _nameservers.empty())
+    else if (_capacity <= _inflight || lookup->config()->nameservers() == 0)
     {
         // we are going to update _scheduled, check if this is the first time
         bool wasempty = _scheduled.empty();
@@ -390,6 +357,81 @@ Connecting *Core::connect(const Ip &ip, Connector *connector)
     case 6:     return _ipv6.connect(ip, connector);
     default:    return nullptr;
     }
+}
+
+/**
+ *  Should the search path be respected?
+ *  @param  config      configuration
+ *  @param  domain      the domain to lookup
+ *  @param  handler     handler that is already in use
+ *  @return bool
+ */
+bool Core::searchable(const std::shared_ptr<Config> &config, const char *domain, DNS::Handler *handler)
+{
+    // length of the lookup
+    size_t length = strlen(domain);
+    
+    // empty domains fail anyway
+    if (length == 0) return false;
+    
+    // canonical domains don't go into recursion
+    if (domain[length-1] == '.') return false;
+    
+    // count the dots
+    size_t ndots = std::count(domain, domain + length + 1, '.');
+    
+    // compare with the 'ndots' setting
+    if (ndots >= config->ndots()) return false;
+    
+    // do not do recursion (if the current handler already is a SearchLookup)
+    return dynamic_cast<SearchLookup*>(handler) == nullptr;
+}
+
+/**
+ *  Do a dns lookup
+ *  @param  domain      the record name to look for
+ *  @param  type        type of record (normally you ask for an 'a' record)
+ *  @param  bits        bits to include in the query
+ *  @param  handler     object that will be notified when the query is ready
+ *  @return Operation   object to interact with the operation while it is in progress
+ */
+Operation *Core::query(const std::shared_ptr<Config> &config, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler)
+{
+    // check if we should respect the search path
+    if (searchable(config, domain, handler)) return new SearchLookup(this, config, type, bits, domain, handler);
+    
+    // for A and AAAA lookups we also check the /etc/hosts file
+    if (type == ns_t_a    && config->hosts().lookup(domain, 4)) return add(new LocalLookup(this, config, domain, type, handler));
+    if (type == ns_t_aaaa && config->hosts().lookup(domain, 6)) return add(new LocalLookup(this, config, domain, type, handler));
+    
+    // the request can throw (for example when the domain is invalid
+    try
+    {
+        // we are going to create a self-destructing request
+        return add(new RemoteLookup(this, config, domain, type, bits, handler));
+    }
+    catch (...)
+    {
+        // invalid parameters were supplied
+        return nullptr;
+    }
+}
+
+/**
+ *  Do a reverse IP lookup, this is only meaningful for PTR lookups
+ *  @param  config      configuration to use
+ *  @param  ip          the ip address to lookup
+ *  @param  bits        bits to include in the query
+ *  @param  handler     object that will be notified when the query is ready
+ *  @return operation   object to interact with the operation while it is in progress
+ */
+Operation *Core::query(const std::shared_ptr<Config> &config, const Ip &ip, const Bits &bits, DNS::Handler *handler)
+{
+    // if the /etc/hosts file already holds a record
+    if (config->hosts().lookup(ip)) return add(new LocalLookup(this, config, ip, handler));
+
+    // pass on to the regular query method
+    return query(config, Reverse(ip), TYPE_PTR, bits, handler);
 }
 
 /**

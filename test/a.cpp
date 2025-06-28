@@ -92,9 +92,10 @@ public:
 
     /**
      *  Method that is called when a raw response is received
+     *  @param  operation       the finished operation
      *  @param  response        the received response
      */
-    virtual void onReceived(const DNS::Response &response) override
+    virtual void onReceived(const DNS::Operation *operation, const DNS::Response &response) override
     {
         std::cout << "validation response is in" << std::endl;
         
@@ -154,9 +155,10 @@ public:
 
     /**
      *  Method that is called when a raw response is received
+     *  @param  operation       the reporting operation
      *  @param  response        the received response
      */
-    virtual void onReceived(const DNS::Response &response) override
+    virtual void onReceived(const DNS::Operation *operation, const DNS::Response &response) override
     {
         // go look for the A record
         for (size_t i = 0; i < response.answers(); ++i)
@@ -201,7 +203,7 @@ int main()
     context.nameserver(DNS::Ip("8.8.8.8"));
     
     // do a query
-    context.query("www.example.com", ns_t_a, &handler);
+    context.query("www.google.com", ns_t_a, &handler);
     
     // run the event loop
     ev_run(loop, 0);

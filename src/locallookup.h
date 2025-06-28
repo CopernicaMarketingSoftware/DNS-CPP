@@ -4,7 +4,7 @@
  *  Class that implements the lookup in the local /etc/hosts file
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2023 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
  
 /**
@@ -31,12 +31,6 @@ class LocalLookup : public Lookup
 {
 private:
     /**
-     *  Reference to the /etc/hosts file
-     *  @var Hosts
-     */
-    const Hosts &_hosts;
-    
-    /**
      *  Execute the lookup. Returns true when a user-space call was made, and false when further
      *  processing is required.
      *  @param  now         current time
@@ -54,7 +48,7 @@ private:
         _handler = nullptr;
 
         // pass to the hosts (this will trigger an immediate call to the handler)
-        _hosts.notify(Request(this), handler, this);
+        _config->hosts().notify(Request(this), handler, this);
         
         // done
         return true;
@@ -133,22 +127,23 @@ public:
      *  To keep the behavior of lookups consistent with the behavior of remote lookups, we set
      *  a timer so that userspace will be informed in a later tick of the event loop
      *  @param  core
-     *  @param  hosts
+     *  @param  config
      *  @param  domain
      *  @param  type
      *  @param  handler
      */
-    LocalLookup(Core *core, const Hosts &hosts, const char *domain, int type, Handler *handler) :
-        Lookup(core, handler, ns_o_query, domain, type, Bits{}), _hosts(hosts) {}
+    LocalLookup(Core *core, const std::shared_ptr<Config> &config, const char *domain, int type, Handler *handler) :
+        Lookup(core, config, handler, ns_o_query, domain, type, Bits{}) {}
 
     /**
      *  Constructor
      *  This is a utility constructor for reverse lookups
-     *  @param  hosts
+     *  @param  core
+     *  @param  config
      *  @param  ip
      *  @param  handler
      */
-    LocalLookup(Core *core, const Hosts &hosts, const Ip &ip, Handler *handler) : LocalLookup(core, hosts, Reverse(ip), TYPE_PTR, handler) {}
+    LocalLookup(Core *core, const std::shared_ptr<Config> &config, const Ip &ip, Handler *handler) : LocalLookup(core, config, Reverse(ip), TYPE_PTR, handler) {}
 
     /**
      *  Destructor

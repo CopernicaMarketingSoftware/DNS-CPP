@@ -7,7 +7,7 @@
  *  be called from user space, but they are used internally.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2022 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -26,6 +26,7 @@
 #include "lookup.h"
 #include "processor.h"
 #include "timer.h"
+#include "config.h"
 #include <list>
 #include <deque>
 #include <memory>
@@ -63,24 +64,6 @@ protected:
     Sockets _ipv6;
 
     /**
-     *  The IP addresses of the servers that can be accessed
-     *  @var std::vector<Ip>
-     */
-    std::vector<Ip> _nameservers;
-
-    /**
-     *  The IP addresses of the servers that can be accessed
-     *  @var std::vector<Ip>
-     */
-    std::vector<std::string> _searchpaths;
-    
-    /**
-     *  The contents of the /etc/hosts file
-     *  @var Hosts
-     */
-    Hosts _hosts;
-
-    /**
      *  All operations that are in progress and that are waiting for the next 
      *  (possibly first) attempt. Note that we use multiple queues so that we do
      *  not have to use a slow (priority) queue.
@@ -114,44 +97,8 @@ protected:
      *  Is the timer expected to expire right away
      *  @var bool
      */
-    double _immediate = false;
+    bool _immediate = false;
 
-    /**
-     *  Max time that we wait for a response
-     *  @var double
-     */
-    double _timeout = 60.0;
-    
-    /**
-     *  Max number of attempts / requests to send per query
-     *  @var size_t
-     */
-    size_t _attempts = 5;
-
-    /**
-     *  Interval before a datagram is sent again
-     *  @var double
-     */
-    double _interval = 2.0;
-    
-    /**
-     *  Default bits to include in queries
-     *  @var Bits
-     */
-    Bits _bits;
-    
-    /**
-     *  Should all nameservers be rotated? otherwise they will be tried in-order
-     *  @var bool
-     */
-    bool _rotate = false;
-    
-    /**
-     *  The 'ndots' setting from resolv.conf
-     *  @var ndots
-     */
-    uint8_t _ndots = 1;
-    
     /**
      *  Max number of operations to run at the same time
      *  @var size_t
@@ -209,23 +156,28 @@ protected:
      *  @return Operation
      */
     Operation *add(Lookup *lookup);
-    
-    /**
-     *  Protected constructor, only the derived class may construct it
-     *  @param  loop        your event loop
-     *  @param  defaults    should defaults from resolv.conf and /etc/hosts be loaded?
-     *  @throws std::runtime_error
-     */
-    Core(Loop *loop, bool defaults);
 
     /**
+     *  Should the search path be respected?
+     *  @param  domain      the domain to lookup
+     *  @param  handler     handler that is already in use
+     *  @return bool
+     */
+    static bool searchable(const std::shared_ptr<Config> &config, const char *domain, DNS::Handler *handler);
+    
+
+public:
+    /**
      *  Protected constructor, only the derived class may construct it
      *  @param  loop        your event loop
-     *  @param  settings    settings from the resolv.conf file
-     * 
-     *  @deprecated
      */
-    Core(Loop *loop, const ResolvConf &settings);
+    Core(Loop *loop);
+
+    /**
+     *  No copying
+     *  @param  that
+     */
+    Core(const Core &that) = delete;
     
     /**
      *  Destructor
@@ -245,63 +197,58 @@ protected:
      */
     void reschedule(double now);
 
-
-public:
-    /**
-     *  No copying
-     *  @param  that
-     */
-    Core(const Core &that) = delete;
-    
     /**
      *  Expose the event loop
      *  @return Loop
      */
     Loop *loop() { return _loop; }
-    
+
     /**
-     *  The period between sending the datagram again
-     *  @return double
+     *  Number of sockets to use
+     *  This is normally 1 which is enough for most applications. However,
+     *  for applications that send many UDP requests (new requests are sent
+     *  before the previous ones are completed, this number could be set higher
+     *  to ensure that the load is spread out over multiple sockets that are 
+     *  closed and opened every now and then to ensure that port numbers are
+     *  refreshed. You can only use this to _increment_ the number of sockets.
+     *  @param  count       number of sockets
      */
-    double interval() const { return _interval; }
-    
+    void sockets(size_t count)
+    {
+        // pass on
+        _ipv4.sockets(count);
+        _ipv6.sockets(count);
+    }
+
     /**
-     *  The time to wait for a response
-     *  @return double
+     *  Set the max number of calls that are made to userspace in one iteration
+     *  @param  value       the new value
      */
-    double timeout() const { return _timeout; }
-    
-    /**
-     *  Max number of attempts / number of requests to send
-     *  @return size_t
-     */
-    size_t attempts() const { return _attempts; }
+    void maxcalls(size_t value) { _maxcalls = value; }
     
     /**
      *  THe capacity: number of operations to run at the same time
      *  @return size_t
      */
     size_t capacity() const { return _capacity; }
+
+    /**
+     *  Set the capacity: number of operations to run at the same time
+     *  @param  value       the new value
+     */
+    void capacity(size_t value);
+
+    /**
+     *  Set the send & receive buffer size of each individual UDP socket
+     *  @param value  the value to set
+     */
+    void buffersize(int32_t value)
+    {
+        // pass to the actual sockets
+        _ipv4.buffersize(value);
+        _ipv6.buffersize(value);
+    }
     
-    /**
-     *  Default bits that are sent with each query
-     *  @return Bits
-     */
-    const Bits &bits() const { return _bits; }
-
-    /**
-     *  Should all nameservers be rotated? otherwise they will be tried in-order
-     *  @var bool
-     */
-    bool rotate() const { return _rotate; }
-
-    /**
-     *  Does a certain hostname exists in /etc/hosts? In that case a NXDOMAIN error should not be given
-     *  @param  hostname        hostname to check
-     *  @return bool            does it exists in /etc/hosts?
-     */
-    bool exists(const char *hostname) const { return _hosts.lookup(hostname) != nullptr; }
-
     /**
      *  Send a message over a UDP socket
      *  @param  ip              target IP
@@ -320,16 +267,25 @@ public:
     Connecting *connect(const Ip &ip, Connector *connector);
 
     /**
-     *  Expose the nameservers
-     *  @return std::string<Ip>
+     *  Do a dns lookup
+     *  @param  config      configuration to use
+     *  @param  domain      the record name to look for
+     *  @param  type        type of record (normally you ask for an 'a' record)
+     *  @param  bits        bits to include in the query
+     *  @param  handler     object that will be notified when the query is ready
+     *  @return Operation   object to interact with the operation while it is in progress
      */
-    const std::vector<Ip> &nameservers() const { return _nameservers; }
+    Operation *query(const std::shared_ptr<Config> &config, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler);
 
     /**
-     *  Expose the search-paths
-     *  @return std::vector<std::string>
+     *  Do a reverse IP lookup, this is only meaningful for PTR lookups
+     *  @param  config      configuration to use
+     *  @param  ip          the ip address to lookup
+     *  @param  bits        bits to include in the query
+     *  @param  handler     object that will be notified when the query is ready
+     *  @return operation   object to interact with the operation while it is in progress
      */
-    const std::vector<std::string> &searchpaths() const { return _searchpaths; }
+    Operation *query(const std::shared_ptr<Config> &config, const Ip &ip, const Bits &bits, DNS::Handler *handler);
 
     /**
      *  Mark a lookup as cancelled and start more queues lookups

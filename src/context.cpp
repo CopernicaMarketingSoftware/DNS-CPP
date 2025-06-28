@@ -4,17 +4,13 @@
  *  Implementation file for the Context class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2022 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
  *  Dependencies
  */
 #include "../include/dnscpp/context.h"
-#include "remotelookup.h"
-#include "locallookup.h"
-#include "idgenerator.h"
-#include "searchlookup.h"
 
 /**
  *  Begin of namespace
@@ -22,51 +18,59 @@
 namespace DNS {
 
 /**
- *  Set the send & receive buffer size of each individual UDP socket
- *  @param value  the value to set
+ *  Helper function to construct the configuration
+ *  @param  defaults
+ *  @return std::shared_ptr<Config>
  */
-void Context::buffersize(int32_t value)
+static std::shared_ptr<Config> createConfig(bool defaults)
 {
-    // pass to the actual sockets
-    _ipv4.buffersize(value);
-    _ipv6.buffersize(value);
-}
+    // if we do not have to load system defaults, we start with an empty config
+    if (!defaults) return std::make_shared<Config>();
+    
+    // load the defaults from /etc/resolv.conf
+    ResolvConf settings;
+    
+    // construct the context
+    return std::make_shared<Config>(settings);
+}    
 
 /**
- *  Set the capacity: number of operations to run at the same time
- *  @param  value       the new value
+ *  Constructor
+ *  You can specify whether the system defaults from /etc/resolv.conf and
+ *  /etc/hosts should be loaded or not. If you decide to no load the system
+ *  defaults, you must explicitly assign nameservers to the context before
+ *  you can run any queries.
+ *  @param  loop        your event loop
+ *  @param  defaults    should system settings be loaded
  */
-void Context::capacity(size_t value)
-{
-    // store property
-    _capacity = std::min((size_t)IdGenerator::capacity(), std::max(size_t(1), value));
-}
+Context::Context(Loop *loop, bool defaults) : Context(loop, createConfig(defaults)) {}
 
 /**
- *  Should the search path be respected?
- *  @param  domain      the domain to lookup
- *  @param  handler     handler that is already in use
- *  @return bool
+ *  Constructor
+ *  @param  loop        your event loop
+ *  @param  settings    settings parsed from the /etc/resolv.conf file
+ * 
+ *  @deprecated
  */
-bool Context::searchable(const char *domain, DNS::Handler *handler) const
+Context::Context(Loop *loop, const ResolvConf &settings) : Context(loop, std::make_shared<Config>(settings)) {}
+
+/**
+ *  Copy constructor
+ *  @param  that        the to be copied object
+ */
+Context::Context(const Context &that) : _core(that._core), _config(std::make_shared<Config>(*that._config)), _bits(that._bits) {}
+
+/**
+ *  Reset the configuration - start with all default settings
+ *  @param  defaults    load system resources for defaults (/etc/resolv.conf, /etc/hosts)
+ */
+void Context::reset(bool defaults)
 {
-    // length of the lookup
-    size_t length = strlen(domain);
+    // install new settings
+    _config = createConfig(defaults);
     
-    // empty domains fail anyway
-    if (length == 0) return false;
-    
-    // canonical domains don't go into recursion
-    if (domain[length-1] == '.') return false;
-    
-    // count the dots
-    size_t ndots = std::count(domain, domain + length + 1, '.');
-    
-    // compare with the 'ndots' setting
-    if (ndots >= _ndots) return false;
-    
-    // do not do recursion (if the current handler already is a SearchLookup)
-    return dynamic_cast<SearchLookup*>(handler) == nullptr;
+    // reset bits too
+    _bits = Bits();
 }
 
 /**
@@ -79,27 +83,9 @@ bool Context::searchable(const char *domain, DNS::Handler *handler) const
  */
 Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler)
 {
-    // check if we should respect the search path
-    if (searchable(domain, handler)) return new SearchLookup(this, type, bits, domain, handler);
-    
-    // for A and AAAA lookups we also check the /etc/hosts file
-    if (type == ns_t_a    && _hosts.lookup(domain, 4)) return add(new LocalLookup(this, _hosts, domain, type, handler));
-    if (type == ns_t_aaaa && _hosts.lookup(domain, 6)) return add(new LocalLookup(this, _hosts, domain, type, handler));
-    
-    // the request can throw (for example when the domain is invalid
-    try
-    {
-        // we are going to create a self-destructing request
-        return add(new RemoteLookup(this, domain, type, bits, handler));
-    }
-    catch (...)
-    {
-        // invalid parameters were supplied
-        return nullptr;
-    }
+    // pass to the core
+    return _core->query(_config, domain, type, bits, handler);
 }
-
-
 
 /**
  *  Do a reverse IP lookup, this is only meaningful for PTR lookups
@@ -110,11 +96,8 @@ Operation *Context::query(const char *domain, ns_type type, const Bits &bits, DN
  */
 Operation *Context::query(const Ip &ip, const Bits &bits, DNS::Handler *handler)
 {
-    // if the /etc/hosts file already holds a record
-    if (_hosts.lookup(ip)) return add(new LocalLookup(this, _hosts, ip, handler));
-
-    // pass on to the regular query method
-    return query(Reverse(ip), TYPE_PTR, bits, handler);
+    // pass to the core
+    return _core->query(_config, ip, bits, handler);
 }
 
 /**

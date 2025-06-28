@@ -5,7 +5,7 @@
  *  used internally, user space code does not interact with it.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2021 - 2022 Copernica BV
+ *  @copyright 2021 - 2025 Copernica BV
  */
 
 /**
@@ -28,6 +28,7 @@ namespace DNS {
  */
 class Handler;
 class Core;
+class Config;
 
 /**
  *  Class definition
@@ -42,6 +43,12 @@ protected:
     Core *_core;
 
     /**
+     *  The configuration (settings about nameservers, etc)
+     *  @var Config
+     */
+    std::shared_ptr<Config> _config;
+
+    /**
      *  The query that we're going to send
      *  @var Query
      */
@@ -50,6 +57,7 @@ protected:
     /**
      *  Constructor
      *  @param  core        the core object
+     *  @param  config      configuration
      *  @param  handler     user space handler
      *  @param  op          the type of operation (normally a regular query)
      *  @param  dname       the domain to lookup
@@ -58,9 +66,10 @@ protected:
      *  @param  data        optional data (only for type = ns_o_notify)
      *  @throws std::runtime_error
      */
-    Lookup(Core *core, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
+    Lookup(Core *core, const std::shared_ptr<Config> &config, Handler *handler, int op, const char *dname, int type, const Bits &bits, const unsigned char *data = nullptr) :
         Operation(handler),
         _core(core),
+        _config(config),
         _query(op, dname, type, bits, data) {}
 
 public:
@@ -74,6 +83,12 @@ public:
      *  @return Query
      */
     virtual const Query &query() const override { return _query; }
+    
+    /**
+     *  Expose the configuration
+     *  @return Config
+     */
+    const std::shared_ptr<Config> &config() const { return _config; }
     
     /**
      *  Is this lookup still scheduled: meaning that no requests has been sent yet

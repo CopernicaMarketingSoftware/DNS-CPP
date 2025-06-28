@@ -7,7 +7,7 @@
  *  ourselves.
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -110,7 +110,7 @@ public:
      *  @param  question    question extracted from the request
      *  @throws std::runtime_error
      */
-    FakeResponse(const Request &request, const Question &question) : _size(sizeof(HEADER)), _compressor(_buffer)
+    FakeResponse(const Request &request, const Question &question) : _buffer(""), _size(sizeof(HEADER)), _compressor(_buffer)
     {
         // make sure buffer is completely filled with zero's
         memset(_buffer, 0, sizeof(HEADER));

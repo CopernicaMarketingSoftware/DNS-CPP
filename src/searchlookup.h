@@ -5,8 +5,7 @@
  *  It then passes the first successfull call, or the last failed call, back to user-space
  *  
  *  @author Bram van den Brink (bram.vandenbrink@copernica.nl)
- *  @date 2022-06-29
- *  @copyright 2022 Copernica BV
+ *  @copyright 2022 - 2025 Copernica BV
  */
 
 /**
@@ -33,10 +32,16 @@ class SearchLookup : public DNS::Operation, public DNS::Handler
 {
 private:
     /**
-     *  DNS context object to ask for querys
-     *  @var DNS::Context
+     *  DNS core object to ask for querys
+     *  @var DNS::Core
      */
-    DNS::Context *_context;
+    DNS::Core *_core;
+    
+    /**
+     *  The congifuration to use
+     *  @var std::shared_ptr<Config>
+     */
+    std::shared_ptr<Config> _config;
 
     /**
      *  the base domain, this is the domain becofore any modifications
@@ -149,14 +154,11 @@ private:
         // do nothing if we already have exhausted all calls
         if (_index == size_t(-1)) return false;
 
-        // shortcut to the search-paths
-        const auto &searchpaths = _context->searchpaths();
-        
         // if there are no more paths left, return false
-        if (_index >= searchpaths.size()) return finalize();
+        if (_index >= _config->searchpaths()) return finalize();
 
         // the next path to check
-        const auto &nextdomain = searchpaths[_index++];
+        const auto &nextdomain = _config->searchpath(_index++);
         
         // for empty domains we do not need to concatenate
         if (nextdomain.empty()) return finalize();
@@ -169,7 +171,7 @@ private:
 
         // perform dns-query on the constructed path
         // and save the operation so we can cancell it if requested
-        _operation = _context->query(nexthost.c_str(), _type, _bits, this);
+        _operation = _core->query(_config, nexthost.c_str(), _type, _bits, this);
 
         // return success
         return true;
@@ -182,7 +184,7 @@ private:
     bool finalize()
     {
         // start a lookup for just the requested domain
-        _operation = _context->query(_basedomain.c_str(), _type, _bits, this);
+        _operation = _core->query(_config, _basedomain.c_str(), _type, _bits, this);
         
         // update index to prevent loops
         _index = size_t(-1);
@@ -199,15 +201,17 @@ private:
 public:
     /**
      *  Constructor
-     *  @param context      the context object that will perform the querys
+     *  @param core         the context object that will perform the queries
+     *  @param config       object that knows which search-path to use
      *  @param type         the type of query the user supplied
      *  @param bits         the bits the user supplied
      *  @param basedomain   the base domain the user supplied
      *  @param handler      the handler the user supplied
      */
-    SearchLookup(DNS::Context *context, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
+    SearchLookup(DNS::Core *core, const std::shared_ptr<Config> &config, ns_type type, const DNS::Bits bits, const char *basedomain, DNS::Handler* handler) :
         Operation(handler),
-        _context(context),
+        _core(core),
+        _config(config),
         _basedomain(basedomain),
         _index(0),
         _type(type),

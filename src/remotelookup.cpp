@@ -4,7 +4,7 @@
  *  Implementation file for the RemoteLookup class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2021 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -26,13 +26,14 @@ namespace DNS {
 /**
  *  Constructor
  *  @param  core        dns core object
+ *  @param  config      object with settings about nameservers, etc
  *  @param  domain      the domain of the lookup
  *  @param  type        the type of the request
  *  @param  bits        bits to include
  *  @param  handler     user space object
  */
-RemoteLookup::RemoteLookup(Core *core, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
-    Lookup(core, handler, ns_o_query, domain, type, bits), _id(rand()) {}
+RemoteLookup::RemoteLookup(Core *core, const std::shared_ptr<Config> &config, const char *domain, ns_type type, const Bits &bits, DNS::Handler *handler) : 
+    Lookup(core, config, handler, ns_o_query, domain, type, bits), _id(rand()) {}
 
 /**
  *  Destructor
@@ -81,7 +82,7 @@ bool RemoteLookup::exhausted() const
     if (_connections > 0) return true;
     
     // if max number of datagrams has not yet been reached
-    return _datagrams >= _core->attempts();
+    return _datagrams >= _config->attempts();
 }
 
 /**
@@ -96,10 +97,10 @@ double RemoteLookup::delay(double now) const
     if (_datagrams == 0 || _handler == nullptr) return 0.0;
     
     // if already doing a tcp lookup, or when all attemps have passed, we wait until the expire-time
-    if (_connections > 0 || _datagrams >= _core->attempts()) return std::max(0.0, _last + _core->timeout() - now);
+    if (_connections > 0 || _datagrams >= _config->attempts()) return std::max(0.0, _last + _config->timeout() - now);
     
     // wait until we can send a next datagram
-    return std::max(_last + _core->interval() - now, 0.0);
+    return std::max(_last + _config->interval() - now, 0.0);
 }
 
 /**
@@ -171,26 +172,25 @@ bool RemoteLookup::timeout()
 bool RemoteLookup::execute(double now)
 {
     // when job times out
-    if ((_connections > 0 || _datagrams >= _core->attempts()) && now > _last + _core->timeout()) return timeout();
+    if ((_connections > 0 || _datagrams >= _config->attempts()) && now > _last + _config->timeout()) return timeout();
 
     // if we reached the max attempts we stop sending out more datagrams
-    if (_datagrams >= _core->attempts()) return false;
+    if (_datagrams >= _config->attempts()) return false;
 
     // if the operation is already using tcp we simply wait for that
     if (_connections > 0) return false;
 
     // access to the nameservers + the number we have
-    auto &nameservers = _core->nameservers();
-    size_t nscount = nameservers.size();
+    size_t nscount = _config->nameservers();
     
     // what if there are no nameservers?
     if (nscount == 0) return timeout();
 
     // which nameserver should we sent now?
-    size_t target = _core->rotate() ? (_datagrams + _id) % nscount : _datagrams % nscount;
+    size_t target = _config->rotate() ? (_datagrams + _id) % nscount : _datagrams % nscount;
     
     // send a datagram to each nameserver
-    auto &nameserver = nameservers[target];
+    auto &nameserver = _config->nameserver(target);
 
     // send a datagram to this server
     auto *inbound = _core->datagram(nameserver, _query);
@@ -233,7 +233,7 @@ bool RemoteLookup::report(const Response &response)
     
     // there was a NXDOMAIN error, which we should not communicate if our /etc/hosts
     // file does have a record for this hostname, check this
-    if (!_core->exists(question.name())) return cleanup()->onReceived(this, response), true;
+    if (!_config->exists(question.name())) return cleanup()->onReceived(this, response), true;
     
     // get the original request (so that the response can match the request)
     Request request(this);

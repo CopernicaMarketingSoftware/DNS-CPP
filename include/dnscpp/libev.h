@@ -84,12 +84,6 @@ public:
     LibEv(struct ev_loop *loop, bool persist = true) : _loop(loop), _persist(persist) {}
     
     /**
-     *  No copying
-     *  @param  that
-     */
-    LibEv(const LibEv &that) = delete;
-    
-    /**
      *  Destructor
      */
     virtual ~LibEv() = default;

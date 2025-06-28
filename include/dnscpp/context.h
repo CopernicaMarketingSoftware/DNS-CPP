@@ -4,7 +4,7 @@
  *  Main context for DNS lookups. This is the starting point
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 - 2023 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -36,16 +36,34 @@ class SearchLookupHandler;
 /**
  *  Class definition
  */
-class Context : private Core
+class Context
 {
 private:
     /**
-     *  Should the search path be respected?
-     *  @param  domain      the domain to lookup
-     *  @param  handler     handler that is already in use
-     *  @return bool
+     *  The core of the DNS engine, this holds all the runtime resources like sockets, etc
+     *  @var std::shared_ptr<Core>
      */
-    bool searchable(const char *domain, DNS::Handler *handler) const;
+    std::shared_ptr<Core> _core;
+
+    /**
+     *  The configuration used by this context, by splitting the config from the core we can have multiple
+     *  contexts (for example that speak to different nameservers), that still use the same core (same sockets) 
+     *  @var std::shared<Config>
+     */
+    std::shared_ptr<Config> _config;
+
+    /**
+     *  Default bits to include in queries
+     *  @var Bits
+     */
+    Bits _bits;
+
+    /**
+     *  Constructor
+     *  @param  loop
+     *  @param  config
+     */
+    Context(Loop *loop, const std::shared_ptr<Config> &config) : _core(std::make_shared<Core>(loop)), _config(config) {}
 
 public:
     /**
@@ -57,7 +75,7 @@ public:
      *  @param  loop        your event loop
      *  @param  defaults    should system settings be loaded
      */
-    Context(Loop *loop, bool defaults = true) : Core(loop, defaults) {}
+    Context(Loop *loop, bool defaults = true);
 
     /**
      *  Constructor
@@ -66,13 +84,16 @@ public:
      * 
      *  @deprecated
      */
-    Context(Loop *loop, const ResolvConf &settings) : Core(loop, settings) {}
+    Context(Loop *loop, const ResolvConf &settings);
     
     /**
-     *  No copying
-     *  @param  that
+     *  Copy constructor
+     *  This makes a copy of the context with the same core (so it uses the same 
+     *  sockets, etc), but with a new configuration (so changes to the configuration,
+     *  like other nameservers are reserved for this context only)
+     *  @param  that        the to be copied object
      */
-    Context(const Context &that) = delete;
+    Context(const Context &that);
     
     /**
      *  Destructor
@@ -80,82 +101,81 @@ public:
     virtual ~Context() = default;
     
     /**
+     *  Reset the configuration - start with all default settings
+     *  @param  defaults    load system resources for defaults (/etc/resolv.conf, /etc/hosts)
+     */
+    void reset(bool defaults = true);
+    
+    /**
      *  Clear the list of nameservers
      */
-    void clear()
-    {
-        // empty the list
-        _nameservers.clear();
-    }
+    void clear() { _config->clear(); }
     
     /**
      *  Add a nameserver
      *  @param  ip
      */
-    void nameserver(const Ip &ip)
-    {
-        // add to the member in the base class
-        _nameservers.emplace_back(ip);
-    }
+    void nameserver(const Ip &ip) { _config->nameserver(ip); }
     
     /**
      *  Number of sockets to use
-     *  This is normally 1 which is enough for most applications. However,
-     *  for applications that send many UDP requests (new requests are sent
-     *  before the previous ones are completed, this number could be set higher
-     *  to ensure that the load is spread out over multiple sockets that are 
-     *  closed and opened every now and then to ensure that port numbers are
-     *  refreshed. You can only use this to _increment_ the number of sockets.
      *  @param  count       number of sockets
      */
-    void sockets(size_t count)
-    {
-        // pass on
-        _ipv4.sockets(count);
-        _ipv6.sockets(count);
-    }
+    void sockets(size_t count) { _core->sockets(count); }
     
     /**
      *  Set max time to wait for a response
      *  @param timeout      time in seconds
      */
-    void timeout(double timeout)
-    {
-        // store property, make sure the numbers are reasonably clamped
-        _timeout = std::max(timeout, 0.1);
-    }
+    void timeout(double timeout) { _config->timeout(timeout); }
+    
+    /**
+     *  Interval before a datagram is sent again
+     *  @return double
+     */
+    double interval() const { return _config->interval(); }
     
     /**
      *  Set interval before a datagram is sent again
      *  @param  interval    time in seconds
      */
-    void interval(double interval)
-    {
-        // store property, make sure the numbers are reasonably clamped
-        _interval = std::max(interval, 0.1);
-    }
+    void interval(double interval) { _config->interval(interval); }
+
+    /**
+     *  Max number of attempts / requests to send per query
+     *  @return size_t
+     */
+    size_t attempts() const { return _config->attempts(); }
     
     /**
      *  Set the max number of attempts
      *  @param  attempt     max number of attemps
      */
-    void attempts(size_t attempts)
-    {
-        // update member
-        _attempts = attempts;
-    }
+    void attempts(size_t attempts) { _config->attempts(attempts); }
 
     /**
      *  Set the send & receive buffer size of each individual UDP socket
      *  @param value  the value to set
      */
-    void buffersize(int32_t value);
+    void buffersize(int32_t value) { _core->buffersize(value); }
+
+    /**
+     *  THe capacity: number of operations to run at the same time
+     *  @return size_t
+     */
+    size_t capacity() const { return _core->capacity(); }
 
     /**
      *  Set the capacity: number of operations to run at the same time
      *  @param  value       the new value
      */
-    void capacity(size_t value);
+    void capacity(size_t value) { _core->capacity(value); }
+
+    /**
+     *  Default bits that are sent with each query
+     *  @return Bits
+     */
+    const Bits &bits() const { return _bits; }
     
     /**
      *  Enable or disable certain bits
@@ -166,22 +186,34 @@ public:
     void disable(const Bits &bits) { _bits.disable(bits); }
 
     /**
+     *  Should all nameservers be rotated? otherwise they will be tried in-order
+     *  @return bool
+     */
+    bool rotate() const { return _config->rotate(); }
+
+    /**
      *  Set the rotate setting: If true, nameservers will be rotated, if false, nameservers are tried in-order
      *  @param rotate   the new setting
      */
-    void rotate(bool rotate) { _rotate = rotate; }
+    void rotate(bool rotate) { _config->rotate(rotate); }
     
     /**
      *  Set the max number of calls that are made to userspace in one iteration
      *  @param  value       the new value
      */
-    void maxcalls(size_t value) { _maxcalls = value; }
+    void maxcalls(size_t value) { _core->maxcalls(value); }
+
+    /**
+     *  The 'ndots' setting from resolv.conf
+     *  @return ndots
+     */
+    uint8_t ndots() const { return _config->ndots(); }
     
     /**
      *  Change the ndots setting
      *  @param  value       the new value
      */
-    void ndots(uint8_t value) { _ndots = value; }
+    void ndots(uint8_t value) { _config->ndots(value); }
     
     /**
      *  Do a dns lookup and pass the result to a user-space handler object
@@ -228,16 +260,6 @@ public:
      */
     Operation *query(const DNS::Ip &ip, const Bits &bits, const SuccessCallback &success, const FailureCallback &failure);
     Operation *query(const DNS::Ip &ip, const SuccessCallback &success, const FailureCallback &failure) { return query(ip, _bits, success, failure); }
-    
-    /**
-     *  Expose some getters from core
-     */
-    using Core::bits;
-    using Core::rotate;
-    using Core::expire;
-    using Core::interval;
-    using Core::capacity;
-    using Core::searchpaths;
 };
     
 /**
