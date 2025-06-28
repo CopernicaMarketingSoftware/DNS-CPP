@@ -154,8 +154,8 @@ public:
      */
     void attempts(size_t attempts)
     {
-        // update member
-        _attempts = attempts;
+        // pass on
+        _config->attempts(attempts);
     }
 
     /**

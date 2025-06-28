@@ -106,12 +106,6 @@ protected:
     bool _immediate = false;
 
     /**
-     *  Max number of attempts / requests to send per query
-     *  @var size_t
-     */
-    size_t _attempts = 5;
-
-    /**
      *  Interval before a datagram is sent again
      *  @var double
      */
@@ -250,7 +244,7 @@ public:
      *  Max number of attempts / number of requests to send
      *  @return size_t
      */
-    size_t attempts() const { return _attempts; }
+    size_t attempts() const { return _config->attempts(); }
     
     /**
      *  THe capacity: number of operations to run at the same time

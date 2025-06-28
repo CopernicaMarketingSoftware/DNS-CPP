@@ -195,6 +195,12 @@ public:
     size_t attempts() const { return _attempts; }
 
     /**
+     *  Set the max number of attempts
+     *  @param  attempt     max number of attemps
+     */
+    void attempts(size_t attempts) { _attempts = attempts; }
+
+    /**
      *  Interval before a datagram is sent again
      *  @return double
      */
