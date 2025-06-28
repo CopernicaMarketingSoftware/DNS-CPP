@@ -40,13 +40,14 @@ class Context
 {
 private:
     /**
-     *  Core as member variable
+     *  The core of the DNS engine, this holds all the runtime resources like sockets, etc
      *  @var std::shared_ptr<Core>
      */
     std::shared_ptr<Core> _core;
 
     /**
-     *  The configuration used by this context
+     *  The configuration used by this context, by splitting the config from the core we can have multiple
+     *  contexts (for example that speak to different nameservers), that still use the same core (same sockets) 
      *  @var std::shared<Config>
      */
     std::shared_ptr<Config> _config;
@@ -86,10 +87,13 @@ public:
     Context(Loop *loop, const ResolvConf &settings);
     
     /**
-     *  No copying
-     *  @param  that
+     *  Copy constructor
+     *  This makes a copy of the context with the same core (so it uses the same 
+     *  sockets, etc), but with a new configuration (so changes to the configuration,
+     *  like other nameservers are reserved for this context only)
+     *  @param  that        the to be copied object
      */
-    Context(const Context &that) = delete;
+    Context(const Context &that);
     
     /**
      *  Destructor
@@ -97,23 +101,21 @@ public:
     virtual ~Context() = default;
     
     /**
+     *  Reset the configuration - start with all default settings
+     *  @param  defaults    load system resources for defaults (/etc/resolv.conf, /etc/hosts)
+     */
+    void reset(bool defaults = true);
+    
+    /**
      *  Clear the list of nameservers
      */
-    void clear()
-    {
-        // empty the list
-        _config->clear();
-    }
+    void clear() { _config->clear(); }
     
     /**
      *  Add a nameserver
      *  @param  ip
      */
-    void nameserver(const Ip &ip)
-    {
-        // add to the member in the base class
-        _config->nameserver(ip);
-    }
+    void nameserver(const Ip &ip) { _config->nameserver(ip); }
     
     /**
      *  Number of sockets to use

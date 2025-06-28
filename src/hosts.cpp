@@ -4,7 +4,7 @@
  *  Implementation file for the Hosts class
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -49,7 +49,7 @@ static size_t linesize(const char *line, size_t size)
  *  @param  filename        the filename to parse
  *  @throws std::runtime_error
  */
-Hosts::Hosts(const char *filename)
+Hosts::Hosts(const char *filename) : _hostnames(std::make_shared<Hostnames>())
 {
     // load initial file
     if (!load(filename)) throw std::runtime_error(std::string(filename) + ": failed to open file");
@@ -129,10 +129,10 @@ bool Hosts::parse(const char *line, size_t size)
             
             // turn the token into a string
             // @todo check if hostname is valid
-            _hostnames.emplace_back(token);
+            _hostnames->emplace_back(token);
             
             // get reference to the last item
-            const auto &hostname = _hostnames.back();
+            const auto &hostname = _hostnames->back();
             
             // insert into the maps
             _host2ip.emplace(std::make_pair(hostname.data(), ip));

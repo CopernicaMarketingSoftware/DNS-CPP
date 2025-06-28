@@ -26,6 +26,7 @@ namespace DNS {
  *      AD:     "please tell me if the data is verified (in case you know)"
  *      CD:     "checking-disabled: if you dont know if data is verified, just give me the data, no need to check it"
  *      DO:     "please also send relevant signatures like RSIG records"
+ *      RD:     "please do a recursive lookup if you do not hold the record yourself"
  * 
  *  When sent back in the response from the server to the client:
  * 

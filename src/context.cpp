@@ -55,6 +55,25 @@ Context::Context(Loop *loop, bool defaults) : Context(loop, createConfig(default
 Context::Context(Loop *loop, const ResolvConf &settings) : Context(loop, std::make_shared<Config>(settings)) {}
 
 /**
+ *  Copy constructor
+ *  @param  that        the to be copied object
+ */
+Context::Context(const Context &that) : _core(that._core), _config(std::make_shared<Config>(*that._config)), _bits(that._bits) {}
+
+/**
+ *  Reset the configuration - start with all default settings
+ *  @param  defaults    load system resources for defaults (/etc/resolv.conf, /etc/hosts)
+ */
+void Context::reset(bool defaults)
+{
+    // install new settings
+    _config = createConfig(defaults);
+    
+    // reset bits too
+    _bits = Bits();
+}
+
+/**
  *  Do a dns lookup
  *  @param  domain      the record name to look for
  *  @param  type        type of record (normally you ask for an 'a' record)

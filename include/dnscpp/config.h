@@ -71,6 +71,11 @@ private:
 public:
     /**
      *  Default constructor
+     */
+    Config() = default;
+
+    /**
+     *  Default constructor
      *  @param  settings
      */
     Config(const ResolvConf &settings) :
@@ -87,11 +92,6 @@ public:
         // we also have to load /etc/hosts
         if (!_hosts.load()) throw std::runtime_error("failed to load /etc/hosts");
     }
-
-    /**
-     *  Default constructor
-     */
-    Config() = default;
 
     /**
      *  Expose the /etc/hosts file

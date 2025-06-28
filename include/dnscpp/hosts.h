@@ -5,7 +5,7 @@
  *  and host-to-ip information in that file
  * 
  *  @author Emiel Bruijntjes <emiel.bruijntjes@copernica.com>
- *  @copyright 2020 Copernica BV
+ *  @copyright 2020 - 2025 Copernica BV
  */
 
 /**
@@ -18,6 +18,7 @@
  */
 #include <map>
 #include <list>
+#include <memory>
 
 /**
  *  Begin of namespace
@@ -50,12 +51,17 @@ private:
          */
         bool operator()(const char *hostname1, const char *hostname2) const { return strcasecmp(hostname1, hostname2) < 0; }
     };
+    
+    /**
+     *  The hostname-list
+     */
+    using Hostnames = std::list<std::string>;
 
     /**
-     *  All the hostnames found
+     *  All the hostnames found - this member is just here to keep the strings in scope
      *  @var std::list
      */
-    std::list<std::string> _hostnames;
+    std::shared_ptr<Hostnames> _hostnames;
 
     /**
      *  Map of hostnames to IP addresses
@@ -83,7 +89,7 @@ public:
      *  Default constructor
      *  This does not yet read the /etc/hosts file, you need to call load() for that
      */
-    Hosts() = default;
+    Hosts() : _hostnames(std::make_shared<Hostnames>()) {}
 
     /**
      *  Constructor that immediately reads a file
@@ -91,12 +97,6 @@ public:
      *  @throws std::runtime_error
      */
     Hosts(const char *filename);
-    
-    /**
-     *  No copying
-     *  @param  that
-     */
-    Hosts(const Hosts &that) = delete;
     
     /**
      *  Destructor
